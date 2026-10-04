@@ -173,7 +173,7 @@ messages/                  fr.json, en.json
 scripts/                   synchronisation Scryfall
 drizzle/                   migrations SQL
 tests/e2e/                 tests Playwright
-docker/                    configuration Caddy, scripts de sauvegarde
+docker/                    scripts Docker (démarrage, sauvegardes)
 docs/                      ce plan et la documentation
 Dockerfile                 image de l'application
 compose.yaml               services de développement
