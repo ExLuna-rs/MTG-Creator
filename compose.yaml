@@ -17,6 +17,9 @@ x-node-dev: &node-dev
     BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:${APP_PORT:-3000}}
     # Les emails envoyés par l'application arrivent dans Mailpit.
     SMTP_URL: smtp://mailpit:1025
+    # Connexion avec Google (facultative) : à renseigner dans .env.
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
   volumes:
     - .:/app
     - node_modules:/app/node_modules

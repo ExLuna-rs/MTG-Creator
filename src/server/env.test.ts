@@ -31,6 +31,26 @@ describe("parseAuthEnv", () => {
     expect(env.MAIL_FROM).toBe("MTG Creator <no-reply@localhost>");
   });
 
+  it("accepte les identifiants Google, mais seulement ensemble", () => {
+    expect(
+      parseAuthEnv({
+        ...valid,
+        GOOGLE_CLIENT_ID: "id.apps.googleusercontent.com",
+        GOOGLE_CLIENT_SECRET: "secret",
+      }).GOOGLE_CLIENT_ID,
+    ).toBe("id.apps.googleusercontent.com");
+    expect(() =>
+      parseAuthEnv({
+        ...valid,
+        GOOGLE_CLIENT_ID: "id.apps.googleusercontent.com",
+      }),
+    ).toThrow();
+    expect(
+      parseAuthEnv({ ...valid, GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" })
+        .GOOGLE_CLIENT_ID,
+    ).toBeUndefined();
+  });
+
   it("refuse un secret trop court", () => {
     expect(() =>
       parseAuthEnv({ ...valid, BETTER_AUTH_SECRET: "trop-court" }),
