@@ -29,7 +29,8 @@ Sessions cloud : le hook `.claude/hooks/session-start.sh` démarre Docker et rè
 
 - `src/app/[locale]/` : pages ; `src/app/api/` : routes API.
 - `src/domain/` : logique métier pure (règles Commander, statistiques, import / export), sans dépendance à Next.js, couverte par des tests unitaires.
-- `src/server/` : code exclusivement serveur (`import "server-only"`) : base de données, variables d'environnement.
+- `src/server/` : code exclusivement serveur (`import "server-only"`) : base de données, comptes (Better Auth, `src/server/auth/`), emails, variables d'environnement.
+- Pages réservées aux utilisateurs connectés : `requireSession()` (`src/server/auth/session.ts`) au début de la page ou de l'action, en plus de toute vérification d'appartenance des données.
 - `src/i18n/` : configuration next-intl. Pour les liens et redirections, utiliser `@/i18n/navigation`, pas `next/link` ni `next/navigation`.
 - Base de données : Drizzle ORM, schéma dans `src/server/db/schema.ts`. Les migrations sont générées par `make db-generate` et ne sont jamais modifiées une fois appliquées.
 - Next.js 16 : `src/proxy.ts` remplace le middleware. Lire la documentation embarquée (`node_modules/next/dist/docs/`) avant d'utiliser une API de Next.js.
