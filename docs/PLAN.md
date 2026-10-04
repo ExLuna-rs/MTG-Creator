@@ -55,14 +55,17 @@ Navigateur (React, pages /fr/… et /en/…)
   │                          └──► images des cartes : CDN Scryfall
   │ HTTPS
   ▼
-Docker Compose
-  ├─ caddy     reverse proxy, certificats HTTPS automatiques (prod)
-  ├─ app       Next.js : pages, API, comptes, règles Commander, statistiques
-  ├─ db        PostgreSQL : utilisateurs, decks, copie locale des cartes
-  ├─ migrate   applique les migrations de la base avant le démarrage de app
-  ├─ sync      synchronisation des cartes Scryfall (chaque nuit en prod)
-  ├─ backup    sauvegarde quotidienne de la base (prod)
-  └─ mailpit   boîte mail de test (dev)
+Cloudflare : DNS, HTTPS, CDN, protection DDoS, pare-feu applicatif (WAF)
+  │ tunnel chiffré, ouvert depuis le serveur (aucun port ouvert sur Internet)
+  ▼
+Docker Compose, sur un VPS
+  ├─ cloudflared  connecteur du tunnel Cloudflare (prod)
+  ├─ app          Next.js : pages, API, comptes, règles Commander, statistiques
+  ├─ db           PostgreSQL : utilisateurs, decks, copie locale des cartes
+  ├─ migrate      applique les migrations de la base avant le démarrage de app
+  ├─ sync         synchronisation des cartes Scryfall (chaque nuit en prod)
+  ├─ backup       sauvegarde quotidienne de la base vers Cloudflare R2 (prod)
+  └─ mailpit      boîte mail de test (dev)
 ```
 
 ### Stack technique
@@ -84,7 +87,9 @@ Docker Compose
 | Conteneurs | Docker, Docker Compose | Mêmes services en développement, en test et en production |
 | Emails | Mailpit en développement ; fournisseur SMTP en production (Brevo, Resend…) | Vérification des adresses, mot de passe oublié |
 | Intégration continue | GitHub Actions | Tests dans Docker, image publiée sur GitHub Container Registry |
-| Hébergement | VPS (OVHcloud, Scaleway, Hetzner…) avec Docker Compose et Caddy | Quelques euros par mois, données dans l'UE, aucune dépendance à une plateforme |
+| Hébergement | VPS (OVHcloud, Scaleway, Hetzner…) avec Docker Compose | Quelques euros par mois, données dans l'UE, mêmes services qu'en développement |
+| Exposition | Cloudflare (offre gratuite) : Tunnel, DNS, CDN, WAF | HTTPS sans certificat à gérer, serveur sans aucun port ouvert, protection contre les attaques |
+| Sauvegardes | Cloudflare R2 (10 Go gratuits) | Copie quotidienne de la base hors du serveur |
 
 ### Environnement Docker
 
@@ -95,8 +100,8 @@ Docker Compose
 | `migrate` | Lancé avant `app` | Lancé à chaque déploiement, avant `app` |
 | `sync` | À la demande (`make sync`) | Chaque nuit |
 | `mailpit` | Interface web pour lire les emails envoyés par l'application | — |
-| `caddy` | — | HTTPS automatique (Let's Encrypt) |
-| `backup` | — | Sauvegarde quotidienne de la base avec rotation, copiée hors du serveur |
+| `cloudflared` | — | Tunnel vers Cloudflare : le trafic arrive sans qu'aucun port soit ouvert sur le serveur |
+| `backup` | — | Sauvegarde quotidienne de la base avec rotation, envoyée sur Cloudflare R2 |
 
 Fichiers :
 
@@ -243,7 +248,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 - Import texte : reconnaissance des noms anglais ou français, signalement des lignes non reconnues avec des suggestions.
 - Export texte et format MTG Arena, copie dans le presse-papiers.
 - Visibilité (privé / non listé / public), page publique avec aperçu pour les réseaux sociaux (illustration du commandant), « Copier ce deck », page Explorer.
-- Mise en production sur un VPS : `compose.prod.yaml` (Caddy, HTTPS et en-têtes de sécurité, sauvegardes, synchronisation nocturne), image publiée par la CI, déploiement automatique depuis `main`.
+- Mise en production sur un VPS : `compose.prod.yaml` (tunnel Cloudflare, sauvegardes sur R2, synchronisation nocturne), domaine et règles de sécurité Cloudflare, image publiée par la CI, déploiement automatique depuis `main`.
 
 **Terminé quand** : l'application est en ligne en HTTPS, les sauvegardes tournent, et un deck exporté depuis Moxfield s'importe sans erreur.
 
@@ -273,7 +278,7 @@ Selon les priorités, dans la liste « Plus tard ».
 
 Next.js a publié plusieurs correctifs de sécurité en 2026 (juillet, août, puis deux en septembre) : une version sûre aujourd'hui ne le sera plus forcément dans un mois. Le projet est donc organisé pour se mettre à jour vite :
 
-- **Dependabot** ouvre automatiquement des pull requests pour les dépendances npm, les images Docker (Node.js, PostgreSQL, Caddy) et les actions GitHub. Les alertes de sécurité GitHub sont activées.
+- **Dependabot** ouvre automatiquement des pull requests pour les dépendances npm, les images Docker (Node.js, PostgreSQL, cloudflared) et les actions GitHub. Les alertes de sécurité GitHub sont activées.
 - **La CI bloque la fusion** si `pnpm audit` trouve une faille haute ou critique, et elle analyse l'image Docker (Grype ou Docker Scout).
 - **Les actions GitHub sont épinglées par empreinte de commit** et non par tag : en mars 2026, des tags de l'action Trivy ont été détournés pour voler des secrets de CI.
 - Appliquer un correctif revient à fusionner la pull request de mise à jour : la CI reconstruit l'image et le serveur la redéploie.
@@ -285,13 +290,13 @@ Le code reste prudent même si le framework a une faille :
 - L'autorisation est vérifiée dans chaque Server Action, route API et fonction d'accès aux données, pas seulement dans le `proxy` (l'ancien middleware) : plusieurs failles de Next.js ont permis de contourner le middleware.
 - Toutes les entrées sont validées avec Zod, les modules serveur sont protégés par `server-only`, et aucun secret ne passe par les variables `NEXT_PUBLIC_*`.
 - L'optimiseur d'images de Next.js, qui a connu plusieurs failles, est désactivé : les images viennent directement du CDN Scryfall. Les aperçus pour les réseaux sociaux utilisent l'illustration du commandant fournie par Scryfall au lieu d'images générées avec `next/og`.
-- Better Auth limite les tentatives de connexion, et les cookies de session sont `HttpOnly`, `Secure` et `SameSite`.
-- Caddy ajoute les en-têtes de sécurité : CSP, HSTS, `frame-ancestors`, `Referrer-Policy`.
+- Better Auth limite les tentatives de connexion, en lisant l'adresse IP réelle des visiteurs dans l'en-tête `CF-Connecting-IP` transmis par Cloudflare. Les cookies de session sont `HttpOnly`, `Secure` et `SameSite`.
+- Next.js envoie les en-têtes de sécurité (CSP, HSTS, `frame-ancestors`, `Referrer-Policy`), et le pare-feu applicatif de Cloudflare filtre le trafic avant qu'il n'atteigne le serveur.
 
 ### Docker et serveur
 
 - Image minimale, utilisateur non root, aucun outil de build dans l'image finale.
-- PostgreSQL n'est joignable que depuis le réseau Docker interne ; seuls les ports 80 et 443 de Caddy sont ouverts.
+- Aucun port n'est ouvert sur Internet : le trafic web arrive par le tunnel Cloudflare, et PostgreSQL n'est joignable que depuis le réseau Docker interne.
 - Les secrets sont dans des fichiers `.env` jamais commités.
 - Sur le serveur : connexion SSH par clé uniquement, pare-feu, mises à jour de sécurité automatiques du système.
 
@@ -299,7 +304,7 @@ Le code reste prudent même si le framework a une faille :
 
 - **Fan Content Policy de Wizards of the Coast** : l'application reste gratuite et affiche la mention « contenu de fan non officiel, non approuvé par Wizards of the Coast ».
 - **Scryfall** : pas d'accès payant à ses données, attribution visible, aucune suggestion de partenariat ; les images ne sont jamais recadrées de façon à masquer l'artiste ou le copyright.
-- **RGPD** : hébergement dans l'Union européenne, données personnelles minimales (email, pseudo), politique de confidentialité, suppression du compte et export des decks. Seuls des cookies de session sont utilisés, donc pas de bandeau cookies tant qu'aucun outil de mesure d'audience n'est ajouté.
+- **RGPD** : hébergement dans l'Union européenne, données personnelles minimales (email, pseudo), politique de confidentialité (qui cite Cloudflare comme sous-traitant), suppression du compte et export des decks. Seuls des cookies de session sont utilisés, donc pas de bandeau cookies tant qu'aucun outil de mesure d'audience n'est ajouté.
 
 ## 9. Risques et points ouverts
 
@@ -307,7 +312,8 @@ Le code reste prudent même si le framework a une faille :
 |---|---|
 | Nouvelles failles dans Next.js ou dans d'autres dépendances | Pull requests Dependabot, audit bloquant dans la CI, redéploiement automatique après fusion |
 | Fichier *All Cards* très volumineux (plusieurs Go) | Lecture en flux dans le conteneur `sync`, ou recherche `lang:fr` paginée ; choix au début de la phase 1 |
-| Serveur à maintenir soi-même | Sauvegardes quotidiennes copiées hors du serveur, HTTPS automatique avec Caddy, mises à jour régulières des images Docker |
+| Serveur à maintenir soi-même | Sauvegardes quotidiennes sur R2, aucun port exposé grâce au tunnel, mises à jour régulières des images Docker |
+| Dépendance à Cloudflare pour l'accès au site | L'application ne dépend pas de Cloudflare : le tunnel peut être remplacé par un reverse proxy classique (Caddy) en quelques lignes |
 | Évolution des règles Commander (brackets, Game Changers, bannissements) | Données synchronisées chaque nuit, règles des brackets en configuration |
 | Cartes sans traduction française | Affichage en anglais avec un indicateur |
 | Le texte français de Scryfall est le texte imprimé, parfois antérieur aux errata Oracle | Texte Oracle anglais toujours accessible depuis la fiche carte |
@@ -317,4 +323,4 @@ Le code reste prudent même si le framework a une faille :
 1. **Sur la machine de développement** : Docker Desktop (Windows, macOS) ou Docker Engine (Linux). Rien d'autre.
 2. **Avant la phase 1** : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
 3. **Phase 2** : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
-4. **Phase 4** : un VPS (quelques euros par mois), un nom de domaine et un fournisseur d'emails SMTP (Brevo, Resend…).
+4. **Phase 4** : un VPS (quelques euros par mois), un compte Cloudflare (offre gratuite) gérant le nom de domaine, et un fournisseur d'emails SMTP (Brevo, Resend…).
