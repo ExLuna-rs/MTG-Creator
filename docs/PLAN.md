@@ -264,7 +264,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 **Terminé quand** : on peut construire de bout en bout un deck de 100 cartes valide, et chaque règle a ses tests.
 
-**État** : terminée (pull request n° 7).
+**État** : terminée (pull request n° 8).
 
 - Tables `deck` et `deck_card` (migration `0003_decks`). Les cartes sont référencées par `oracle_id` sans clé étrangère : une carte retirée par Scryfall ne bloque pas la synchronisation. Chaque fonction d'accès (`src/server/decks/decks.ts`) filtre sur l'utilisateur connecté.
 - Nouveau deck (`/fr/decks/new`) : recherche parmi les commandants possibles ; si le commandant a une capacité de paire, choix facultatif d'un second commandant parmi les seules cartes compatibles (`/api/cards/commanders`). Le serveur revérifie le commandant et la paire.
