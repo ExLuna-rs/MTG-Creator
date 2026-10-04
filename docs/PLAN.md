@@ -69,7 +69,7 @@ Docker Compose
 
 | Couche | Choix | Rôle |
 |---|---|---|
-| Framework | Next.js 16 (App Router), React 19, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
+| Framework | Next.js 16 (16.3.8 au minimum, voir la section Sécurité), React 19.3, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
 | Interface | Tailwind CSS 4, shadcn/ui, icônes lucide | Composants accessibles et personnalisables |
 | Symboles | mana-font ; icônes d'éditions SVG de Scryfall | Symboles de mana sans appel réseau |
 | Traductions | next-intl | URLs `/fr/…` et `/en/…`, textes traduits, formats de nombres et de dates |
@@ -205,6 +205,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 - next-intl avec les routes `/fr` et `/en`, sélecteur de langue.
 - Mise en page de base : en-tête, pied de page avec les mentions légales.
 - CI GitHub Actions (tests dans Docker, construction de l'image) ; `CLAUDE.md` (conventions du projet) et script de démarrage pour les prochaines sessions Claude Code.
+- Sécurité : Dependabot, audit des dépendances et analyse de l'image dans la CI, actions GitHub épinglées par empreinte de commit.
 
 **Terminé quand** : sur une machine qui n'a que Docker, `make dev` lance l'application en FR et en EN, et la CI passe.
 
@@ -241,8 +242,8 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 - Import texte : reconnaissance des noms anglais ou français, signalement des lignes non reconnues avec des suggestions.
 - Export texte et format MTG Arena, copie dans le presse-papiers.
-- Visibilité (privé / non listé / public), page publique avec aperçu pour les réseaux sociaux, « Copier ce deck », page Explorer.
-- Mise en production sur un VPS : `compose.prod.yaml` (Caddy et HTTPS, sauvegardes, synchronisation nocturne), image publiée par la CI, déploiement automatique depuis `main`.
+- Visibilité (privé / non listé / public), page publique avec aperçu pour les réseaux sociaux (illustration du commandant), « Copier ce deck », page Explorer.
+- Mise en production sur un VPS : `compose.prod.yaml` (Caddy, HTTPS et en-têtes de sécurité, sauvegardes, synchronisation nocturne), image publiée par la CI, déploiement automatique depuis `main`.
 
 **Terminé quand** : l'application est en ligne en HTTPS, les sauvegardes tournent, et un deck exporté depuis Moxfield s'importe sans erreur.
 
@@ -261,23 +262,57 @@ Selon les priorités, dans la liste « Plus tard ».
 - **Tests de bout en bout** (Playwright, dans son image Docker officielle) sur les parcours principaux : inscription → création d'un deck → ajout de cartes → validation → export.
 - La CI exécute tous les tests dans Docker à chaque pull request.
 
-## 7. Aspects légaux et RGPD
+## 7. Sécurité
+
+### Versions
+
+- **Next.js 16.3.8 au minimum** (publiée le 30 septembre 2026) : c'est la dernière version, et elle corrige toutes les failles connues à ce jour. Parmi elles, une exécution de code à distance dans `next/og` (corrigée en 16.3.6), qui touchait justement les serveurs Node.js auto-hébergés comme le nôtre. **React 19.3.0**. Au 4 octobre 2026, `npm audit` ne signale aucune vulnérabilité connue pour ces versions.
+- Les versions exactes sont figées par le fichier de verrouillage `pnpm-lock.yaml`, et l'image Docker est construite à partir de ce fichier (`pnpm install --frozen-lockfile`).
+
+### Mises à jour
+
+Next.js a publié plusieurs correctifs de sécurité en 2026 (juillet, août, puis deux en septembre) : une version sûre aujourd'hui ne le sera plus forcément dans un mois. Le projet est donc organisé pour se mettre à jour vite :
+
+- **Dependabot** ouvre automatiquement des pull requests pour les dépendances npm, les images Docker (Node.js, PostgreSQL, Caddy) et les actions GitHub. Les alertes de sécurité GitHub sont activées.
+- **La CI bloque la fusion** si `pnpm audit` trouve une faille haute ou critique, et elle analyse l'image Docker (Grype ou Docker Scout).
+- **Les actions GitHub sont épinglées par empreinte de commit** et non par tag : en mars 2026, des tags de l'action Trivy ont été détournés pour voler des secrets de CI.
+- Appliquer un correctif revient à fusionner la pull request de mise à jour : la CI reconstruit l'image et le serveur la redéploie.
+
+### Dans le code
+
+Le code reste prudent même si le framework a une faille :
+
+- L'autorisation est vérifiée dans chaque Server Action, route API et fonction d'accès aux données, pas seulement dans le `proxy` (l'ancien middleware) : plusieurs failles de Next.js ont permis de contourner le middleware.
+- Toutes les entrées sont validées avec Zod, les modules serveur sont protégés par `server-only`, et aucun secret ne passe par les variables `NEXT_PUBLIC_*`.
+- L'optimiseur d'images de Next.js, qui a connu plusieurs failles, est désactivé : les images viennent directement du CDN Scryfall. Les aperçus pour les réseaux sociaux utilisent l'illustration du commandant fournie par Scryfall au lieu d'images générées avec `next/og`.
+- Better Auth limite les tentatives de connexion, et les cookies de session sont `HttpOnly`, `Secure` et `SameSite`.
+- Caddy ajoute les en-têtes de sécurité : CSP, HSTS, `frame-ancestors`, `Referrer-Policy`.
+
+### Docker et serveur
+
+- Image minimale, utilisateur non root, aucun outil de build dans l'image finale.
+- PostgreSQL n'est joignable que depuis le réseau Docker interne ; seuls les ports 80 et 443 de Caddy sont ouverts.
+- Les secrets sont dans des fichiers `.env` jamais commités.
+- Sur le serveur : connexion SSH par clé uniquement, pare-feu, mises à jour de sécurité automatiques du système.
+
+## 8. Aspects légaux et RGPD
 
 - **Fan Content Policy de Wizards of the Coast** : l'application reste gratuite et affiche la mention « contenu de fan non officiel, non approuvé par Wizards of the Coast ».
 - **Scryfall** : pas d'accès payant à ses données, attribution visible, aucune suggestion de partenariat ; les images ne sont jamais recadrées de façon à masquer l'artiste ou le copyright.
 - **RGPD** : hébergement dans l'Union européenne, données personnelles minimales (email, pseudo), politique de confidentialité, suppression du compte et export des decks. Seuls des cookies de session sont utilisés, donc pas de bandeau cookies tant qu'aucun outil de mesure d'audience n'est ajouté.
 
-## 8. Risques et points ouverts
+## 9. Risques et points ouverts
 
 | Risque | Réponse prévue |
 |---|---|
+| Nouvelles failles dans Next.js ou dans d'autres dépendances | Pull requests Dependabot, audit bloquant dans la CI, redéploiement automatique après fusion |
 | Fichier *All Cards* très volumineux (plusieurs Go) | Lecture en flux dans le conteneur `sync`, ou recherche `lang:fr` paginée ; choix au début de la phase 1 |
 | Serveur à maintenir soi-même | Sauvegardes quotidiennes copiées hors du serveur, HTTPS automatique avec Caddy, mises à jour régulières des images Docker |
 | Évolution des règles Commander (brackets, Game Changers, bannissements) | Données synchronisées chaque nuit, règles des brackets en configuration |
 | Cartes sans traduction française | Affichage en anglais avec un indicateur |
 | Le texte français de Scryfall est le texte imprimé, parfois antérieur aux errata Oracle | Texte Oracle anglais toujours accessible depuis la fiche carte |
 
-## 9. Prérequis
+## 10. Prérequis
 
 1. **Sur la machine de développement** : Docker Desktop (Windows, macOS) ou Docker Engine (Linux). Rien d'autre.
 2. **Avant la phase 1** : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
