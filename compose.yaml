@@ -1,0 +1,89 @@
+# Environnement de développement : `make dev` (ou `docker compose up --build`).
+# Application : http://localhost:3000 — emails de test : http://localhost:8025
+name: mtg-creator
+
+x-node-dev: &node-dev
+  build:
+    context: .
+    target: dev
+  image: mtg-creator-dev
+  # Utilisateur de la machine hôte (renseigné par le Makefile) : les fichiers
+  # créés dans le dépôt depuis le conteneur lui appartiennent.
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  environment:
+    DATABASE_URL: postgres://${POSTGRES_USER:-mtg}:${POSTGRES_PASSWORD:-mtg}@db:5432/${POSTGRES_DB:-mtg}
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+    - next_cache:/app/.next
+
+services:
+  db:
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mtg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mtg}
+      POSTGRES_DB: ${POSTGRES_DB:-mtg}
+    volumes:
+      - db_data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Applique les migrations, puis s'arrête : `app` attend qu'il ait réussi.
+  migrate:
+    <<: *node-dev
+    command: ["pnpm", "db:migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    <<: *node-dev
+    init: true
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 30s
+      start_period: 60s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
+  # Tests de bout en bout (`make e2e`), dans l'image officielle de Playwright.
+  e2e:
+    profiles: ["e2e"]
+    image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    working_dir: /app
+    environment:
+      CI: ${CI:-}
+      E2E_BASE_URL: http://app:3000
+      # Magasin pnpm dans le volume, pour ne rien écrire dans le dépôt.
+      npm_config_store_dir: /app/node_modules/.pnpm-store
+    volumes:
+      - .:/app
+      - e2e_node_modules:/app/node_modules
+    entrypoint: ["sh", "-c", "corepack enable pnpm && pnpm install --frozen-lockfile && exec pnpm test:e2e \"$$@\"", "--"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  node_modules:
+  next_cache:
+  e2e_node_modules:

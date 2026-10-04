@@ -1,0 +1,71 @@
+# Pile proche de la production, pour les tests de bout en bout (`make e2e-ci`) :
+# mêmes images que celles qui seront déployées, base de données jetable.
+name: mtg-creator-test
+
+x-database-url: &database-url postgres://mtg:mtg@db:5432/mtg
+
+services:
+  db:
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_USER: mtg
+      POSTGRES_PASSWORD: mtg
+      POSTGRES_DB: mtg
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtg -d mtg"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  migrate:
+    build:
+      context: .
+      target: tools
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    init: true
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    working_dir: /app
+    environment:
+      CI: ${CI:-}
+      E2E_BASE_URL: http://app:3000
+      # Magasin pnpm dans le volume, pour ne rien écrire dans le dépôt.
+      npm_config_store_dir: /app/node_modules/.pnpm-store
+    volumes:
+      - .:/app
+      - e2e_node_modules:/app/node_modules
+    entrypoint: ["sh", "-c", "corepack enable pnpm && pnpm install --frozen-lockfile && exec pnpm test:e2e \"$$@\"", "--"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Analyse des vulnérabilités des images de production (`make scan`).
+  grype:
+    profiles: ["scan"]
+    image: anchore/grype:v0.120.0@sha256:5c88961f4130e830542d441c7ed6c78baa28e799163abac53d2be4923fb5ab7d
+    environment:
+      GRYPE_DB_CACHE_DIR: /cache
+    volumes:
+      - ./.scan:/scan:ro
+      - grype_db:/cache
+
+volumes:
+  e2e_node_modules:
+  grype_db:
