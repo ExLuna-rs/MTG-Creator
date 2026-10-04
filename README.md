@@ -28,6 +28,8 @@ docker compose run --rm --build app pnpm cards:sync
 
 ou, sans accès à Internet, le jeu de test de 172 cartes : `docker compose run --rm --build app pnpm cards:seed`. Les mêmes commandes s'écrivent `make sync` et `make seed`.
 
+Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : en développement, aucun email ne part vraiment, le lien de confirmation (comme celui du mot de passe oublié) arrive dans Mailpit, sur <http://localhost:8025>.
+
 Sous Linux, macOS ou WSL, `make dev` fait la même chose, et `make help` liste toutes les commandes (voir plus bas).
 
 Si le port 5432 est déjà pris (un PostgreSQL installé sur la machine, par exemple), copiez `.env.example` en `.env` et changez `DB_PORT`.
@@ -79,7 +81,7 @@ Sans `make` (par exemple sous Windows), les commandes les plus utiles s'écriven
 
 ## Stack
 
-Next.js 16, React 19, TypeScript, Tailwind CSS 4, next-intl, PostgreSQL 18 avec Drizzle ORM, Vitest, Playwright et Biome. Les détails et les choix d'architecture sont dans [`docs/PLAN.md`](docs/PLAN.md).
+Next.js 16, React 19, TypeScript, Tailwind CSS 4, next-intl, PostgreSQL 18 avec Drizzle ORM, Better Auth, Vitest, Playwright et Biome. Les détails et les choix d'architecture sont dans [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Structure
 
@@ -87,9 +89,9 @@ Next.js 16, React 19, TypeScript, Tailwind CSS 4, next-intl, PostgreSQL 18 avec 
 src/app/[locale]/   pages (une version par langue : /fr, /en)
 src/app/api/        routes API
 src/components/     composants d'interface
-src/domain/         logique métier pure (cartes, recherche…), testée
+src/domain/         logique métier pure (cartes, recherche, comptes…), testée
 src/i18n/           configuration des langues
-src/server/         code serveur : base de données, configuration
+src/server/         code serveur : base de données, comptes, emails, configuration
 messages/           traductions (fr.json, en.json)
 drizzle/            migrations SQL
 scripts/            scripts d'exploitation (migrations, import des cartes…)

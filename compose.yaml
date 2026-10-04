@@ -12,6 +12,11 @@ x-node-dev: &node-dev
   user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
   environment:
     DATABASE_URL: postgres://${POSTGRES_USER:-mtg}:${POSTGRES_PASSWORD:-mtg}@db:5432/${POSTGRES_DB:-mtg}
+    # Clé des sessions : valeur de développement, à ne jamais réutiliser en production.
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-not-for-production-use}
+    BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:${APP_PORT:-3000}}
+    # Les emails envoyés par l'application arrivent dans Mailpit.
+    SMTP_URL: smtp://mailpit:1025
   volumes:
     - .:/app
     - node_modules:/app/node_modules
@@ -75,6 +80,7 @@ services:
     environment:
       CI: ${CI:-}
       E2E_BASE_URL: http://localhost:3000
+      MAILPIT_URL: http://mailpit:8025
       # Magasin pnpm dans le volume, pour ne rien écrire dans le dépôt.
       npm_config_store_dir: /app/node_modules/.pnpm-store
     volumes:

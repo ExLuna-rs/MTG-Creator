@@ -6,7 +6,11 @@
   "Header": {
     "home": "Accueil de MTG Creator",
     "cards": "Cartes",
-    "mainNav": "Navigation principale"
+    "mainNav": "Navigation principale",
+    "signIn": "Connexion",
+    "signUp": "Créer un compte",
+    "account": "Mon compte ({name})",
+    "signOut": "Se déconnecter"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -160,5 +164,101 @@
     "pauper": "Pauper",
     "historic": "Historic",
     "timeless": "Timeless"
+  },
+  "AuthForm": {
+    "name": "Pseudo",
+    "nameHint": "De 2 à 32 caractères. Il sera visible sur vos decks publics.",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "passwordHint": "8 caractères au minimum.",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmez le mot de passe",
+    "currentPassword": "Mot de passe actuel",
+    "errors": {
+      "required": "Ce champ est obligatoire.",
+      "invalidEmail": "Saisissez une adresse email valide.",
+      "nameLength": "Le pseudo doit faire entre 2 et 32 caractères.",
+      "nameCharacters": "Le pseudo contient des caractères non autorisés.",
+      "passwordLength": "Le mot de passe doit faire entre 8 et 128 caractères.",
+      "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
+      "invalidLocale": "Choisissez une langue de la liste.",
+      "confirmRequired": "Cochez cette case pour confirmer la suppression.",
+      "invalidCredentials": "Adresse email ou mot de passe incorrect.",
+      "emailNotVerified": "Votre adresse email n'est pas encore confirmée. Nous venons de vous renvoyer un lien de confirmation.",
+      "wrongPassword": "Mot de passe incorrect.",
+      "invalidToken": "Ce lien n'est plus valable.",
+      "tooManyRequests": "Trop de tentatives. Patientez un instant avant de réessayer.",
+      "unknown": "Une erreur est survenue. Réessayez dans un instant."
+    }
+  },
+  "SignUpPage": {
+    "title": "Créer un compte",
+    "description": "Enregistrez vos decks et retrouvez-les sur tous vos appareils.",
+    "submit": "Créer mon compte",
+    "haveAccount": "Déjà un compte ?",
+    "signIn": "Se connecter",
+    "checkEmailTitle": "Vérifiez votre boîte mail",
+    "checkEmail": "Nous avons envoyé un lien de confirmation à {email}. Cliquez dessus pour activer votre compte. Pensez à regarder dans les courriers indésirables."
+  },
+  "SignInPage": {
+    "title": "Connexion",
+    "description": "Connectez-vous pour retrouver vos decks.",
+    "submit": "Se connecter",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Pas encore de compte ?",
+    "signUp": "Créer un compte",
+    "passwordReset": "Votre mot de passe a été modifié. Connectez-vous avec le nouveau."
+  },
+  "ForgotPasswordPage": {
+    "title": "Mot de passe oublié",
+    "description": "Saisissez l'adresse de votre compte : nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+    "submit": "Envoyer le lien",
+    "sent": "Si un compte existe pour {email}, un email avec un lien de réinitialisation vient de lui être envoyé. Le lien est valable une heure.",
+    "backToSignIn": "Retour à la connexion"
+  },
+  "ResetPasswordPage": {
+    "title": "Nouveau mot de passe",
+    "description": "Choisissez votre nouveau mot de passe. Vos autres appareils seront déconnectés.",
+    "submit": "Enregistrer le mot de passe",
+    "invalidLink": "Ce lien a expiré ou a déjà été utilisé.",
+    "requestNewLink": "Demander un nouveau lien"
+  },
+  "VerifyEmailPage": {
+    "title": "Adresse confirmée",
+    "success": "Votre compte est activé et vous êtes connecté.",
+    "goToAccount": "Voir mon compte",
+    "errorTitle": "Lien non valable",
+    "error": "Ce lien de confirmation a expiré ou a déjà été utilisé. Connectez-vous : si votre adresse n'est pas encore confirmée, un nouveau lien vous sera envoyé.",
+    "signIn": "Se connecter"
+  },
+  "SettingsPage": {
+    "title": "Mon compte",
+    "signedInAs": "Connecté avec l'adresse {email}.",
+    "profileTitle": "Profil",
+    "locale": "Langue préférée",
+    "localeHint": "Langue du site et des emails que nous vous envoyons.",
+    "save": "Enregistrer",
+    "saved": "Modifications enregistrées.",
+    "deleteTitle": "Supprimer le compte",
+    "deleteDescription": "La suppression est immédiate et définitive : votre compte et toutes ses données seront effacés.",
+    "deleteConfirm": "Je comprends que mon compte sera supprimé définitivement.",
+    "delete": "Supprimer mon compte"
+  },
+  "Emails": {
+    "greeting": "Bonjour {name},",
+    "signature": "L'équipe MTG Creator",
+    "linkFallback": "Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :",
+    "verifyEmail": {
+      "subject": "Confirmez votre adresse email",
+      "body": "Merci pour votre inscription sur MTG Creator. Confirmez votre adresse email pour activer votre compte. Le lien est valable 24 heures.",
+      "action": "Confirmer mon adresse",
+      "ignore": "Si vous n'avez pas créé de compte, ignorez simplement cet email."
+    },
+    "resetPassword": {
+      "subject": "Réinitialisez votre mot de passe",
+      "body": "Vous avez demandé à changer le mot de passe de votre compte MTG Creator. Le lien est valable une heure.",
+      "action": "Choisir un nouveau mot de passe",
+      "ignore": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe reste inchangé."
+    }
   }
 }

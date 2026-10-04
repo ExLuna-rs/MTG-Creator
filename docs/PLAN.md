@@ -243,6 +243,17 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 **Terminé quand** : un utilisateur peut créer un compte, confirmer son email, réinitialiser son mot de passe, se reconnecter et supprimer son compte.
 
+**État** : terminée pour l'email + mot de passe (pull request n° 6). La connexion Discord et Google attend la création des applications OAuth (voir Prérequis) et viendra dans une pull request à part.
+
+- Better Auth 1.7 (`src/server/auth/`) avec l'adaptateur Drizzle : tables `user`, `session`, `account` et `verification` (migration `0002_auth`). L'utilisateur a en plus une langue préférée (`locale`), qui choisit la langue des emails.
+- Pages `/fr/sign-up`, `/fr/sign-in`, `/fr/forgot-password`, `/fr/reset-password`, `/fr/verify-email` et `/fr/settings` (page Compte). Les formulaires appellent les routes `/api/auth/…` de Better Auth depuis le navigateur ; ils sont validés avec Zod dans le navigateur (`src/domain/auth/forms.ts`), puis de nouveau par Better Auth et ses hooks côté serveur.
+- La connexion exige une adresse confirmée. Une tentative de connexion avec une adresse non confirmée renvoie un lien de confirmation. Les emails partent par SMTP (`SMTP_URL`) : Mailpit en développement et dans les tests.
+- Mot de passe oublié : lien valable une heure ; un mot de passe réinitialisé ferme toutes les sessions. Les réponses ne révèlent pas si une adresse a un compte.
+- Suppression du compte immédiate, confirmée par le mot de passe et une case à cocher ; sessions et moyens de connexion sont supprimés en cascade.
+- Pages réservées : `requireSession()` (`src/server/auth/session.ts`) redirige vers la connexion, qui ramène ensuite à la page demandée (`?next=`, limité aux chemins internes). L'en-tête lit la session dans le navigateur, pour que les pages publiques restent statiques.
+- Limitation des tentatives par Better Auth (en production) : adresse IP lue dans l'en-tête `CF-Connecting-IP`, sûr tant que le serveur n'est joignable que par le tunnel Cloudflare.
+- Variables d'environnement : `BETTER_AUTH_SECRET` (au moins 32 caractères), `BETTER_AUTH_URL` (adresse publique du site), `SMTP_URL` et `MAIL_FROM`. `compose.yaml` fournit des valeurs de développement.
+
 ### Phase 3 : éditeur de deck Commander
 
 - Création d'un deck à partir d'un commandant (et d'un partenaire ou Background).
@@ -329,5 +340,5 @@ Le code reste prudent même si le framework a une faille :
 
 1. **Sur la machine de développement** : Docker Desktop (Windows, macOS) ou Docker Engine (Linux). Rien d'autre.
 2. **Avant la phase 1** (fait) : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
-3. **Phase 2** : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
+3. **Phase 2** (reste à faire) : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
 4. **Phase 4** : un VPS (quelques euros par mois), un compte Cloudflare (offre gratuite) gérant le nom de domaine, et un fournisseur d'emails SMTP (Brevo, Resend…).
