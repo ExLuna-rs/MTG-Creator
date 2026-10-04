@@ -11,7 +11,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 | Sauvegarde | Comptes utilisateurs, decks stockés côté serveur dès la première version |
 | Format de jeu | Commander (EDH) en priorité ; le modèle de données reste ouvert aux autres formats |
 | Stack | React + TypeScript avec Next.js (front et back dans un seul projet) |
-| Langues | Interface FR/EN avec sélecteur de langue ; cartes en anglais (noms et textes Oracle) dans un premier temps, cartes en français plus tard |
+| Langues | Interface FR/EN avec sélecteur de langue ; cartes en anglais (noms et textes Oracle) dans un premier temps, cartes en français dans un chantier parallèle (voir la feuille de route) |
 | Conteneurs | Tout tourne dans Docker : développement, tests, synchronisation des cartes et production |
 
 ## 2. Fonctionnalités
@@ -42,7 +42,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 
 ### Plus tard
 
-- Cartes en français : noms, types et textes imprimés, recherche par nom français.
+- Cartes en français : avancées dans le chantier parallèle « Cartes en français et scan » (voir la feuille de route).
 - Gestion de collection (cartes possédées, cartes manquantes et leur coût).
 - Historique des versions d'un deck.
 - Détection de combos (API de Commander Spellbook).
@@ -128,7 +128,7 @@ Les cartes viennent de **Scryfall**, la référence des données Magic. Plutôt 
 | Fichier *Oracle Cards* (≈ 25 Mo compressés) | Une entrée par carte : texte Oracle anglais, légalités, identité couleur, rang EDHREC, statut Game Changer, image et prix de l'édition par défaut |
 | Fichier *Default Cards* (phase 5) | Toutes les éditions : images, prix, numéro de collection |
 
-Scryfall publie ces fichiers au format JSONL compressé, lus en flux par le service `sync`. Les jetons, emblèmes, plans, cartes « Art Series » et cartes uniquement numériques non légales en Commander ne sont pas importés. Les noms et textes français viendront plus tard (voir « Plus tard »).
+Scryfall publie ces fichiers au format JSONL compressé, lus en flux par le service `sync`. Les jetons, emblèmes, plans, cartes « Art Series » et cartes uniquement numériques non légales en Commander ne sont pas importés. Les noms et textes français viennent du fichier *All Cards* (voir le chantier parallèle « Cartes en français et scan »).
 
 Les images sont affichées directement depuis le CDN de Scryfall, sans recadrage, pour que le nom de l'artiste et le copyright restent visibles.
 
@@ -280,6 +280,55 @@ Estimation du bracket, objectifs par catégorie, test de main, choix de l'éditi
 ### Phase 6 et suivantes
 
 Selon les priorités, dans la liste « Plus tard ».
+
+### Chantier parallèle : cartes en français et scan depuis le téléphone
+
+Deux fonctionnalités qui avancent à côté des phases, sans décaler la feuille de route : chaque étape démarre dès que sa dépendance est terminée. Les cartes en français passent en premier, car le scan en a besoin pour reconnaître les cartes françaises.
+
+#### Cartes en français
+
+Objectif : chercher une carte par son nom français (« éclair » trouve « Lightning Bolt ») et lire ses noms, types et textes en français dans l'interface en français.
+
+- **Source** : le fichier Scryfall *All Cards* contient toutes les éditions dans toutes les langues, avec pour chacune `lang`, `printed_name`, `printed_type_line` et `printed_text`. Il pèse plusieurs gigaoctets : le service `sync` le lit en flux, ne garde que les éditions `lang = "fr"` et retient pour chaque carte (`oracle_id`) la traduction de l'édition française la plus récente.
+- **Données** : une table `card_translation` (`oracle_id`, langue, nom, nom normalisé pour la recherche, type, texte), une ligne par carte et par langue, ce qui laisse la porte ouverte à d'autres langues.
+- **Recherche** : la recherche floue (`pg_trgm`) porte sur le nom anglais et sur le nom français ; les deux trouvent la même carte.
+- **Affichage** : en français, la fiche et les résultats montrent le nom et le texte français, avec le nom anglais en dessous ; une carte jamais imprimée en français (certaines éditions spéciales ou numériques) reste en anglais. Les règles Commander, les decks (`oracle_id`) et l'export restent en anglais, comme prévu.
+- **Plus tard** : option pour afficher les images des éditions françaises.
+
+| Étape | Contenu | Dépend de |
+|---|---|---|
+| F1 : import et recherche | Lecture du fichier *All Cards*, table `card_translation`, recherche par nom français, jeu de test avec des cartes françaises | Phase 1 (terminée) : peut démarrer tout de suite |
+| F2 : affichage | Noms, types et textes français dans la recherche, la fiche carte puis l'éditeur de deck | F1 ; éditeur de deck : phase 3 |
+
+**Terminé quand** : « eclair » (sans accent) trouve « Lightning Bolt », et sa fiche en français affiche « Éclair » avec son texte français.
+
+#### Scan depuis le téléphone
+
+Objectif : scanner ses cartes physiques avec l'appareil photo du téléphone, comme l'application Manabox, mais directement dans l'application web, sans rien installer.
+
+**Approche technique**
+
+- **Caméra** : `navigator.mediaDevices.getUserMedia` avec la caméra arrière (`facingMode: "environment"`), affichée dans une page `/fr/scan` avec un cadre de visée à la taille d'une carte. Le navigateur exige HTTPS (fourni par Cloudflare en production, `localhost` en développement). L'en-tête `Permissions-Policy` de `next.config.ts` bloque aujourd'hui la caméra (`camera=()`) : il faudra l'autoriser pour le site lui-même (`camera=(self)`).
+- **Reconnaissance du nom** : on ne garde que la bande du nom en haut de la carte, puis on la lit par reconnaissance de texte (OCR) dans le navigateur avec Tesseract.js (WebAssembly). L'image ne quitte pas le téléphone et le serveur n'a aucun calcul lourd à faire. Les fichiers de Tesseract (≈ 5 Mo, modèles anglais et français, utile pour les accents) sont servis par l'application elle-même, chargés seulement sur la page de scan, et mis en cache.
+- **Correspondance avec la base** : le texte lu, souvent imparfait, est envoyé à la recherche floue de la phase 1 (`pg_trgm` sur `search_name`), qui tolère déjà les fautes. Une carte est reconnue quand la meilleure correspondance est assez sûre ; sinon, l'utilisateur choisit parmi les trois premières propositions.
+- **Édition exacte** (plus tard) : sur les cartes imprimées depuis 2014, le bas de la carte porte le code de l'édition et le numéro de collection ; les lire donne l'édition exacte, donc la bonne illustration et le bon prix (table `printing`).
+- **Reconnaissance de l'illustration** (piste, si l'OCR ne suffit pas) : comparer une empreinte de l'image (hachage perceptuel) avec celles de toutes les éditions, précalculées par le service `sync`. C'est plus robuste (cartes abîmées, autres langues) mais demande de télécharger et traiter environ 100 000 images Scryfall : à étudier seulement si le besoin se confirme.
+
+**Étapes et dépendances**
+
+| Étape | Contenu | Dépend de |
+|---|---|---|
+| S1 : prototype | Page de scan, caméra, OCR du nom, fiche de la carte reconnue ; test sur plusieurs téléphones (Android et iPhone) | Phase 1 (terminée) : peut démarrer tout de suite |
+| S2 : liste de scan | Scan en continu, liste des cartes scannées avec quantités, correction manuelle, export texte | S1 |
+| S3 : ajout à un deck | Envoyer la liste scannée dans un deck ou dans les cartes à considérer | Phase 3 (éditeur de deck), comptes de la phase 2 |
+| S4 : édition exacte | Lecture du code d'édition et du numéro de collection | Phase 5 (table `printing`) |
+| S5 : collection | Ajouter les cartes scannées à sa collection | Gestion de collection (« Plus tard ») |
+
+Avant l'étape F1, le scan ne reconnaît que les cartes en anglais ; ensuite, le texte lu est comparé aux noms anglais et français, et les cartes françaises sont reconnues aussi.
+
+**Tests** : la logique de nettoyage du texte lu et de choix de la correspondance va dans `src/domain/scan/` avec des tests unitaires sur des lectures OCR réelles enregistrées ; les tests de bout en bout utilisent la caméra simulée de Chromium (`--use-file-for-fake-video-capture`) avec la photo d'une carte.
+
+**Terminé quand** (S1 et S2) : sur un téléphone, on scanne une dizaine de cartes anglaises à la suite, et au moins neuf sur dix sont reconnues sans correction.
 
 ## 6. Tests et qualité
 
