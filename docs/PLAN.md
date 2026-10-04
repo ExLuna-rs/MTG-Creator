@@ -1,6 +1,6 @@
 # MTG Creator — Plan du projet
 
-Application web de création de decks *Magic: The Gathering* centrée sur le format **Commander**, bilingue **français / anglais**, avec **comptes utilisateurs** et decks sauvegardés en ligne.
+Application web de création de decks *Magic: The Gathering* centrée sur le format **Commander**, bilingue **français / anglais**, avec **comptes utilisateurs** et decks sauvegardés en ligne. **Tout tourne dans Docker**, du développement à la production.
 
 > Document de référence du projet, mis à jour à la fin de chaque phase.
 
@@ -12,6 +12,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 | Format de jeu | Commander (EDH) en priorité ; le modèle de données reste ouvert aux autres formats |
 | Stack | React + TypeScript avec Next.js (front et back dans un seul projet) |
 | Langues | Interface FR/EN avec sélecteur de langue ; cartes affichées en français ou en anglais ; recherche dans les deux langues |
+| Conteneurs | Tout tourne dans Docker : développement, tests, synchronisation des cartes et production |
 
 ## 2. Fonctionnalités
 
@@ -50,22 +51,18 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 ## 3. Architecture
 
 ```
-┌──────────────────────────── Navigateur ────────────────────────────┐
-│  React (pages /fr/… et /en/…)                                      │
-│  Images des cartes chargées depuis le CDN Scryfall                 │
-└─────────────────┬──────────────────────────────────────────────────┘
-                  │ Server Components, Server Actions, routes API
-┌─────────────────▼───────────────── Next.js ────────────────────────┐
-│  Better Auth (sessions, OAuth)                                     │
-│  Domaine : règles Commander, statistiques, import / export         │
-│  Drizzle ORM                                                       │
-└─────────────────┬──────────────────────────────────────────────────┘
-                  │
-┌─────────────────▼──────────────── PostgreSQL ──────────────────────┐
-│  Utilisateurs, decks, copie locale des cartes Scryfall             │
-└─────────────────▲──────────────────────────────────────────────────┘
-                  │ chaque nuit
-     GitHub Actions : synchronisation des données Scryfall
+Navigateur (React, pages /fr/… et /en/…)
+  │                          └──► images des cartes : CDN Scryfall
+  │ HTTPS
+  ▼
+Docker Compose
+  ├─ caddy     reverse proxy, certificats HTTPS automatiques (prod)
+  ├─ app       Next.js : pages, API, comptes, règles Commander, statistiques
+  ├─ db        PostgreSQL : utilisateurs, decks, copie locale des cartes
+  ├─ migrate   applique les migrations de la base avant le démarrage de app
+  ├─ sync      synchronisation des cartes Scryfall (chaque nuit en prod)
+  ├─ backup    sauvegarde quotidienne de la base (prod)
+  └─ mailpit   boîte mail de test (dev)
 ```
 
 ### Stack technique
@@ -76,7 +73,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 | Interface | Tailwind CSS 4, shadcn/ui, icônes lucide | Composants accessibles et personnalisables |
 | Symboles | mana-font ; icônes d'éditions SVG de Scryfall | Symboles de mana sans appel réseau |
 | Traductions | next-intl | URLs `/fr/…` et `/en/…`, textes traduits, formats de nombres et de dates |
-| Base de données | PostgreSQL 16 avec `pg_trgm` | Recherche floue sur les noms FR et EN |
+| Base de données | PostgreSQL avec `pg_trgm` | Recherche floue sur les noms FR et EN |
 | Accès aux données | Drizzle ORM et drizzle-kit | Requêtes typées, migrations |
 | Authentification | Better Auth | Email + mot de passe, Discord, Google |
 | État côté client | TanStack Query, Zustand | Cache des recherches, état de l'éditeur |
@@ -84,12 +81,37 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 | Graphiques | Recharts | Courbe de mana, répartitions |
 | Validation | Zod | Contrôle des entrées et de l'import |
 | Tests | Vitest, Testing Library, Playwright | Tests unitaires, de composants et de bout en bout |
-| Intégration continue | GitHub Actions | Lint, types, tests et build à chaque pull request |
-| Hébergement | Vercel + Neon (PostgreSQL managé) | Gratuit pour démarrer ; alternative : VPS avec Docker Compose |
+| Conteneurs | Docker, Docker Compose | Mêmes services en développement, en test et en production |
+| Emails | Mailpit en développement ; fournisseur SMTP en production (Brevo, Resend…) | Vérification des adresses, mot de passe oublié |
+| Intégration continue | GitHub Actions | Tests dans Docker, image publiée sur GitHub Container Registry |
+| Hébergement | VPS (OVHcloud, Scaleway, Hetzner…) avec Docker Compose et Caddy | Quelques euros par mois, données dans l'UE, aucune dépendance à une plateforme |
+
+### Environnement Docker
+
+| Service | Développement | Production |
+|---|---|---|
+| `app` | Rechargement à chaud du code | Image optimisée (`output: "standalone"`), utilisateur non root, contrôle de santé |
+| `db` | PostgreSQL avec volume local | PostgreSQL avec volume persistant, non exposé sur Internet |
+| `migrate` | Lancé avant `app` | Lancé à chaque déploiement, avant `app` |
+| `sync` | À la demande (`make sync`) | Chaque nuit |
+| `mailpit` | Interface web pour lire les emails envoyés par l'application | — |
+| `caddy` | — | HTTPS automatique (Let's Encrypt) |
+| `backup` | — | Sauvegarde quotidienne de la base avec rotation, copiée hors du serveur |
+
+Fichiers :
+
+- `Dockerfile` multi-étapes : installation des dépendances, build, puis image d'exécution légère.
+- `compose.yaml` pour le développement, `compose.prod.yaml` pour la production.
+- `.env.example` documente toutes les variables ; les vrais fichiers `.env` ne sont jamais commités.
+- `Makefile` avec des raccourcis : `make dev`, `make test`, `make e2e`, `make sync`, `make db-migrate`.
+
+Il suffit d'avoir Docker sur sa machine : pas besoin d'installer Node.js ni PostgreSQL. Les tests tournent aussi dans des conteneurs : tests unitaires et d'intégration dans `app` avec la base `db`, tests de bout en bout dans l'image officielle de Playwright.
+
+En production, la CI construit l'image et la publie sur GitHub Container Registry. Le serveur se contente de la télécharger et de redémarrer les services (`docker compose pull` puis `docker compose up -d`), ce qui permet de garder un petit serveur : le build de Next.js consomme beaucoup de mémoire.
 
 ### Données des cartes
 
-Les cartes viennent de **Scryfall**, la référence des données Magic. Plutôt que d'appeler son API à chaque recherche, l'application garde une **copie locale** dans PostgreSQL, mise à jour chaque nuit. Cela permet :
+Les cartes viennent de **Scryfall**, la référence des données Magic. Plutôt que d'appeler son API à chaque recherche, l'application garde une **copie locale** dans PostgreSQL, mise à jour chaque nuit par le service `sync`. Cela permet :
 
 - la recherche en français, insensible aux accents (« precepteur » trouve « Précepteur démoniaque ») ;
 - la validation des decks côté serveur, sans appel externe ;
@@ -146,7 +168,12 @@ messages/                  fr.json, en.json
 scripts/                   synchronisation Scryfall
 drizzle/                   migrations SQL
 tests/e2e/                 tests Playwright
+docker/                    configuration Caddy, scripts de sauvegarde
 docs/                      ce plan et la documentation
+Dockerfile                 image de l'application
+compose.yaml               services de développement
+compose.prod.yaml          services de production
+Makefile                   raccourcis (make dev, make test…)
 ```
 
 ## 4. Écrans
@@ -172,17 +199,18 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 ### Phase 0 : fondations
 
 - Projet Next.js + TypeScript + Tailwind + shadcn/ui, gestionnaire de paquets pnpm.
-- Lint, formatage, Vitest, Playwright.
-- PostgreSQL en local via Docker Compose, Drizzle et première migration.
+- Docker : `Dockerfile` multi-étapes, `compose.yaml` (app avec rechargement à chaud, PostgreSQL, Mailpit), `Makefile`.
+- Lint, formatage, Vitest et Playwright, exécutés dans les conteneurs.
+- Drizzle, première migration et service `migrate`.
 - next-intl avec les routes `/fr` et `/en`, sélecteur de langue.
 - Mise en page de base : en-tête, pied de page avec les mentions légales.
-- CI GitHub Actions ; `CLAUDE.md` (conventions du projet) et script de démarrage pour les prochaines sessions Claude Code.
+- CI GitHub Actions (tests dans Docker, construction de l'image) ; `CLAUDE.md` (conventions du projet) et script de démarrage pour les prochaines sessions Claude Code.
 
-**Terminé quand** : l'application démarre en local en FR et en EN, et la CI passe.
+**Terminé quand** : sur une machine qui n'a que Docker, `make dev` lance l'application en FR et en EN, et la CI passe.
 
 ### Phase 1 : base de cartes
 
-- Script de synchronisation Scryfall (cartes, éditions, textes français).
+- Service `sync` : synchronisation Scryfall (cartes, éditions, textes français).
 - Recherche : autocomplétion par nom FR ou EN tolérante aux fautes, filtres, tri (popularité, nom, valeur de mana, prix).
 - Page de recherche et fiche carte, symboles de mana, cartes recto verso.
 - Jeu de données réduit (quelques centaines de cartes) versionné pour les tests.
@@ -192,11 +220,12 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 ### Phase 2 : comptes
 
 - Better Auth : inscription, connexion et déconnexion par email + mot de passe.
+- Vérification de l'adresse email et mot de passe oublié (emails visibles dans Mailpit en développement).
 - Connexion Discord et Google, dès que les applications OAuth sont créées.
 - Page Compte : pseudo, langue préférée, suppression du compte.
 - Protection des pages et des actions réservées aux utilisateurs connectés.
 
-**Terminé quand** : un utilisateur peut créer un compte, se reconnecter et supprimer son compte.
+**Terminé quand** : un utilisateur peut créer un compte, confirmer son email, réinitialiser son mot de passe, se reconnecter et supprimer son compte.
 
 ### Phase 3 : éditeur de deck Commander
 
@@ -213,9 +242,9 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 - Import texte : reconnaissance des noms anglais ou français, signalement des lignes non reconnues avec des suggestions.
 - Export texte et format MTG Arena, copie dans le presse-papiers.
 - Visibilité (privé / non listé / public), page publique avec aperçu pour les réseaux sociaux, « Copier ce deck », page Explorer.
-- Déploiement en production (Vercel + Neon) et synchronisation nocturne des cartes.
+- Mise en production sur un VPS : `compose.prod.yaml` (Caddy et HTTPS, sauvegardes, synchronisation nocturne), image publiée par la CI, déploiement automatique depuis `main`.
 
-**Terminé quand** : l'application est en ligne, et un deck exporté depuis Moxfield s'importe sans erreur.
+**Terminé quand** : l'application est en ligne en HTTPS, les sauvegardes tournent, et un deck exporté depuis Moxfield s'importe sans erreur.
 
 ### Phase 5 : outils Commander avancés (version 2)
 
@@ -228,28 +257,29 @@ Selon les priorités, dans la liste « Plus tard ».
 ## 6. Tests et qualité
 
 - **Tests unitaires** (Vitest) sur tout le dossier `domain/` : règles Commander, statistiques, import / export. C'est là que les bugs coûtent le plus cher.
-- **Tests d'intégration** sur les requêtes de recherche et la sauvegarde des decks, avec une vraie base PostgreSQL.
-- **Tests de bout en bout** (Playwright) sur les parcours principaux : inscription → création d'un deck → ajout de cartes → validation → export.
-- La CI exécute tous les tests à chaque pull request.
+- **Tests d'intégration** sur les requêtes de recherche et la sauvegarde des decks, avec une vraie base PostgreSQL dans Docker.
+- **Tests de bout en bout** (Playwright, dans son image Docker officielle) sur les parcours principaux : inscription → création d'un deck → ajout de cartes → validation → export.
+- La CI exécute tous les tests dans Docker à chaque pull request.
 
 ## 7. Aspects légaux et RGPD
 
 - **Fan Content Policy de Wizards of the Coast** : l'application reste gratuite et affiche la mention « contenu de fan non officiel, non approuvé par Wizards of the Coast ».
 - **Scryfall** : pas d'accès payant à ses données, attribution visible, aucune suggestion de partenariat ; les images ne sont jamais recadrées de façon à masquer l'artiste ou le copyright.
-- **RGPD** : données personnelles minimales (email, pseudo), politique de confidentialité, suppression du compte et export des decks. Seuls des cookies de session sont utilisés, donc pas de bandeau cookies tant qu'aucun outil de mesure d'audience n'est ajouté.
+- **RGPD** : hébergement dans l'Union européenne, données personnelles minimales (email, pseudo), politique de confidentialité, suppression du compte et export des decks. Seuls des cookies de session sont utilisés, donc pas de bandeau cookies tant qu'aucun outil de mesure d'audience n'est ajouté.
 
 ## 8. Risques et points ouverts
 
 | Risque | Réponse prévue |
 |---|---|
-| Fichier *All Cards* très volumineux (plusieurs Go) | Lecture en flux dans GitHub Actions, ou recherche `lang:fr` paginée ; choix au début de la phase 1 |
-| Offre gratuite de Neon limitée à 0,5 Go | Ne garder que les champs utiles (estimation : 150 à 200 Mo pour les cartes) |
+| Fichier *All Cards* très volumineux (plusieurs Go) | Lecture en flux dans le conteneur `sync`, ou recherche `lang:fr` paginée ; choix au début de la phase 1 |
+| Serveur à maintenir soi-même | Sauvegardes quotidiennes copiées hors du serveur, HTTPS automatique avec Caddy, mises à jour régulières des images Docker |
 | Évolution des règles Commander (brackets, Game Changers, bannissements) | Données synchronisées chaque nuit, règles des brackets en configuration |
 | Cartes sans traduction française | Affichage en anglais avec un indicateur |
 | Le texte français de Scryfall est le texte imprimé, parfois antérieur aux errata Oracle | Texte Oracle anglais toujours accessible depuis la fiche carte |
 
 ## 9. Prérequis
 
-1. **Avant la phase 1** : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
-2. **Phase 2** : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
-3. **Phase 4** : comptes Vercel et Neon pour la mise en ligne, et un service d'envoi d'emails (Resend par exemple) pour la vérification des adresses et la réinitialisation des mots de passe.
+1. **Sur la machine de développement** : Docker Desktop (Windows, macOS) ou Docker Engine (Linux). Rien d'autre.
+2. **Avant la phase 1** : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
+3. **Phase 2** : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
+4. **Phase 4** : un VPS (quelques euros par mois), un nom de domaine et un fournisseur d'emails SMTP (Brevo, Resend…).
