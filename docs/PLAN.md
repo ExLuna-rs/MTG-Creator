@@ -243,7 +243,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 **Terminé quand** : un utilisateur peut créer un compte, confirmer son email, réinitialiser son mot de passe, se reconnecter et supprimer son compte.
 
-**État** : terminée pour l'email + mot de passe (pull request n° PRNUM). La connexion Discord et Google attend la création des applications OAuth (voir Prérequis) et viendra dans une pull request à part.
+**État** : terminée pour l'email + mot de passe (pull request n° 6). La connexion Discord et Google attend la création des applications OAuth (voir Prérequis) et viendra dans une pull request à part.
 
 - Better Auth 1.7 (`src/server/auth/`) avec l'adaptateur Drizzle : tables `user`, `session`, `account` et `verification` (migration `0002_auth`). L'utilisateur a en plus une langue préférée (`locale`), qui choisit la langue des emails.
 - Pages `/fr/sign-up`, `/fr/sign-in`, `/fr/forgot-password`, `/fr/reset-password`, `/fr/verify-email` et `/fr/settings` (page Compte). Les formulaires appellent les routes `/api/auth/…` de Better Auth depuis le navigateur ; ils sont validés avec Zod dans le navigateur (`src/domain/auth/forms.ts`), puis de nouveau par Better Auth et ses hooks côté serveur.
