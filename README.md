@@ -20,6 +20,14 @@ docker compose up --build
 
 Le premier lancement télécharge les images et installe les dépendances : comptez quelques minutes. Ensuite, chaque modification du code est rechargée automatiquement dans le navigateur.
 
+La base de cartes est vide au départ. Importez les cartes depuis Scryfall (environ 25 Mo, une trentaine de secondes), depuis un autre terminal :
+
+```bash
+docker compose run --rm --build app pnpm cards:sync
+```
+
+ou, sans accès à Internet, le jeu de test de 172 cartes : `docker compose run --rm --build app pnpm cards:seed`. Les mêmes commandes s'écrivent `make sync` et `make seed`.
+
 Sous Linux, macOS ou WSL, `make dev` fait la même chose, et `make help` liste toutes les commandes (voir plus bas).
 
 Si le port 5432 est déjà pris (un PostgreSQL installé sur la machine, par exemple), copiez `.env.example` en `.env` et changez `DB_PORT`.
@@ -39,7 +47,10 @@ Si le port 5432 est déjà pris (un PostgreSQL installé sur la machine, par exe
 | `make dev` | Lance l'application en développement |
 | `make up` / `make down` | Démarre l'environnement en arrière-plan / l'arrête |
 | `make logs` | Affiche les journaux des services |
+| `make sync` | Importe toutes les cartes depuis Scryfall |
+| `make seed` | Importe le jeu de test (172 cartes, sans réseau) |
 | `make check` | Lint, vérification des types et tests unitaires |
+| `make test-db` | Tests sur une vraie base PostgreSQL (recherche de cartes) |
 | `make e2e` | Tests de bout en bout dans un navigateur (Playwright) |
 | `make e2e-ci` | Tests de bout en bout sur les images de production |
 | `make db-migrate` | Applique les migrations de la base de données |
@@ -59,6 +70,7 @@ Sans `make` (par exemple sous Windows), les commandes les plus utiles s'écriven
 |---|---|
 | `make dev` | `docker compose up --build` |
 | `make down` | `docker compose down` |
+| `make sync` | `docker compose run --rm --build app pnpm cards:sync` |
 | `make check` | `docker compose run --rm --no-deps --build app pnpm check` |
 | `make e2e` | `docker compose --profile e2e run --rm e2e` |
 | `make db-migrate` | `docker compose run --rm migrate` |
@@ -75,12 +87,15 @@ Next.js 16, React 19, TypeScript, Tailwind CSS 4, next-intl, PostgreSQL 18 avec 
 src/app/[locale]/   pages (une version par langue : /fr, /en)
 src/app/api/        routes API
 src/components/     composants d'interface
+src/domain/         logique métier pure (cartes, recherche…), testée
 src/i18n/           configuration des langues
 src/server/         code serveur : base de données, configuration
 messages/           traductions (fr.json, en.json)
 drizzle/            migrations SQL
-scripts/            scripts d'exploitation (migrations…)
+scripts/            scripts d'exploitation (migrations, import des cartes…)
+tests/db/           préparation des tests sur base réelle
 tests/e2e/          tests de bout en bout
+tests/fixtures/     jeu de cartes de test
 docker/             scripts Docker
 ```
 

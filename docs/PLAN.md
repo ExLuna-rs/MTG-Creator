@@ -132,6 +132,8 @@ Scryfall publie ces fichiers au format JSONL compressé, lus en flux par le serv
 
 Les images sont affichées directement depuis le CDN de Scryfall, sans recadrage, pour que le nom de l'artiste et le copyright restent visibles.
 
+La recherche par nom compare la saisie à une version normalisée du nom (minuscules, sans accents ni ponctuation, colonne `search_name`) grâce à l'extension `pg_trgm` : une carte est retenue si son nom contient la saisie ou lui ressemble assez. Les résultats sont classés ainsi : nom exact, nom dont un mot commence par la saisie, nom qui la contient, simple ressemblance ; à égalité, la carte la plus jouée (rang EDHREC) passe devant. Les symboles de mana utilisent la police libre Mana (paquet `mana-font`).
+
 ### Modèle de données (simplifié)
 
 | Table | Contenu |
@@ -214,6 +216,8 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 **Terminé quand** : sur une machine qui n'a que Docker, `make dev` lance l'application en FR et en EN, et la CI passe.
 
+**État** : terminée (pull request n° 1).
+
 ### Phase 1 : base de cartes
 
 - Service `sync` : import des cartes Scryfall (fichier *Oracle Cards*).
@@ -222,6 +226,12 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 - Jeu de données réduit (quelques centaines de cartes) versionné pour les tests.
 
 **Terminé quand** : une carte se retrouve par son nom, même tapé sans accents ou avec une faute de frappe (« jotun » trouve « Jötun Grunt »), et les filtres de couleur et de type fonctionnent.
+
+**État** : terminée (pull request n° 2).
+
+- Import : `make sync` télécharge le fichier *Oracle Cards* (≈ 33 900 cartes gardées, environ 30 secondes) ; `make seed` importe le jeu de test (172 cartes, sans réseau), utilisé par les tests sur base réelle et les tests de bout en bout. La synchronisation nocturne arrive avec la mise en production (phase 4).
+- Recherche (`/fr/cards`) : nom avec suggestions au clavier et à la souris, identité couleur, types, valeur de mana, rareté, texte, légalité en Commander, commandants possibles, Game Changers ; tri par pertinence, popularité, nom, valeur de mana ou prix ; 60 cartes par page. Le formulaire fonctionne aussi sans JavaScript.
+- Fiche carte (`/fr/cards/[id]`) : images recto verso, texte Oracle avec symboles de mana, légalités dans douze formats, prix Cardmarket et TCGplayer, rang EDHREC, lien vers Scryfall.
 
 ### Phase 2 : comptes
 
@@ -318,6 +328,6 @@ Le code reste prudent même si le framework a une faille :
 ## 10. Prérequis
 
 1. **Sur la machine de développement** : Docker Desktop (Windows, macOS) ou Docker Engine (Linux). Rien d'autre.
-2. **Avant la phase 1** : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
+2. **Avant la phase 1** (fait) : autoriser les domaines Scryfall dans les réglages réseau de l'environnement cloud (`api.scryfall.com`, `data.scryfall.io`, `cards.scryfall.io`), sans quoi les cartes ne peuvent pas être téléchargées depuis l'environnement de développement.
 3. **Phase 2** : créer les applications OAuth Discord et Google, si ces modes de connexion sont retenus.
 4. **Phase 4** : un VPS (quelques euros par mois), un compte Cloudflare (offre gratuite) gérant le nom de domaine, et un fournisseur d'emails SMTP (Brevo, Resend…).
