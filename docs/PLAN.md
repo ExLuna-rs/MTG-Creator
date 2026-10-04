@@ -1,6 +1,6 @@
 # MTG Creator — Plan du projet
 
-Application web de création de decks *Magic: The Gathering* centrée sur le format **Commander**, bilingue **français / anglais**, avec **comptes utilisateurs** et decks sauvegardés en ligne. **Tout tourne dans Docker**, du développement à la production.
+Application web de création de decks *Magic: The Gathering* centrée sur le format **Commander**, avec une interface **bilingue français / anglais**, des **comptes utilisateurs** et decks sauvegardés en ligne. **Tout tourne dans Docker**, du développement à la production.
 
 > Document de référence du projet, mis à jour à la fin de chaque phase.
 
@@ -11,7 +11,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 | Sauvegarde | Comptes utilisateurs, decks stockés côté serveur dès la première version |
 | Format de jeu | Commander (EDH) en priorité ; le modèle de données reste ouvert aux autres formats |
 | Stack | React + TypeScript avec Next.js (front et back dans un seul projet) |
-| Langues | Interface FR/EN avec sélecteur de langue ; cartes affichées en français ou en anglais ; recherche dans les deux langues |
+| Langues | Interface FR/EN avec sélecteur de langue ; cartes en anglais (noms et textes Oracle) dans un premier temps, cartes en français plus tard |
 | Conteneurs | Tout tourne dans Docker : développement, tests, synchronisation des cartes et production |
 
 ## 2. Fonctionnalités
@@ -19,7 +19,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 ### Version 1 (MVP)
 
 1. **Comptes** : inscription et connexion (email + mot de passe, puis Discord et Google), profil, suppression du compte.
-2. **Base de cartes** : recherche par nom français ou anglais, tolérante aux accents et aux fautes de frappe ; filtres (couleurs, types, valeur de mana, texte, rareté, Game Changer…) ; fiche détaillée de chaque carte.
+2. **Base de cartes** : recherche par nom (anglais), tolérante aux accents et aux fautes de frappe ; filtres (couleurs, types, valeur de mana, texte, rareté, Game Changer…) ; fiche détaillée de chaque carte.
 3. **Création d'un deck Commander** : choix du commandant, puis du partenaire ou du Background si la carte le permet.
 4. **Éditeur de deck** :
    - recherche automatiquement limitée à l'identité couleur du commandant ;
@@ -42,6 +42,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 
 ### Plus tard
 
+- Cartes en français : noms, types et textes imprimés, recherche par nom français.
 - Gestion de collection (cartes possédées, cartes manquantes et leur coût).
 - Historique des versions d'un deck.
 - Détection de combos (API de Commander Spellbook).
@@ -76,7 +77,7 @@ Docker Compose, sur un VPS
 | Interface | Tailwind CSS 4, shadcn/ui, icônes lucide | Composants accessibles et personnalisables |
 | Symboles | mana-font ; icônes d'éditions SVG de Scryfall | Symboles de mana sans appel réseau |
 | Traductions | next-intl | URLs `/fr/…` et `/en/…`, textes traduits, formats de nombres et de dates |
-| Base de données | PostgreSQL avec `pg_trgm` | Recherche floue sur les noms FR et EN |
+| Base de données | PostgreSQL avec `pg_trgm` | Recherche floue sur les noms des cartes |
 | Accès aux données | Drizzle ORM et drizzle-kit | Requêtes typées, migrations |
 | Authentification | Better Auth | Email + mot de passe, Discord, Google |
 | État côté client | TanStack Query, Zustand | Cache des recherches, état de l'éditeur |
@@ -118,27 +119,26 @@ En production, la CI construit l'image et la publie sur GitHub Container Registr
 
 Les cartes viennent de **Scryfall**, la référence des données Magic. Plutôt que d'appeler son API à chaque recherche, l'application garde une **copie locale** dans PostgreSQL, mise à jour chaque nuit par le service `sync`. Cela permet :
 
-- la recherche en français, insensible aux accents (« precepteur » trouve « Précepteur démoniaque ») ;
+- une recherche rapide et tolérante (« jotun » trouve « Jötun Grunt », « sol rign » trouve « Sol Ring ») ;
 - la validation des decks côté serveur, sans appel externe ;
 - de ne pas dépendre des limites de l'API Scryfall (10 requêtes par seconde au maximum, en-têtes `User-Agent` et `Accept` obligatoires).
 
 | Source Scryfall | Contenu utilisé |
 |---|---|
-| Fichier *Oracle Cards* | Une entrée par carte : texte Oracle anglais, légalités, identité couleur, rang EDHREC, statut Game Changer |
-| Fichier *Default Cards* | Toutes les éditions : images, prix, numéro de collection |
-| Impressions françaises | Nom, type et texte imprimés en français (`printed_name`, `printed_type_line`, `printed_text`) |
+| Fichier *Oracle Cards* (≈ 25 Mo compressés) | Une entrée par carte : texte Oracle anglais, légalités, identité couleur, rang EDHREC, statut Game Changer, image et prix de l'édition par défaut |
+| Fichier *Default Cards* (phase 5) | Toutes les éditions : images, prix, numéro de collection |
 
-Pour les données françaises, deux options seront comparées au début de la phase 1 : lire en flux le fichier *All Cards* (plusieurs Go) en ne gardant que le français, ou interroger la recherche Scryfall `lang:fr` page par page.
+Scryfall publie ces fichiers au format JSONL compressé, lus en flux par le service `sync`. Les jetons, emblèmes, plans, cartes « Art Series » et cartes uniquement numériques non légales en Commander ne sont pas importés. Les noms et textes français viendront plus tard (voir « Plus tard »).
 
-Les images sont affichées directement depuis le CDN de Scryfall, sans recadrage, pour que le nom de l'artiste et le copyright restent visibles. Quand une carte n'a pas de traduction française, elle s'affiche en anglais avec un indicateur.
+Les images sont affichées directement depuis le CDN de Scryfall, sans recadrage, pour que le nom de l'artiste et le copyright restent visibles.
 
 ### Modèle de données (simplifié)
 
 | Table | Contenu |
 |---|---|
 | `user`, `session`, `account`, `verification` | Tables gérées par Better Auth |
-| `card` | Une ligne par carte : `oracle_id`, noms EN et FR (plus leurs versions sans accents pour la recherche), coût, valeur de mana, types, textes, couleurs, identité couleur (masque de bits WUBRG), mots-clés, légalités, faces, mana produit, rang EDHREC, Game Changer, éligibilité comme commandant, édition par défaut |
-| `printing` | Une ligne par édition : identifiant Scryfall, `oracle_id`, édition, numéro, rareté, images, prix, date de sortie |
+| `card` | Une ligne par carte : `oracle_id`, nom (et sa version normalisée, sans accents, pour la recherche), coût, valeur de mana, types, textes, couleurs, identité couleur (masque de bits WUBRG), mots-clés, légalités, faces, mana produit, rang EDHREC, Game Changer, éligibilité comme commandant, édition par défaut |
+| `printing` (phase 5) | Une ligne par édition : identifiant Scryfall, `oracle_id`, édition, numéro, rareté, images, prix, date de sortie |
 | `deck` | Propriétaire, nom, description, format, visibilité (privé / non listé / public), illustration de couverture, dates |
 | `deck_card` | Deck, carte (`oracle_id`), édition choisie (facultative), quantité, zone (commandant / deck / à considérer), catégories |
 
@@ -186,8 +186,8 @@ Makefile                   raccourcis (make dev, make test…)
 | Page | URL | Contenu |
 |---|---|---|
 | Accueil | `/fr` | Présentation, decks publics récents, bouton « Créer un deck » |
-| Recherche de cartes | `/fr/cards` | Barre de recherche FR/EN, filtres, grille d'images |
-| Fiche carte | `/fr/cards/[id]` | Image, textes FR et EN, légalités, éditions, prix |
+| Recherche de cartes | `/fr/cards` | Barre de recherche, filtres, grille d'images |
+| Fiche carte | `/fr/cards/[id]` | Image (recto verso), texte Oracle, légalités, prix |
 | Mes decks | `/fr/decks` | Liste avec commandant, couleurs, nombre de cartes, prix, statut de validation |
 | Nouveau deck | `/fr/decks/new` | Choix du commandant (et du partenaire) |
 | Éditeur | `/fr/decks/[id]/edit` | Sur ordinateur : recherche à gauche, deck au centre, statistiques et validation à droite. Sur mobile : onglets |
@@ -216,12 +216,12 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 ### Phase 1 : base de cartes
 
-- Service `sync` : synchronisation Scryfall (cartes, éditions, textes français).
-- Recherche : autocomplétion par nom FR ou EN tolérante aux fautes, filtres, tri (popularité, nom, valeur de mana, prix).
+- Service `sync` : import des cartes Scryfall (fichier *Oracle Cards*).
+- Recherche : autocomplétion par nom tolérante aux fautes, filtres, tri (popularité, nom, valeur de mana, prix).
 - Page de recherche et fiche carte, symboles de mana, cartes recto verso.
 - Jeu de données réduit (quelques centaines de cartes) versionné pour les tests.
 
-**Terminé quand** : une carte se retrouve par son nom anglais ou par son nom français tapé sans accents, et les filtres de couleur et de type fonctionnent.
+**Terminé quand** : une carte se retrouve par son nom, même tapé sans accents ou avec une faute de frappe (« jotun » trouve « Jötun Grunt »), et les filtres de couleur et de type fonctionnent.
 
 ### Phase 2 : comptes
 
@@ -245,7 +245,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 ### Phase 4 : import, export, partage, puis mise en ligne du MVP
 
-- Import texte : reconnaissance des noms anglais ou français, signalement des lignes non reconnues avec des suggestions.
+- Import texte : reconnaissance des noms des cartes, signalement des lignes non reconnues avec des suggestions.
 - Export texte et format MTG Arena, copie dans le presse-papiers.
 - Visibilité (privé / non listé / public), page publique avec aperçu pour les réseaux sociaux (illustration du commandant), « Copier ce deck », page Explorer.
 - Mise en production sur un VPS : `compose.prod.yaml` (tunnel Cloudflare, sauvegardes sur R2, synchronisation nocturne), domaine et règles de sécurité Cloudflare, image publiée par la CI, déploiement automatique depuis `main`.
@@ -254,7 +254,7 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 ### Phase 5 : outils Commander avancés (version 2)
 
-Estimation du bracket, objectifs par catégorie, test de main, choix de l'édition, suggestions de cartes.
+Estimation du bracket, objectifs par catégorie, test de main, choix de l'édition (table `printing`), suggestions de cartes.
 
 ### Phase 6 et suivantes
 
@@ -311,12 +311,9 @@ Le code reste prudent même si le framework a une faille :
 | Risque | Réponse prévue |
 |---|---|
 | Nouvelles failles dans Next.js ou dans d'autres dépendances | Pull requests Dependabot, audit bloquant dans la CI, redéploiement automatique après fusion |
-| Fichier *All Cards* très volumineux (plusieurs Go) | Lecture en flux dans le conteneur `sync`, ou recherche `lang:fr` paginée ; choix au début de la phase 1 |
 | Serveur à maintenir soi-même | Sauvegardes quotidiennes sur R2, aucun port exposé grâce au tunnel, mises à jour régulières des images Docker |
 | Dépendance à Cloudflare pour l'accès au site | L'application ne dépend pas de Cloudflare : le tunnel peut être remplacé par un reverse proxy classique (Caddy) en quelques lignes |
 | Évolution des règles Commander (brackets, Game Changers, bannissements) | Données synchronisées chaque nuit, règles des brackets en configuration |
-| Cartes sans traduction française | Affichage en anglais avec un indicateur |
-| Le texte français de Scryfall est le texte imprimé, parfois antérieur aux errata Oracle | Texte Oracle anglais toujours accessible depuis la fiche carte |
 
 ## 10. Prérequis
 

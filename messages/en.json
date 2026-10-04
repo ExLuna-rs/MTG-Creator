@@ -14,15 +14,15 @@
   "HomePage": {
     "badge": "Under construction",
     "title": "Build your Commander decks",
-    "subtitle": "Search cards in English or French, build your deck around your commander and check that it follows the rules as you go.",
+    "subtitle": "Search cards, build your deck around your commander and check that it follows the rules as you go.",
     "createDeck": "Create a deck",
     "searchCards": "Search cards",
     "comingSoon": "Coming soon",
     "featuresTitle": "What's coming",
     "features": {
       "search": {
-        "title": "Bilingual search",
-        "description": "Find any card by its English or French name, even without accents or with a typo."
+        "title": "Fast search",
+        "description": "Find any card by name, even with a typo, and filter by color, type or cost."
       },
       "rules": {
         "title": "Commander rules checked",

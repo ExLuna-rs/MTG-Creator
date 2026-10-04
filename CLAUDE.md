@@ -2,7 +2,7 @@
 
 # MTG Creator — consignes pour Claude Code
 
-Application web de création de decks *Magic: The Gathering* (format Commander), bilingue français / anglais. Le plan complet et la feuille de route sont dans `docs/PLAN.md` : le lire avant d'attaquer une phase, et le mettre à jour à la fin de chaque phase.
+Application web de création de decks *Magic: The Gathering* (format Commander). L'interface est bilingue français / anglais ; les cartes sont en anglais pour l'instant, le français viendra plus tard. Le plan complet et la feuille de route sont dans `docs/PLAN.md` : le lire avant d'attaquer une phase, et le mettre à jour à la fin de chaque phase.
 
 ## Langues
 
