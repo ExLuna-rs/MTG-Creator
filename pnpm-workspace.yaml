@@ -1,0 +1,15 @@
+# Les scripts d'installation des dépendances ne sont jamais exécutés
+# (protection contre les attaques par la chaîne d'approvisionnement).
+# Les binaires natifs de ces paquets arrivent par des dépendances
+# optionnelles précompilées : leurs scripts ne sont pas nécessaires.
+ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - "@swc/core"
+  - esbuild
+  - sharp
+  - unrs-resolver
+
+# drizzle-kit dépend encore d'une vieille version d'esbuild (<= 0.24.2)
+# touchée par GHSA-67mh-4wv8-2f99 : on force une version corrigée.
+overrides:
+  "@esbuild-kit/core-utils>esbuild": ^0.25.12

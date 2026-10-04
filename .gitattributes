@@ -1,0 +1,4 @@
+# Fins de ligne LF pour tous les fichiers texte, y compris sous Windows :
+# les fichiers montés dans les conteneurs Linux (scripts shell, sources
+# vérifiées par Biome) doivent rester en LF.
+* text=auto eol=lf

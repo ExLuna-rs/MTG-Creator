@@ -1,0 +1,50 @@
+{
+  "Metadata": {
+    "title": "MTG Creator",
+    "description": "Créez, validez et partagez vos decks Commander de Magic: The Gathering, en français et en anglais."
+  },
+  "Header": {
+    "home": "Accueil de MTG Creator"
+  },
+  "LocaleSwitcher": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
+  "HomePage": {
+    "badge": "En construction",
+    "title": "Construisez vos decks Commander",
+    "subtitle": "Recherchez des cartes, construisez votre deck autour de votre commandant et vérifiez au fur et à mesure qu'il respecte les règles.",
+    "createDeck": "Créer un deck",
+    "searchCards": "Rechercher des cartes",
+    "comingSoon": "Bientôt disponible",
+    "featuresTitle": "Ce qui arrive",
+    "features": {
+      "search": {
+        "title": "Recherche rapide",
+        "description": "Retrouvez n'importe quelle carte par son nom, même avec une faute de frappe, et filtrez par couleur, type ou coût."
+      },
+      "rules": {
+        "title": "Règles Commander vérifiées",
+        "description": "100 cartes, un seul exemplaire, identité couleur, cartes bannies et Game Changers : les erreurs s'affichent pendant que vous construisez."
+      },
+      "stats": {
+        "title": "Statistiques du deck",
+        "description": "Courbe de mana, couleurs, types de cartes, terrains et prix total en euros ou en dollars."
+      },
+      "share": {
+        "title": "Import, export et partage",
+        "description": "Importez une liste depuis Moxfield, Archidekt ou MTG Arena, exportez la vôtre et partagez-la par un simple lien."
+      }
+    }
+  },
+  "Footer": {
+    "fanContent": "MTG Creator est un contenu de fan non officiel, autorisé par la <policy>politique de Wizards of the Coast sur les contenus de fans</policy>. Il n'est ni approuvé ni soutenu par Wizards. Certains éléments utilisés sont la propriété de Wizards of the Coast. ©Wizards of the Coast LLC.",
+    "scryfall": "Données et images des cartes fournies par <link>Scryfall</link>."
+  },
+  "NotFoundPage": {
+    "title": "Page introuvable",
+    "description": "Cette page n'existe pas ou n'existe plus.",
+    "backHome": "Retour à l'accueil"
+  }
+}

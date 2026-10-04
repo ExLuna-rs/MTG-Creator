@@ -1,0 +1,31 @@
+# Dépendances et sorties de build : reconstruites dans l'image
+node_modules
+.pnpm-store
+.next
+dist
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests et rapports
+tests
+coverage
+test-results
+playwright-report
+blob-report
+.scan
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Fichiers inutiles dans l'image
+.git
+.github
+.claude
+docs
+*.md
+Dockerfile
+.dockerignore
+compose*.yaml
+Makefile

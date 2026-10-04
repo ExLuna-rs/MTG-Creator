@@ -1,0 +1,42 @@
+# Mises à jour automatiques des dépendances (pull requests hebdomadaires).
+# Les correctifs de sécurité arrivent sans attendre : le délai de
+# « cooldown » ne s'applique qu'aux mises à jour ordinaires, pour laisser
+# le temps aux versions compromises d'être repérées et retirées.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
+    groups:
+      mineures-et-correctifs:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 3
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 3
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 3

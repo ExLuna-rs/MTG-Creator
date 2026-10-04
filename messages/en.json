@@ -1,0 +1,50 @@
+{
+  "Metadata": {
+    "title": "MTG Creator",
+    "description": "Build, validate and share your Magic: The Gathering Commander decks, in English and French."
+  },
+  "Header": {
+    "home": "MTG Creator home"
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "HomePage": {
+    "badge": "Under construction",
+    "title": "Build your Commander decks",
+    "subtitle": "Search cards, build your deck around your commander and check that it follows the rules as you go.",
+    "createDeck": "Create a deck",
+    "searchCards": "Search cards",
+    "comingSoon": "Coming soon",
+    "featuresTitle": "What's coming",
+    "features": {
+      "search": {
+        "title": "Fast search",
+        "description": "Find any card by name, even with a typo, and filter by color, type or cost."
+      },
+      "rules": {
+        "title": "Commander rules checked",
+        "description": "100 cards, singleton, color identity, banned cards and Game Changers: errors show up while you build."
+      },
+      "stats": {
+        "title": "Deck statistics",
+        "description": "Mana curve, colors, card types, lands and total price in euros or dollars."
+      },
+      "share": {
+        "title": "Import, export and sharing",
+        "description": "Import a list from Moxfield, Archidekt or MTG Arena, export yours and share it with a simple link."
+      }
+    }
+  },
+  "Footer": {
+    "fanContent": "MTG Creator is unofficial Fan Content permitted under the <policy>Fan Content Policy</policy>. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.",
+    "scryfall": "Card data and images provided by <link>Scryfall</link>."
+  },
+  "NotFoundPage": {
+    "title": "Page not found",
+    "description": "This page doesn't exist or no longer exists.",
+    "backHome": "Back to home"
+  }
+}
