@@ -1,17 +1,19 @@
 "use client";
 
-import { MailCheck } from "lucide-react";
+import { LockKeyhole, Mail, MailCheck, UserRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { signUpSchema } from "@/domain/auth/forms";
 import { getPathname } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
+import { DevMailHint } from "./dev-mail-hint";
 import { FormField } from "./form-field";
 import { FormMessage } from "./form-message";
+import { GoogleButton } from "./google-button";
 import { SubmitButton } from "./submit-button";
 import { useAuthForm } from "./use-auth-form";
 
-export function SignUpForm() {
+export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
   const t = useTranslations("AuthForm");
   const tPage = useTranslations("SignUpPage");
   const locale = useLocale();
@@ -36,52 +38,59 @@ export function SignUpForm() {
         <p className="text-muted-foreground">
           {tPage("checkEmail", { email: sentTo })}
         </p>
+        <DevMailHint />
       </div>
     );
   }
 
   return (
-    <form
-      method="post"
-      noValidate
-      onSubmit={form.onSubmit}
-      className="space-y-4"
-    >
-      {form.formError && (
-        <FormMessage variant="error">{form.formError}</FormMessage>
-      )}
-      <FormField
-        id="sign-up-name"
-        name="name"
-        label={t("name")}
-        hint={t("nameHint")}
-        autoComplete="nickname"
-        required
-        maxLength={32}
-        error={form.fieldError("name")}
-      />
-      <FormField
-        id="sign-up-email"
-        name="email"
-        type="email"
-        label={t("email")}
-        autoComplete="email"
-        required
-        error={form.fieldError("email")}
-      />
-      <FormField
-        id="sign-up-password"
-        name="password"
-        type="password"
-        label={t("password")}
-        hint={t("passwordHint")}
-        autoComplete="new-password"
-        required
-        minLength={8}
-        maxLength={128}
-        error={form.fieldError("password")}
-      />
-      <SubmitButton pending={form.pending}>{tPage("submit")}</SubmitButton>
-    </form>
+    <>
+      {googleEnabled && <GoogleButton returnTo="/settings" />}
+      <form
+        method="post"
+        noValidate
+        onSubmit={form.onSubmit}
+        className="space-y-4"
+      >
+        {form.formError && (
+          <FormMessage variant="error">{form.formError}</FormMessage>
+        )}
+        <FormField
+          id="sign-up-name"
+          name="name"
+          label={t("name")}
+          hint={t("nameHint")}
+          icon={UserRound}
+          autoComplete="nickname"
+          required
+          maxLength={32}
+          error={form.fieldError("name")}
+        />
+        <FormField
+          id="sign-up-email"
+          name="email"
+          type="email"
+          label={t("email")}
+          icon={Mail}
+          autoComplete="email"
+          required
+          error={form.fieldError("email")}
+        />
+        <FormField
+          id="sign-up-password"
+          name="password"
+          type="password"
+          label={t("password")}
+          hint={t("passwordHint")}
+          icon={LockKeyhole}
+          autoComplete="new-password"
+          required
+          minLength={8}
+          maxLength={128}
+          error={form.fieldError("password")}
+        />
+        <SubmitButton pending={form.pending}>{tPage("submit")}</SubmitButton>
+      </form>
+    </>
   );
 }

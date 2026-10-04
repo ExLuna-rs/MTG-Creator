@@ -188,8 +188,16 @@
       "wrongPassword": "Mot de passe incorrect.",
       "invalidToken": "Ce lien n'est plus valable.",
       "tooManyRequests": "Trop de tentatives. Patientez un instant avant de réessayer.",
-      "unknown": "Une erreur est survenue. Réessayez dans un instant."
-    }
+      "unknown": "Une erreur est survenue. Réessayez dans un instant.",
+      "sessionNotFresh": "Par sécurité, déconnectez-vous puis reconnectez-vous avant de supprimer votre compte.",
+      "oauthFailed": "La connexion avec Google n'a pas abouti. Réessayez.",
+      "oauthLinkFailed": "Un compte utilise déjà cette adresse, mais elle n'est pas encore confirmée. Confirmez-la avec le lien reçu par email, ou connectez-vous avec votre mot de passe."
+    },
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "continueWithGoogle": "Continuer avec Google",
+    "orWithEmail": "ou avec votre email",
+    "devMailHint": "En développement, aucun email ne part vraiment : ouvrez <link>Mailpit (localhost:8025)</link> pour le lire."
   },
   "SignUpPage": {
     "title": "Créer un compte",
@@ -242,7 +250,11 @@
     "deleteTitle": "Supprimer le compte",
     "deleteDescription": "La suppression est immédiate et définitive : votre compte et toutes ses données seront effacés.",
     "deleteConfirm": "Je comprends que mon compte sera supprimé définitivement.",
-    "delete": "Supprimer mon compte"
+    "delete": "Supprimer mon compte",
+    "signInMethods": "Méthodes de connexion : {methods}.",
+    "methodPassword": "email et mot de passe",
+    "methodGoogle": "Google",
+    "deleteConfirmGoogle": "Votre compte n'a pas de mot de passe : cochez la case pour confirmer."
   },
   "Emails": {
     "greeting": "Bonjour {name},",
@@ -260,5 +272,14 @@
       "action": "Choisir un nouveau mot de passe",
       "ignore": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe reste inchangé."
     }
+  },
+  "AuthAside": {
+    "title": "Construisez, validez et partagez vos decks Commander.",
+    "points": {
+      "save": "Vos decks enregistrés en ligne, sur tous vos appareils",
+      "rules": "Les règles Commander vérifiées pendant que vous construisez",
+      "share": "Un lien suffit pour partager un deck"
+    },
+    "fanContent": "Contenu de fan non officiel, non approuvé par Wizards of the Coast."
   }
 }
