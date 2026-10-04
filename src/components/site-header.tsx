@@ -1,5 +1,6 @@
 import { Layers } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { UserMenu } from "@/components/auth/user-menu";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Link } from "@/i18n/navigation";
 
@@ -19,7 +20,7 @@ export function SiteHeader() {
           </span>
           MTG Creator
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <nav aria-label={t("mainNav")} className="flex items-center gap-1">
             <Link
               href="/cards"
@@ -28,6 +29,7 @@ export function SiteHeader() {
               {t("cards")}
             </Link>
           </nav>
+          <UserMenu />
           <LocaleSwitcher />
         </div>
       </div>
