@@ -4,7 +4,7 @@
 import { build } from "esbuild";
 
 await build({
-  entryPoints: ["scripts/migrate.mts"],
+  entryPoints: ["scripts/migrate.mts", "scripts/sync-cards.mts"],
   outdir: "dist/scripts",
   outExtension: { ".js": ".mjs" },
   bundle: true,

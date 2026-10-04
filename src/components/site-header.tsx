@@ -19,7 +19,17 @@ export function SiteHeader() {
           </span>
           MTG Creator
         </Link>
-        <LocaleSwitcher />
+        <div className="flex items-center gap-4">
+          <nav aria-label={t("mainNav")} className="flex items-center gap-1">
+            <Link
+              href="/cards"
+              className="rounded-md px-2 py-1 font-medium text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {t("cards")}
+            </Link>
+          </nav>
+          <LocaleSwitcher />
+        </div>
       </div>
     </header>
   );

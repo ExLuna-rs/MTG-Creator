@@ -11,8 +11,8 @@ export HOST_GID ?= $(shell id -g)
 RUN := $(COMPOSE) run --rm --no-deps --build app
 
 .DEFAULT_GOAL := help
-.PHONY: help dev up down logs ps sh install pnpm lint format typecheck test check \
-	e2e e2e-ci db-migrate db-generate db-psql build audit scan clean reset
+.PHONY: help dev up down logs ps sh install pnpm lint format typecheck test check test-db \
+	e2e e2e-ci db-migrate db-generate db-psql sync seed build audit scan clean reset
 
 help: ## Affiche cette aide
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
@@ -60,7 +60,10 @@ test: ## Lance les tests unitaires (Vitest)
 check: ## Lint, types et tests unitaires
 	$(RUN) pnpm check
 
-e2e: .env ## Lance les tests de bout en bout sur l'environnement de développement
+test-db: ## Lance les tests sur une vraie base PostgreSQL (base jetable)
+	$(COMPOSE) run --rm --build app pnpm test:db
+
+e2e: .env seed ## Lance les tests de bout en bout sur l'environnement de développement
 	$(COMPOSE) --profile e2e run --rm e2e
 
 e2e-ci: ## Lance les tests de bout en bout sur les images de production
@@ -70,6 +73,12 @@ e2e-ci: ## Lance les tests de bout en bout sur les images de production
 
 db-migrate: ## Applique les migrations de la base de données
 	$(COMPOSE) run --rm migrate
+
+sync: ## Importe toutes les cartes depuis Scryfall (environ 25 Mo, 30 s)
+	$(COMPOSE) run --rm --build app pnpm cards:sync
+
+seed: ## Importe le jeu de cartes de test (172 cartes, sans réseau)
+	$(COMPOSE) run --rm --build app pnpm cards:seed
 
 db-generate: ## Génère une migration depuis le schéma Drizzle (name=nom_facultatif)
 	$(RUN) pnpm db:generate $(if $(name),--name=$(name),)

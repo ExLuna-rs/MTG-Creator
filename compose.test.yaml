@@ -29,6 +29,20 @@ services:
       db:
         condition: service_healthy
 
+  # Importe le jeu de cartes de test (sans réseau), après les migrations.
+  seed:
+    build:
+      context: .
+      target: tools
+    command: ["node", "scripts/sync-cards.mjs", "--file", "/fixtures/cards.jsonl"]
+    environment:
+      DATABASE_URL: *database-url
+    volumes:
+      - ./tests/fixtures:/fixtures:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   app:
     build:
       context: .
@@ -37,7 +51,7 @@ services:
     environment:
       DATABASE_URL: *database-url
     depends_on:
-      migrate:
+      seed:
         condition: service_completed_successfully
 
   e2e:

@@ -5,6 +5,8 @@ x-proxy-env: &proxy-env
   HTTPS_PROXY: ${HTTPS_PROXY}
   NO_PROXY: localhost,127.0.0.1
   NODE_EXTRA_CA_CERTS: /ccr/ca-bundle.crt
+  # fetch() de Node ne lit HTTPS_PROXY qu'avec cette option.
+  NODE_USE_ENV_PROXY: "1"
 
 x-proxy-build: &proxy-build
   network: host
