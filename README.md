@@ -6,20 +6,31 @@ Application web de création de decks *Magic: The Gathering* pour le format Comm
 
 ## Démarrer
 
-Prérequis : **Docker** (Docker Desktop sous Windows et macOS, Docker Engine sous Linux) et `make`. Rien d'autre à installer : Node.js et PostgreSQL tournent dans des conteneurs.
+Prérequis : **Docker** (Docker Desktop sous Windows et macOS, Docker Engine sous Linux). Rien d'autre à installer : Node.js et PostgreSQL tournent dans des conteneurs.
 
 ```bash
 git clone https://github.com/ExLuna-rs/MTG-Creator.git
 cd MTG-Creator
-make dev
+docker compose up --build
 ```
 
 - Application : <http://localhost:3000>
 - Emails envoyés par l'application (Mailpit) : <http://localhost:8025>
+- Pour arrêter : `Ctrl+C`, puis `docker compose down`.
 
 Le premier lancement télécharge les images et installe les dépendances : comptez quelques minutes. Ensuite, chaque modification du code est rechargée automatiquement dans le navigateur.
 
-Sous Windows, utilisez WSL 2 et placez le projet dans le système de fichiers Linux de WSL : `make` y est disponible, et le rechargement automatique est bien plus rapide.
+Sous Linux, macOS ou WSL, `make dev` fait la même chose, et `make help` liste toutes les commandes (voir plus bas).
+
+Si le port 5432 est déjà pris (un PostgreSQL installé sur la machine, par exemple), copiez `.env.example` en `.env` et changez `DB_PORT`.
+
+### Sous Windows
+
+- **Pour essayer l'application**, la commande `docker compose up --build` ci-dessus suffit, dans PowerShell ou l'invite de commandes. `make` n'existe pas sous Windows : utilisez les équivalents `docker compose` du tableau plus bas.
+- **Pour développer**, passez par WSL 2. Les fichiers stockés côté Windows et partagés avec Docker ralentissent fortement Next.js, et le rechargement automatique y fonctionne mal.
+  1. Si besoin, installez Ubuntu dans WSL (PowerShell en administrateur) : `wsl --install -d Ubuntu`.
+  2. Dans Docker Desktop : Settings → Resources → WSL integration, activez Ubuntu.
+  3. Dans le terminal Ubuntu : `sudo apt update && sudo apt install -y make git`, puis clonez le dépôt dans votre dossier personnel (`~`, pas `/mnt/c/…`) et lancez `make dev`.
 
 ## Commandes
 
@@ -40,7 +51,19 @@ Sous Windows, utilisez WSL 2 et placez le projet dans le système de fichiers Li
 | `make build` | Construit les images de production |
 | `make reset` | Supprime les conteneurs et les volumes (efface la base locale) |
 
-`make help` affiche la liste complète. Sans `make`, l'équivalent de `make dev` est `docker compose up --build`.
+`make help` affiche la liste complète.
+
+Sans `make` (par exemple sous Windows), les commandes les plus utiles s'écrivent directement avec `docker compose` :
+
+| Avec `make` | Sans `make` |
+|---|---|
+| `make dev` | `docker compose up --build` |
+| `make down` | `docker compose down` |
+| `make check` | `docker compose run --rm --no-deps --build app pnpm check` |
+| `make e2e` | `docker compose --profile e2e run --rm e2e` |
+| `make db-migrate` | `docker compose run --rm migrate` |
+| `make pnpm args="add …"` | `docker compose run --rm --no-deps app pnpm add …` |
+| `make reset` | `docker compose --profile e2e down --volumes` |
 
 ## Stack
 
