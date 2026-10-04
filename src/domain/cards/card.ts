@@ -22,7 +22,7 @@ export interface CardFace {
 }
 
 /** Légalité d'une carte dans un format (valeurs de Scryfall). */
-export type Legality = "legal" | "not_legal" | "banned" | "restricted";
+export type Legality = (typeof LEGALITIES)[number];
 
 /** Raretés de Scryfall, de la plus courante à la plus rare. */
 export const RARITIES = [
@@ -35,3 +35,30 @@ export const RARITIES = [
 ] as const;
 
 export type Rarity = (typeof RARITIES)[number];
+
+/** Formats dont la légalité est affichée sur la fiche d'une carte. */
+export const DISPLAYED_FORMATS = [
+  "commander",
+  "paupercommander",
+  "oathbreaker",
+  "brawl",
+  "standard",
+  "pioneer",
+  "modern",
+  "legacy",
+  "vintage",
+  "pauper",
+  "historic",
+  "timeless",
+] as const;
+
+export const LEGALITIES = [
+  "legal",
+  "not_legal",
+  "banned",
+  "restricted",
+] as const;
+
+export function isLegality(value: string): value is Legality {
+  return (LEGALITIES as readonly string[]).includes(value);
+}

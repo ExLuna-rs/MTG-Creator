@@ -4,7 +4,9 @@
     "description": "Créez, validez et partagez vos decks Commander de Magic: The Gathering, en français et en anglais."
   },
   "Header": {
-    "home": "Accueil de MTG Creator"
+    "home": "Accueil de MTG Creator",
+    "cards": "Cartes",
+    "mainNav": "Navigation principale"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -17,7 +19,7 @@
     "subtitle": "Recherchez des cartes, construisez votre deck autour de votre commandant et vérifiez au fur et à mesure qu'il respecte les règles.",
     "createDeck": "Créer un deck",
     "searchCards": "Rechercher des cartes",
-    "comingSoon": "Bientôt disponible",
+    "comingSoon": "La création de decks arrive bientôt.",
     "featuresTitle": "Ce qui arrive",
     "features": {
       "search": {
@@ -46,5 +48,117 @@
     "title": "Page introuvable",
     "description": "Cette page n'existe pas ou n'existe plus.",
     "backHome": "Retour à l'accueil"
+  },
+  "ErrorPage": {
+    "title": "Une erreur est survenue",
+    "description": "La page n'a pas pu être chargée. Réessayez dans un instant.",
+    "retry": "Réessayer"
+  },
+  "CardSearch": {
+    "title": "Recherche de cartes",
+    "description": "Recherchez parmi toutes les cartes de Magic: The Gathering, puis filtrez par couleur, type, coût ou rareté.",
+    "nameLabel": "Nom de la carte",
+    "namePlaceholder": "Sol Ring, Atraxa…",
+    "suggestionsLabel": "Cartes suggérées",
+    "submit": "Rechercher",
+    "reset": "Réinitialiser",
+    "filters": "Filtres",
+    "activeFilters": "{count, plural, one {# filtre actif} other {# filtres actifs}}",
+    "colorsLabel": "Identité couleur comprise dans",
+    "colorsHint": "Affiche les cartes jouables avec ces couleurs. « Incolore » seul : uniquement les cartes incolores.",
+    "typesLabel": "Types",
+    "manaValueLabel": "Valeur de mana",
+    "manaValueMin": "Minimum",
+    "manaValueMax": "Maximum",
+    "rarityLabel": "Rareté",
+    "textLabel": "Le texte de la carte contient",
+    "textPlaceholder": "draw a card",
+    "optionsLabel": "Options",
+    "commanderLegal": "Légales en Commander uniquement",
+    "canBeCommander": "Peuvent être commandant",
+    "gameChanger": "Game Changers uniquement",
+    "sortLabel": "Trier par",
+    "resultCount": "{count, plural, =0 {Aucune carte} one {# carte} other {# cartes}}",
+    "noResults": "Aucune carte ne correspond à votre recherche.",
+    "noResultsHint": "Vérifiez l'orthographe ou retirez des filtres.",
+    "emptyDatabase": "Aucune carte n'est encore importée. Lancez « make sync » pour importer toutes les cartes, ou « make seed » pour le jeu de test.",
+    "pagination": "Pagination",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "pageOf": "Page {page} sur {pageCount}"
+  },
+  "Colors": {
+    "W": "Blanc",
+    "U": "Bleu",
+    "B": "Noir",
+    "R": "Rouge",
+    "G": "Vert",
+    "C": "Incolore"
+  },
+  "CardTypes": {
+    "Artifact": "Artefact",
+    "Battle": "Bataille",
+    "Creature": "Créature",
+    "Enchantment": "Enchantement",
+    "Instant": "Éphémère",
+    "Kindred": "Parenté",
+    "Land": "Terrain",
+    "Planeswalker": "Planeswalker",
+    "Sorcery": "Rituel"
+  },
+  "Rarities": {
+    "common": "Commune",
+    "uncommon": "Inhabituelle",
+    "rare": "Rare",
+    "mythic": "Mythique",
+    "special": "Spéciale",
+    "bonus": "Bonus"
+  },
+  "Sorts": {
+    "relevance": "Pertinence",
+    "popularity": "Popularité (EDHREC)",
+    "name": "Nom",
+    "manaValue": "Valeur de mana",
+    "priceEur": "Prix (€)",
+    "priceUsd": "Prix ($)"
+  },
+  "CardPage": {
+    "back": "Retour à la recherche",
+    "legal": "Légale",
+    "not_legal": "Non légale",
+    "banned": "Bannie",
+    "restricted": "Restreinte",
+    "commanderStatus": "Commander : {status}",
+    "canBeCommander": "Peut être commandant",
+    "gameChanger": "Game Changer",
+    "manaValue": "Valeur de mana : {value}",
+    "powerToughness": "Force / endurance : {power}/{toughness}",
+    "loyalty": "Loyauté : {value}",
+    "defense": "Défense : {value}",
+    "legalities": "Légalités",
+    "prices": "Prix",
+    "priceUnavailable": "indisponible",
+    "priceEur": "Cardmarket (EUR)",
+    "priceUsd": "TCGplayer (USD)",
+    "details": "Détails",
+    "edhrecRank": "Rang de popularité EDHREC : n° {rank}",
+    "set": "{set} ({code}), n° {number}",
+    "artist": "Illustration : {artist}",
+    "viewOnScryfall": "Voir sur Scryfall",
+    "backFace": "{name} (verso)"
+  },
+  "Formats": {
+    "commander": "Commander",
+    "paupercommander": "Pauper Commander",
+    "oathbreaker": "Oathbreaker",
+    "brawl": "Brawl",
+    "standard": "Standard",
+    "pioneer": "Pioneer",
+    "modern": "Modern",
+    "legacy": "Legacy",
+    "vintage": "Vintage",
+    "pauper": "Pauper",
+    "historic": "Historic",
+    "timeless": "Timeless"
   }
 }

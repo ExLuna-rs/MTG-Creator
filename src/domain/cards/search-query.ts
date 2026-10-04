@@ -76,7 +76,7 @@ export function parseCardSearch(params: RawParams): CardSearch {
   const sortValue = first(params, "sort");
   const sort = z
     .enum(CARD_SORTS)
-    .catch(name ? "relevance" : "popularity")
+    .catch(defaultCardSort({ name }))
     .parse(sortValue || undefined);
   const manaValue = (key: string) => {
     const raw = first(params, key);
@@ -104,4 +104,46 @@ export function parseCardSearch(params: RawParams): CardSearch {
       .catch(1)
       .parse(first(params, "page") || 1),
   };
+}
+
+/** Tri appliqué quand aucun n'est demandé. */
+export function defaultCardSort(search: Pick<CardSearch, "name">): CardSort {
+  return search.name ? "relevance" : "popularity";
+}
+
+/**
+ * Paramètres d'URL d'une recherche, sans les valeurs par défaut : l'inverse
+ * de `parseCardSearch`, pour les liens de pagination.
+ */
+export function cardSearchToQuery(
+  search: CardSearch,
+): Record<string, string | string[]> {
+  const query: Record<string, string | string[]> = {};
+  if (search.name) query.q = search.name;
+  if (search.text) query.text = search.text;
+  if (search.colors.length > 0) query.color = search.colors;
+  if (search.types.length > 0) query.type = search.types;
+  if (search.rarities.length > 0) query.rarity = search.rarities;
+  if (search.manaValueMin !== null) query.mvMin = String(search.manaValueMin);
+  if (search.manaValueMax !== null) query.mvMax = String(search.manaValueMax);
+  if (search.commanderLegal) query.legal = "1";
+  if (search.canBeCommander) query.commander = "1";
+  if (search.gameChanger) query.gc = "1";
+  if (search.sort !== defaultCardSort(search)) query.sort = search.sort;
+  if (search.page > 1) query.page = String(search.page);
+  return query;
+}
+
+/** Nombre de filtres actifs, hors nom, tri et page. */
+export function countActiveFilters(search: CardSearch): number {
+  return [
+    search.text !== "",
+    search.colors.length > 0,
+    search.types.length > 0,
+    search.rarities.length > 0,
+    search.manaValueMin !== null || search.manaValueMax !== null,
+    search.commanderLegal,
+    search.canBeCommander,
+    search.gameChanger,
+  ].filter(Boolean).length;
 }
