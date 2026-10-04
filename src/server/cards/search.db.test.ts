@@ -59,11 +59,13 @@ describe("filtres", () => {
     const result = await search({ color: ["W", "U"] });
     expect(result.total).toBeGreaterThan(0);
     for (const card of result.cards) {
-      expect(maskToColors(card.colorIdentity), card.name).toEqual(
-        expect.arrayContaining(maskToColors(card.colorIdentity)),
-      );
       expect(card.colorIdentity & ~(1 | 2), card.name).toBe(0);
     }
+    // Les deux couleurs, chacune seule, et l'incolore sont bien proposés.
+    const identities = new Set(
+      result.cards.map((card) => maskToColors(card.colorIdentity).join("")),
+    );
+    expect([...identities]).toEqual(expect.arrayContaining(["", "W", "U"]));
     const found = result.cards.map((card) => card.name);
     expect(found).toContain("Sol Ring");
     expect(found).not.toContain("Atraxa, Praetors' Voice");
