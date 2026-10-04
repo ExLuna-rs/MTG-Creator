@@ -1,5 +1,5 @@
 // Schéma de la base de données (tables Drizzle).
-// Les tables des comptes (phase 2) et des decks (phase 3) viendront s'ajouter.
+// Les tables des decks (phase 3) viendront s'ajouter.
 import {
   boolean,
   date,
@@ -12,6 +12,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CardFace, CardImageUris } from "../../domain/cards/card";
@@ -83,3 +84,103 @@ export const cardImports = pgTable("card_import", {
   startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
 });
+
+// -----------------------------------------------------------------------------
+// Comptes : tables gérées par Better Auth (src/server/auth/auth.ts). Les noms
+// des champs TypeScript sont ceux qu'attend Better Auth ; les colonnes restent
+// en snake_case comme le reste de la base.
+// -----------------------------------------------------------------------------
+
+/** Utilisateurs. `name` est le pseudo affiché. */
+export const users = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  // Langue préférée (fr ou en) : langue des emails envoyés à l'utilisateur.
+  locale: text("locale").notNull().default("fr"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** Sessions ouvertes (cookie de session). */
+export const sessions = pgTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("session_token_idx").on(table.token),
+    index("session_user_id_idx").on(table.userId),
+  ],
+);
+
+/**
+ * Moyens de connexion d'un utilisateur : mot de passe (`providerId` =
+ * « credential », mot de passe haché), puis Discord et Google.
+ */
+export const accounts = pgTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("account_user_id_idx").on(table.userId)],
+);
+
+/** Jetons à usage unique : vérification de l'email, mot de passe oublié. */
+export const verifications = pgTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
+);

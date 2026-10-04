@@ -43,6 +43,9 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  mailpit:
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+
   app:
     build:
       context: .
@@ -50,9 +53,14 @@ services:
     init: true
     environment:
       DATABASE_URL: *database-url
+      BETTER_AUTH_SECRET: test-only-secret-not-for-production-use
+      BETTER_AUTH_URL: http://localhost:3000
+      SMTP_URL: smtp://mailpit:1025
     depends_on:
       seed:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
 
   e2e:
     image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
@@ -63,6 +71,7 @@ services:
     environment:
       CI: ${CI:-}
       E2E_BASE_URL: http://localhost:3000
+      MAILPIT_URL: http://mailpit:8025
       # Magasin pnpm dans le volume, pour ne rien écrire dans le dépôt.
       npm_config_store_dir: /app/node_modules/.pnpm-store
     volumes:

@@ -23,6 +23,7 @@
     "fixtures:cards": "esbuild scripts/build-card-fixture.mts --bundle --platform=node --format=esm --log-level=warning --outfile=dist/build-card-fixture.mjs && node dist/build-card-fixture.mjs"
   },
   "dependencies": {
+    "better-auth": "^1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.3",
@@ -31,6 +32,7 @@
     "mana-font": "1.18.0",
     "next": "16.3.8",
     "next-intl": "^4.14.9",
+    "nodemailer": "^10.0.14",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -43,6 +45,7 @@
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.1",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

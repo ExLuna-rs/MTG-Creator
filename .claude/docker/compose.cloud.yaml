@@ -34,14 +34,22 @@ services:
     environment:
       <<: *proxy-env
       DATABASE_URL: *database-url
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      SMTP_URL: smtp://127.0.0.1:1025
     volumes:
       - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
+
+  # L'application (réseau de l'hôte) envoie ses emails par ce port.
+  mailpit:
+    ports:
+      - "127.0.0.1:1025:1025"
 
   e2e:
     network_mode: host
     environment:
       <<: *proxy-env
       E2E_BASE_URL: http://127.0.0.1:3000
+      MAILPIT_URL: http://127.0.0.1:8025
     volumes:
       - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
 
