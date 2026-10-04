@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import { Fragment } from "react";
 import { symbolIcon, tokenizeSymbols } from "@/domain/cards/symbols";
 import { cn } from "@/lib/utils";
@@ -11,9 +12,11 @@ export function ManaSymbol({ symbol }: { symbol: string }) {
   const icon = symbolIcon(symbol);
   if (!icon) return <span>{symbol}</span>;
 
+  // clsx et non cn : tailwind-merge prendrait « ms-2 » pour une marge
+  // Tailwind en conflit avec « mx-px » et la supprimerait.
   const glyph = (
     <i
-      className={cn("ms ms-cost", icon.className, !icon.half && "mx-px")}
+      className={clsx("ms ms-cost", icon.className, !icon.half && "mx-px")}
       aria-hidden
     />
   );
