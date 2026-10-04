@@ -1,0 +1,71 @@
+# Intégration continue : tout tourne dans Docker, via les mêmes commandes
+# `make` qu'en local. Les actions tierces sont épinglées par empreinte de
+# commit (et non par tag), mises à jour par Dependabot.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Droits minimaux : la CI ne fait que lire le code.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests unitaires et audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint, types et tests unitaires
+        run: make check
+
+      - name: Audit des dépendances (failles hautes et critiques)
+        run: make audit
+
+  e2e:
+    name: Tests de bout en bout
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Tests de bout en bout sur les images de production
+        run: make e2e-ci
+
+      - name: Conserver le rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rapport-playwright
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  scan:
+    name: Analyse de vulnérabilités des images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Construire et analyser les images de production
+        run: make scan
