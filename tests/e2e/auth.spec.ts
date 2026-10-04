@@ -32,7 +32,7 @@ async function fillSignUp(page: Page, account: Account) {
   await page.goto("/fr/sign-up");
   await page.getByLabel("Pseudo").fill(account.name);
   await page.getByLabel("Adresse email").fill(account.email);
-  await page.getByLabel("Mot de passe").fill(account.password);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(
     page.getByText(
@@ -71,7 +71,7 @@ test("vérifie les champs de l'inscription avant l'envoi", async ({ page }) => {
   await page.goto("/fr/sign-up");
   await page.getByLabel("Pseudo").fill("J");
   await page.getByLabel("Adresse email").fill("pas-une-adresse");
-  await page.getByLabel("Mot de passe").fill("court");
+  await page.getByLabel("Mot de passe", { exact: true }).fill("court");
   await page.getByRole("button", { name: "Créer mon compte" }).click();
 
   await expect(page.getByLabel("Pseudo")).toHaveAttribute(
@@ -121,6 +121,55 @@ test("crée un compte, confirme l'adresse et ouvre la session", async ({
   ).toBeVisible();
   await expect(
     page.getByText(`Connecté avec l'adresse ${account.email}.`),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Méthodes de connexion : email et mot de passe."),
+  ).toBeVisible();
+});
+
+test("affiche ou masque le mot de passe", async ({ page }) => {
+  await page.goto("/fr/sign-in");
+  const password = page.getByLabel("Mot de passe", { exact: true });
+  await password.fill("secret-123");
+  await expect(password).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Afficher le mot de passe" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Masquer le mot de passe" }).click();
+  await expect(password).toHaveAttribute("type", "password");
+});
+
+test("envoie vers Google quand la connexion Google est configurée", async ({
+  page,
+}) => {
+  await page.goto("/fr/sign-in");
+  const google = page.getByRole("button", { name: "Continuer avec Google" });
+  // Identifiants Google factices dans compose.test.yaml seulement.
+  test.skip(!(await google.isVisible()), "connexion Google non configurée");
+
+  // Google n'est pas réellement contacté : on vérifie la redirection.
+  let authorizeUrl: URL | undefined;
+  await page.route("https://accounts.google.com/**", (route) => {
+    authorizeUrl = new URL(route.request().url());
+    return route.fulfill({ body: "Google" });
+  });
+  await google.click();
+  await expect.poll(() => authorizeUrl?.pathname).toContain("/o/oauth2");
+  expect(authorizeUrl?.searchParams.get("client_id")).toBe(
+    "test-client-id.apps.googleusercontent.com",
+  );
+  expect(authorizeUrl?.searchParams.get("redirect_uri")).toMatch(
+    /\/api\/auth\/callback\/google$/,
+  );
+});
+
+test("explique un échec de connexion avec Google", async ({ page }) => {
+  await page.goto("/fr/sign-in?error=unable_to_link_account");
+  await expect(
+    page.getByText("Un compte utilise déjà cette adresse"),
+  ).toBeVisible();
+  await page.goto("/fr/sign-in?error=access_denied");
+  await expect(
+    page.getByText("La connexion avec Google n'a pas abouti."),
   ).toBeVisible();
 });
 
@@ -251,7 +300,7 @@ test("modifie le pseudo et la langue, puis supprime le compte", async ({
 
   await page.goto("/en/sign-in");
   await page.getByLabel("Email address").fill(account.email);
-  await page.getByLabel("Password").fill(account.password);
+  await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
     page.getByText("Incorrect email address or password."),
