@@ -27,10 +27,9 @@ const nextConfig: NextConfig = {
   // Les images des cartes viennent du CDN Scryfall : l'optimiseur d'images
   // de Next.js (qui a connu plusieurs failles) n'est pas utilisé.
   images: { unoptimized: true },
-  // En développement uniquement : autorise les tests de bout en bout (service
-  // Docker « app ») et 127.0.0.1, en plus de localhost, à charger les
-  // ressources du serveur de développement.
-  allowedDevOrigins: ["app", "127.0.0.1"],
+  // En développement uniquement : autorise 127.0.0.1, en plus de localhost,
+  // à charger les ressources du serveur de développement.
+  allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -43,9 +43,12 @@ services:
   e2e:
     image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
     working_dir: /app
+    # Partage le réseau du service app : les tests visent http://localhost,
+    # que Chromium ne bascule jamais en HTTPS (contrairement à http://app).
+    network_mode: service:app
     environment:
       CI: ${CI:-}
-      E2E_BASE_URL: http://app:3000
+      E2E_BASE_URL: http://localhost:3000
       # Magasin pnpm dans le volume, pour ne rien écrire dans le dépôt.
       npm_config_store_dir: /app/node_modules/.pnpm-store
     volumes:
