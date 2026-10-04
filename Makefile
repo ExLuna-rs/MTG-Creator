@@ -11,7 +11,7 @@ export HOST_GID ?= $(shell id -g)
 RUN := $(COMPOSE) run --rm --no-deps --build app
 
 .DEFAULT_GOAL := help
-.PHONY: help dev up down logs ps sh install pnpm lint format typecheck test check \
+.PHONY: help dev up down logs ps sh install pnpm lint format typecheck test check test-db \
 	e2e e2e-ci db-migrate db-generate db-psql sync seed build audit scan clean reset
 
 help: ## Affiche cette aide
@@ -59,6 +59,9 @@ test: ## Lance les tests unitaires (Vitest)
 
 check: ## Lint, types et tests unitaires
 	$(RUN) pnpm check
+
+test-db: ## Lance les tests sur une vraie base PostgreSQL (base jetable)
+	$(COMPOSE) run --rm --build app pnpm test:db
 
 e2e: .env seed ## Lance les tests de bout en bout sur l'environnement de développement
 	$(COMPOSE) --profile e2e run --rm e2e

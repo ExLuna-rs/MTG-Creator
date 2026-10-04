@@ -12,7 +12,28 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.{ts,tsx}"],
     environment: "node",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["src/**/*.test.{ts,tsx}"],
+          exclude: ["src/**/*.db.test.ts"],
+        },
+      },
+      {
+        // Tests sur une vraie base PostgreSQL (pnpm test:db, make test-db) :
+        // une base jetable est créée, migrée et remplie du jeu de test.
+        extends: true,
+        test: {
+          name: "db",
+          include: ["src/**/*.db.test.ts"],
+          globalSetup: ["tests/db/global-setup.ts"],
+          setupFiles: ["tests/db/setup.ts"],
+          fileParallelism: false,
+        },
+      },
+    ],
   },
 });

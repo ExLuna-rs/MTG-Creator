@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, types, tests unitaires et audit
+    name: Lint, types, tests et audit
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -29,6 +29,9 @@ jobs:
 
       - name: Lint, types et tests unitaires
         run: make check
+
+      - name: Tests sur une vraie base PostgreSQL
+        run: make test-db
 
       - name: Audit des dépendances (failles hautes et critiques)
         run: make audit

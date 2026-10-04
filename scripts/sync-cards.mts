@@ -6,24 +6,20 @@
 //
 // L'import complet supprime les cartes absentes du fichier ; l'import d'un
 // fichier (jeu de test) ajoute ou met à jour sans rien supprimer.
-// Le tout se fait dans une transaction : la base n'est jamais à moitié remplie.
 import { createReadStream } from "node:fs";
-import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { createGunzip } from "node:zlib";
-import { getTableColumns, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
-  isDeckCard,
-  type ScryfallCard,
-  toCardRow,
-} from "../src/domain/cards/scryfall";
-import { cardImports, cards } from "../src/server/db/schema";
+  type ImportOptions,
+  importCards,
+} from "../src/server/cards/import-cards";
+import { readLines } from "../src/server/cards/read-lines";
 
 const USER_AGENT = "MTGCreator/0.1 (+https://github.com/ExLuna-rs/MTG-Creator)";
 const BULK_DATA_URL = "https://api.scryfall.com/bulk-data";
-const BATCH_SIZE = 500;
 
 interface BulkDataItem {
   type: string;
@@ -31,11 +27,8 @@ interface BulkDataItem {
   jsonl_download_uri: string;
 }
 
-interface Source {
-  label: string;
-  updatedAt: Date | null;
+interface Source extends ImportOptions {
   stream: NodeJS.ReadableStream;
-  fullImport: boolean;
 }
 
 async function openScryfallSource(): Promise<Source> {
@@ -52,35 +45,24 @@ async function openScryfallSource(): Promise<Source> {
   if (!download.ok || !download.body) {
     throw new Error(`Téléchargement impossible (${download.status}).`);
   }
-  const body = Readable.fromWeb(
-    download.body as import("node:stream/web").ReadableStream,
-  );
+  const body = Readable.fromWeb(download.body as WebReadableStream);
   return {
-    label: bulk.jsonl_download_uri,
-    updatedAt: new Date(bulk.updated_at),
-    stream: body.pipe(createGunzip()),
+    source: bulk.jsonl_download_uri,
+    sourceUpdatedAt: new Date(bulk.updated_at),
     fullImport: true,
+    stream: body.pipe(createGunzip()),
   };
 }
 
 function openFileSource(path: string): Source {
   const file = createReadStream(path);
   return {
-    label: path,
-    updatedAt: null,
-    stream: path.endsWith(".gz") ? file.pipe(createGunzip()) : file,
+    source: path,
+    sourceUpdatedAt: null,
     fullImport: false,
+    stream: path.endsWith(".gz") ? file.pipe(createGunzip()) : file,
   };
 }
-
-// Mise à jour de toutes les colonnes en cas de conflit sur oracle_id.
-const { oracleId: _key, ...updatableColumns } = getTableColumns(cards);
-const upsertSet = Object.fromEntries(
-  Object.entries(updatableColumns).map(([key, column]) => [
-    key,
-    sql.raw(`excluded."${column.name}"`),
-  ]),
-);
 
 async function main() {
   const fileIndex = process.argv.indexOf("--file");
@@ -88,74 +70,30 @@ async function main() {
   if (fileIndex >= 0 && !filePath) throw new Error("--file attend un chemin.");
 
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString)
+  if (!connectionString) {
     throw new Error("La variable DATABASE_URL est obligatoire.");
+  }
 
-  const source = filePath
+  const { stream, ...options } = filePath
     ? openFileSource(filePath)
     : await openScryfallSource();
-  console.log(`Import des cartes depuis ${source.label}`);
+  console.log(`Import des cartes depuis ${options.source}`);
 
   const pool = new pg.Pool({ connectionString, max: 1 });
-  const db = drizzle({ client: pool });
-  const startedAt = new Date();
-  let imported = 0;
-  let skipped = 0;
-  let removed = 0;
-
+  const startedAt = Date.now();
   try {
-    await db.transaction(async (tx) => {
-      let batch: (typeof cards.$inferInsert)[] = [];
-      const flush = async () => {
-        if (batch.length === 0) return;
-        await tx
-          .insert(cards)
-          .values(batch)
-          .onConflictDoUpdate({ target: cards.oracleId, set: upsertSet });
-        imported += batch.length;
-        batch = [];
-      };
-
-      const lines = createInterface({
-        input: source.stream,
-        crlfDelay: Infinity,
-      });
-      for await (const line of lines) {
-        if (!line.trim()) continue;
-        const card = JSON.parse(line) as ScryfallCard;
-        if (!isDeckCard(card)) {
-          skipped++;
-          continue;
-        }
-        batch.push({ ...toCardRow(card), syncedAt: startedAt });
-        if (batch.length >= BATCH_SIZE) await flush();
-      }
-      await flush();
-
-      if (source.fullImport) {
-        const deleted = await tx
-          .delete(cards)
-          .where(lt(cards.syncedAt, startedAt))
-          .returning({ oracleId: cards.oracleId });
-        removed = deleted.length;
-      }
-
-      await tx.insert(cardImports).values({
-        source: source.label,
-        sourceUpdatedAt: source.updatedAt,
-        cardCount: imported,
-        startedAt,
-        finishedAt: new Date(),
-      });
-    });
+    const result = await importCards(
+      drizzle({ client: pool }),
+      readLines(stream as AsyncIterable<Uint8Array>),
+      options,
+    );
+    const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+    console.log(
+      `${result.imported} cartes importées, ${result.skipped} objets ignorés (jetons, plans…), ${result.removed} cartes supprimées, en ${seconds} s.`,
+    );
   } finally {
     await pool.end();
   }
-
-  const seconds = ((Date.now() - startedAt.getTime()) / 1000).toFixed(1);
-  console.log(
-    `${imported} cartes importées, ${skipped} objets ignorés (jetons, plans…), ${removed} cartes supprimées, en ${seconds} s.`,
-  );
 }
 
 main().catch((error: unknown) => {
