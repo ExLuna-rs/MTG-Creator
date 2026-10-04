@@ -15,6 +15,7 @@ import type { CardImageUris } from "@/domain/cards/card";
 import { colorsToMask } from "@/domain/cards/colors";
 import { normalizeCardName } from "@/domain/cards/normalize";
 import { CARD_PAGE_SIZE, type CardSearch } from "@/domain/cards/search-query";
+import type { DeckCardData } from "@/domain/deck/deck";
 import { getDb } from "@/server/db";
 import { cards } from "@/server/db/schema";
 
@@ -56,6 +57,28 @@ const summaryColumns = {
   commanderLegality: cards.commanderLegality,
   priceEur: cards.priceEur,
   priceUsd: cards.priceUsd,
+};
+
+/** Colonnes des données d'une carte utiles à l'éditeur de deck. */
+export const deckCardColumns = {
+  oracleId: cards.oracleId,
+  name: cards.name,
+  manaCost: cards.manaCost,
+  manaValue: cards.manaValue,
+  typeLine: cards.typeLine,
+  oracleText: cards.oracleText,
+  supertypes: cards.supertypes,
+  types: cards.types,
+  subtypes: cards.subtypes,
+  colorIdentity: cards.colorIdentity,
+  producedMana: cards.producedMana,
+  commanderLegality: cards.commanderLegality,
+  canBeCommander: cards.canBeCommander,
+  gameChanger: cards.gameChanger,
+  edhrecRank: cards.edhrecRank,
+  priceEur: cards.priceEur,
+  priceUsd: cards.priceUsd,
+  imageUris: cards.imageUris,
 };
 
 /** Échappe les caractères spéciaux de LIKE (%, _ et \). */
@@ -171,6 +194,76 @@ export async function searchCards(
     page: search.page,
     pageCount: Math.max(1, Math.ceil(total / CARD_PAGE_SIZE)),
   };
+}
+
+/**
+ * Recherche pour l'éditeur de deck : mêmes filtres et même tri que la page
+ * de recherche, mais avec les données dont les règles et les statistiques
+ * ont besoin.
+ */
+export async function searchDeckCards(
+  search: CardSearch,
+): Promise<{ cards: DeckCardData[]; total: number; pageCount: number }> {
+  const db = getDb();
+  const normalizedName = normalizeCardName(search.name);
+  const where = and(...buildConditions(search, normalizedName));
+  const [rows, [{ total }]] = await Promise.all([
+    db
+      .select(deckCardColumns)
+      .from(cards)
+      .where(where)
+      .orderBy(...buildOrder(search, normalizedName))
+      .limit(CARD_PAGE_SIZE)
+      .offset((search.page - 1) * CARD_PAGE_SIZE),
+    db.select({ total: count() }).from(cards).where(where),
+  ]);
+  return {
+    cards: rows,
+    total,
+    pageCount: Math.max(1, Math.ceil(total / CARD_PAGE_SIZE)),
+  };
+}
+
+/**
+ * Candidats commandants dont le nom correspond à la saisie (tous, sans
+ * saisie), les plus joués d'abord. `includeBackgrounds` ajoute les
+ * enchantements légendaires, pour choisir un Background en second commandant.
+ */
+export async function findCommanderCandidates(
+  query: string,
+  { includeBackgrounds = false, limit = 20 } = {},
+): Promise<DeckCardData[]> {
+  const normalized = normalizeCardName(query);
+  const eligible = includeBackgrounds
+    ? sql`(${cards.canBeCommander} or (${cards.supertypes} @> array['Legendary'] and ${cards.types} @> array['Enchantment']))`
+    : eq(cards.canBeCommander, true);
+  return getDb()
+    .select(deckCardColumns)
+    .from(cards)
+    .where(
+      and(
+        eligible,
+        eq(cards.commanderLegality, "legal"),
+        normalized ? nameCondition(normalized) : undefined,
+      ),
+    )
+    .orderBy(
+      ...(normalized ? [sql`${nameRank(normalized)} asc`] : []),
+      sql`${cards.edhrecRank} asc nulls last`,
+      asc(cards.name),
+    )
+    .limit(limit);
+}
+
+/** Données des cartes demandées (les identifiants inconnus sont ignorés). */
+export async function getDeckCardData(
+  oracleIds: readonly string[],
+): Promise<DeckCardData[]> {
+  if (oracleIds.length === 0) return [];
+  return getDb()
+    .select(deckCardColumns)
+    .from(cards)
+    .where(inArray(cards.oracleId, [...new Set(oracleIds)]));
 }
 
 /** Suggestions de noms pendant la saisie. */

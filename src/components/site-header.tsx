@@ -18,7 +18,8 @@ export function SiteHeader() {
           <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Layers className="size-4" aria-hidden />
           </span>
-          MTG Creator
+          {/* Sur mobile, le logo seul laisse la place à la navigation. */}
+          <span className="hidden sm:inline">MTG Creator</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
           <nav aria-label={t("mainNav")} className="flex items-center gap-1">
@@ -27,6 +28,12 @@ export function SiteHeader() {
               className="rounded-md px-2 py-1 font-medium text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               {t("cards")}
+            </Link>
+            <Link
+              href="/decks"
+              className="rounded-md px-2 py-1 font-medium text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {t("decks")}
             </Link>
           </nav>
           <UserMenu />

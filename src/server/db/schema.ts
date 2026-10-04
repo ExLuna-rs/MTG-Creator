@@ -1,5 +1,4 @@
 // Schéma de la base de données (tables Drizzle).
-// Les tables des decks (phase 3) viendront s'ajouter.
 import {
   boolean,
   date,
@@ -7,6 +6,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   real,
   serial,
   smallint,
@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CardFace, CardImageUris } from "../../domain/cards/card";
+import type { DeckFormat, DeckZone } from "../../domain/deck/deck";
 
 /** Une ligne par carte (identifiant Oracle de Scryfall). */
 export const cards = pgTable(
@@ -183,4 +184,60 @@ export const verifications = pgTable(
       .defaultNow(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+// -----------------------------------------------------------------------------
+// Decks
+// -----------------------------------------------------------------------------
+
+/** Visibilité d'un deck ; le partage arrive en phase 4. */
+export const DECK_VISIBILITIES = ["private", "unlisted", "public"] as const;
+
+/** Un deck, qui appartient à un utilisateur. */
+export const decks = pgTable(
+  "deck",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    format: text("format").$type<DeckFormat>().notNull().default("commander"),
+    visibility: text("visibility")
+      .$type<(typeof DECK_VISIBILITIES)[number]>()
+      .notNull()
+      .default("private"),
+    // Carte dont l'illustration sert de couverture (par défaut, le commandant).
+    coverOracleId: uuid("cover_oracle_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("deck_user_id_idx").on(table.userId, table.updatedAt)],
+);
+
+/**
+ * Cartes d'un deck. Les cartes sont référencées par `oracle_id`, stable d'une
+ * synchronisation à l'autre, sans clé étrangère : une carte retirée par
+ * Scryfall ne doit pas empêcher la synchronisation ni effacer les decks.
+ */
+export const deckCards = pgTable(
+  "deck_card",
+  {
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    oracleId: uuid("oracle_id").notNull(),
+    zone: text("zone").$type<DeckZone>().notNull(),
+    quantity: smallint("quantity").notNull(),
+    // Catégories personnalisées (Rampe, Pioche…) ; la première sert au regroupement.
+    categories: text("categories").array().notNull().default([]),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deckId, table.zone, table.oracleId] }),
+  ],
 );

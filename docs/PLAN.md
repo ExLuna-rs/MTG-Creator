@@ -80,9 +80,9 @@ Docker Compose, sur un VPS
 | Base de données | PostgreSQL avec `pg_trgm` | Recherche floue sur les noms des cartes |
 | Accès aux données | Drizzle ORM et drizzle-kit | Requêtes typées, migrations |
 | Authentification | Better Auth | Email + mot de passe, Discord, Google |
-| État côté client | TanStack Query, Zustand | Cache des recherches, état de l'éditeur |
-| Glisser-déposer | dnd-kit | Déplacer les cartes entre groupes |
-| Graphiques | Recharts | Courbe de mana, répartitions |
+| État côté client | Réducteur React (`useReducer`) testé dans `src/domain/deck/editor.ts` | État de l'éditeur, annuler / rétablir |
+| Glisser-déposer | dnd-kit | Déplacer les cartes entre groupes, à la souris ou au clavier |
+| Graphiques | HTML et CSS | Courbe de mana, répartitions (Recharts si des graphiques plus riches deviennent nécessaires) |
 | Validation | Zod | Contrôle des entrées et de l'import |
 | Tests | Vitest, Testing Library, Playwright | Tests unitaires, de composants et de bout en bout |
 | Conteneurs | Docker, Docker Compose | Mêmes services en développement, en test et en production |
@@ -142,7 +142,7 @@ La recherche par nom compare la saisie à une version normalisée du nom (minusc
 | `card` | Une ligne par carte : `oracle_id`, nom (et sa version normalisée, sans accents, pour la recherche), coût, valeur de mana, types, textes, couleurs, identité couleur (masque de bits WUBRG), mots-clés, légalités, faces, mana produit, rang EDHREC, Game Changer, éligibilité comme commandant, édition par défaut |
 | `printing` (phase 5) | Une ligne par édition : identifiant Scryfall, `oracle_id`, édition, numéro, rareté, images, prix, date de sortie |
 | `deck` | Propriétaire, nom, description, format, visibilité (privé / non listé / public), illustration de couverture, dates |
-| `deck_card` | Deck, carte (`oracle_id`), édition choisie (facultative), quantité, zone (commandant / deck / à considérer), catégories |
+| `deck_card` | Deck, carte (`oracle_id`), quantité, zone (commandant / deck / à considérer), catégories ; édition choisie (facultative) en phase 5 |
 
 Les decks référencent les cartes par `oracle_id`, un identifiant stable qui ne change pas quand Scryfall met ses données à jour.
 
@@ -263,6 +263,16 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 - Page « Mes decks ».
 
 **Terminé quand** : on peut construire de bout en bout un deck de 100 cartes valide, et chaque règle a ses tests.
+
+**État** : terminée (pull request n° 7).
+
+- Tables `deck` et `deck_card` (migration `0003_decks`). Les cartes sont référencées par `oracle_id` sans clé étrangère : une carte retirée par Scryfall ne bloque pas la synchronisation. Chaque fonction d'accès (`src/server/decks/decks.ts`) filtre sur l'utilisateur connecté.
+- Nouveau deck (`/fr/decks/new`) : recherche parmi les commandants possibles ; si le commandant a une capacité de paire, choix facultatif d'un second commandant parmi les seules cartes compatibles (`/api/cards/commanders`). Le serveur revérifie le commandant et la paire.
+- Éditeur (`/fr/decks/[id]/edit`) : recherche limitée par défaut à l'identité couleur des commandants et aux cartes légales ; ajout au deck ou aux cartes à considérer ; quantités pour les terrains de base et les exceptions au singleton ; regroupement par type ou par catégorie (la première catégorie d'une carte sert au regroupement, catégories suggérées) ; glisser-déposer entre les groupes et les zones, à la souris ou au clavier ; annuler / rétablir (boutons, Ctrl+Z, Ctrl+Y), 100 étapes ; sauvegarde automatique après une courte pause (`PUT /api/decks/[id]`, contenu complet validé par Zod). Sur mobile, onglets Recherche / Deck / Analyse.
+- Moteur de règles (`src/domain/commander/`) : taille, commandant, paires (Partner et ses variantes, Partner with, Friends forever, Choose a Background, Doctor's companion), identité couleur, singleton et ses exceptions, cartes bannies ou non légales, Game Changers avec le bracket minimum (`brackets.ts`). Les erreurs sont affichées dans le panneau de validation et sur les cartes concernées ; les cartes à considérer ne sont pas vérifiées.
+- Statistiques (`src/domain/deck/stats.ts`) : courbe de mana, valeur de mana moyenne, types, symboles de couleur comparés aux sources de mana, terrains, prix Cardmarket et TCGplayer.
+- « Mes decks » (`/fr/decks`) : commandants, identité couleur, nombre de cartes, validité, prix ; suppression depuis l'éditeur.
+- Écarts avec le plan initial : pas de Zustand ni de TanStack Query (un réducteur suffit à l'éditeur), pas de Recharts (graphiques simples en HTML et CSS), deux dépendances de moins à auditer.
 
 ### Phase 4 : import, export, partage, puis mise en ligne du MVP
 
