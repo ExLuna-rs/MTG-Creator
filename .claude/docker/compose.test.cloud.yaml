@@ -1,0 +1,33 @@
+# Surcharge de compose.test.yaml pour les sessions cloud de Claude Code,
+# activée par le hook de démarrage (variable TEST_COMPOSE).
+# Note : la base de vulnérabilités de Grype n'est pas joignable depuis ces
+# sessions ; `make scan` ne tourne qu'en CI.
+x-proxy-build: &proxy-build
+  network: host
+  args:
+    HTTPS_PROXY: ${HTTPS_PROXY}
+  secrets:
+    - extra_ca
+
+services:
+  migrate:
+    build: *proxy-build
+
+  app:
+    build: *proxy-build
+    ports:
+      - "127.0.0.1:3100:3000"
+
+  e2e:
+    network_mode: host
+    environment:
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      NO_PROXY: localhost,127.0.0.1
+      NODE_EXTRA_CA_CERTS: /ccr/ca-bundle.crt
+      E2E_BASE_URL: http://127.0.0.1:3100
+    volumes:
+      - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
+
+secrets:
+  extra_ca:
+    file: /root/.ccr/ca-bundle.crt

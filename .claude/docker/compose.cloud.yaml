@@ -1,0 +1,48 @@
+# Surcharge de compose.yaml pour les sessions cloud de Claude Code, activée
+# par le hook de démarrage (variable COMPOSE). Les conteneurs y passent par le
+# proxy HTTPS de la session : réseau de l'hôte et certificat racine du proxy.
+x-proxy-env: &proxy-env
+  HTTPS_PROXY: ${HTTPS_PROXY}
+  NO_PROXY: localhost,127.0.0.1
+  NODE_EXTRA_CA_CERTS: /ccr/ca-bundle.crt
+
+x-proxy-build: &proxy-build
+  network: host
+  args:
+    HTTPS_PROXY: ${HTTPS_PROXY}
+  secrets:
+    - extra_ca
+
+x-database-url: &database-url postgres://${POSTGRES_USER:-mtg}:${POSTGRES_PASSWORD:-mtg}@127.0.0.1:${DB_PORT:-5432}/${POSTGRES_DB:-mtg}
+
+services:
+  migrate:
+    network_mode: host
+    build: *proxy-build
+    environment:
+      <<: *proxy-env
+      DATABASE_URL: *database-url
+    volumes:
+      - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
+
+  app:
+    network_mode: host
+    ports: !reset []
+    build: *proxy-build
+    environment:
+      <<: *proxy-env
+      DATABASE_URL: *database-url
+    volumes:
+      - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
+
+  e2e:
+    network_mode: host
+    environment:
+      <<: *proxy-env
+      E2E_BASE_URL: http://127.0.0.1:3000
+    volumes:
+      - /root/.ccr/ca-bundle.crt:/ccr/ca-bundle.crt:ro
+
+secrets:
+  extra_ca:
+    file: /root/.ccr/ca-bundle.crt
