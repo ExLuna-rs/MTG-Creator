@@ -5,9 +5,11 @@ import { emailLink } from "./mailpit";
 /**
  * Adresse IP propre au test, transmise comme le ferait Cloudflare : la
  * limitation des tentatives (active en production) ne mélange pas les tests.
+ * L'en-tête est posé sur le contexte : `page.request` (appels directs à
+ * l'API) l'envoie aussi, contrairement à `page.setExtraHTTPHeaders`.
  */
 export async function setOwnIp(page: Page) {
-  await page.setExtraHTTPHeaders({
+  await page.context().setExtraHTTPHeaders({
     "cf-connecting-ip": `10.${randomInt(256)}.${randomInt(256)}.${randomInt(1, 255)}`,
   });
 }
