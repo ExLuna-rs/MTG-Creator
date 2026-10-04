@@ -270,6 +270,34 @@ Estimation du bracket, objectifs par catégorie, test de main, choix de l'éditi
 
 Selon les priorités, dans la liste « Plus tard ».
 
+### Chantier parallèle : scan de cartes depuis le téléphone
+
+Objectif : scanner ses cartes physiques avec l'appareil photo du téléphone, comme l'application Manabox, mais directement dans l'application web, sans rien installer. Ce chantier avance à côté des phases : il ne décale pas la feuille de route, et chaque étape démarre dès que sa dépendance est terminée.
+
+**Approche technique**
+
+- **Caméra** : `navigator.mediaDevices.getUserMedia` avec la caméra arrière (`facingMode: "environment"`), affichée dans une page `/fr/scan` avec un cadre de visée à la taille d'une carte. Le navigateur exige HTTPS (fourni par Cloudflare en production, `localhost` en développement). L'en-tête `Permissions-Policy` de `next.config.ts` bloque aujourd'hui la caméra (`camera=()`) : il faudra l'autoriser pour le site lui-même (`camera=(self)`).
+- **Reconnaissance du nom** : on ne garde que la bande du nom en haut de la carte, puis on la lit par reconnaissance de texte (OCR) dans le navigateur avec Tesseract.js (WebAssembly). L'image ne quitte pas le téléphone et le serveur n'a aucun calcul lourd à faire. Les fichiers de Tesseract (≈ 5 Mo) sont servis par l'application elle-même, chargés seulement sur la page de scan, et mis en cache.
+- **Correspondance avec la base** : le texte lu, souvent imparfait, est envoyé à la recherche floue de la phase 1 (`pg_trgm` sur `search_name`), qui tolère déjà les fautes. Une carte est reconnue quand la meilleure correspondance est assez sûre ; sinon, l'utilisateur choisit parmi les trois premières propositions.
+- **Édition exacte** (plus tard) : sur les cartes imprimées depuis 2014, le bas de la carte porte le code de l'édition et le numéro de collection ; les lire donne l'édition exacte, donc la bonne illustration et le bon prix (table `printing`).
+- **Reconnaissance de l'illustration** (piste, si l'OCR ne suffit pas) : comparer une empreinte de l'image (hachage perceptuel) avec celles de toutes les éditions, précalculées par le service `sync`. C'est plus robuste (cartes abîmées, autres langues) mais demande de télécharger et traiter environ 100 000 images Scryfall : à étudier seulement si le besoin se confirme.
+
+**Étapes et dépendances**
+
+| Étape | Contenu | Dépend de |
+|---|---|---|
+| S1 : prototype | Page de scan, caméra, OCR du nom, fiche de la carte reconnue ; test sur plusieurs téléphones (Android et iPhone) | Phase 1 (terminée) : peut démarrer tout de suite |
+| S2 : liste de scan | Scan en continu, liste des cartes scannées avec quantités, correction manuelle, export texte | S1 |
+| S3 : ajout à un deck | Envoyer la liste scannée dans un deck ou dans les cartes à considérer | Phase 3 (éditeur de deck), comptes de la phase 2 |
+| S4 : édition exacte | Lecture du code d'édition et du numéro de collection | Phase 5 (table `printing`) |
+| S5 : collection | Ajouter les cartes scannées à sa collection | Gestion de collection (« Plus tard ») |
+
+Les cartes en français ne seront reconnues qu'une fois les noms français importés (« Plus tard ») ; d'ici là, le scan vise les cartes en anglais.
+
+**Tests** : la logique de nettoyage du texte lu et de choix de la correspondance va dans `src/domain/scan/` avec des tests unitaires sur des lectures OCR réelles enregistrées ; les tests de bout en bout utilisent la caméra simulée de Chromium (`--use-file-for-fake-video-capture`) avec la photo d'une carte.
+
+**Terminé quand** (S1 et S2) : sur un téléphone, on scanne une dizaine de cartes anglaises à la suite, et au moins neuf sur dix sont reconnues sans correction.
+
 ## 6. Tests et qualité
 
 - **Tests unitaires** (Vitest) sur tout le dossier `domain/` : règles Commander, statistiques, import / export. C'est là que les bugs coûtent le plus cher.
