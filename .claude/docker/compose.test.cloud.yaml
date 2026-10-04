@@ -13,6 +13,9 @@ services:
   migrate:
     build: *proxy-build
 
+  seed:
+    build: *proxy-build
+
   app:
     build: *proxy-build
     ports:
