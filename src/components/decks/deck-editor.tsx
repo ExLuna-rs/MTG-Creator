@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useReducer, useState } from "react";
-import { CardImage } from "@/components/cards/card-image";
 import { Button } from "@/components/ui/button";
 import { validateCommanderDeck } from "@/domain/commander/validate";
 import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
@@ -20,6 +19,7 @@ import { computeDeckStats } from "@/domain/deck/stats";
 import { mergeImport } from "@/domain/import-export/import";
 import { cn } from "@/lib/utils";
 import { deleteDeckAction } from "@/server/decks/actions";
+import { CardPreview } from "./card-preview";
 import { DeckImport } from "./deck-import";
 import { DeckList } from "./deck-list";
 import { DeckStats } from "./deck-stats";
@@ -38,6 +38,13 @@ function isEditable(target: EventTarget | null): boolean {
       ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
   );
 }
+
+/**
+ * Colonnes latérales sur grand écran : elles restent visibles quand on fait
+ * défiler un long deck, avec leur propre défilement si besoin.
+ */
+const SIDE_PANEL =
+  "lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:overflow-y-auto";
 
 /**
  * Éditeur d'un deck Commander : recherche à gauche, deck au centre,
@@ -203,7 +210,9 @@ export function DeckEditor({
       </fieldset>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)_minmax(0,20rem)]">
-        <div className={cn(tab !== "search" && "hidden", "lg:block")}>
+        <div
+          className={cn(tab !== "search" && "hidden", "lg:block", SIDE_PANEL)}
+        >
           <EditorSearch
             identity={commanders.length > 0 ? validation.colorIdentity : null}
             quantities={quantities}
@@ -243,15 +252,15 @@ export function DeckEditor({
         </div>
 
         <aside
-          className={cn(tab !== "analysis" && "hidden", "space-y-8 lg:block")}
+          className={cn(
+            tab !== "analysis" && "hidden",
+            "space-y-8 lg:block",
+            SIDE_PANEL,
+          )}
         >
           {previewCard && (
-            <div className="mx-auto hidden w-56 lg:block">
-              <CardImage
-                imageUris={previewCard.imageUris}
-                name={previewCard.name}
-                sizes="224px"
-              />
+            <div className="hidden lg:block">
+              <CardPreview card={previewCard} />
             </div>
           )}
           <ValidationPanel validation={validation} />

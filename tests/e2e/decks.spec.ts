@@ -218,6 +218,41 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
 });
 
+test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", async ({
+  page,
+}) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await addCard(page, "Sol Ring");
+  await addCard(page, "Plains");
+
+  // Survoler une carte l'affiche, avec son texte, dans l'aperçu de droite.
+  const preview = page.getByTestId("card-preview");
+  await deckRow(page, "Plains").getByText("Plains", { exact: true }).hover();
+  await expect(preview).toContainText("Basic Land");
+  await deckRow(page, "Sol Ring").getByText("Sol Ring").hover();
+  await expect(preview).toContainText("Sol Ring");
+  await expect(preview).toContainText("Artifact");
+
+  // Terrain de base : le + ajoute un exemplaire.
+  await page
+    .getByRole("button", { name: "Ajouter un exemplaire de Plains" })
+    .click();
+  await expect(page.getByLabel("Quantité de Plains")).toHaveValue("2");
+
+  // Carte unique : le + est bloqué par la règle du singleton, le − la retire.
+  await expect(
+    page.getByRole("button", { name: "Ajouter un exemplaire de Sol Ring" }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Retirer un exemplaire de Sol Ring" })
+    .click();
+  await expect(deckRow(page, "Sol Ring")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Deck (3 cartes)" }),
+  ).toBeVisible();
+});
+
 test("protège les decks des autres utilisateurs", async ({ page, browser }) => {
   await signUpViaApi(page);
   await createDeck(page, "Edgar Markov");

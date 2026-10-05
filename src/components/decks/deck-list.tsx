@@ -14,12 +14,14 @@ import {
   ChevronDown,
   CircleAlert,
   GripVertical,
+  Minus,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId, useState } from "react";
-import { ManaText } from "@/components/cards/mana-text";
+import { ManaText, OracleText } from "@/components/cards/mana-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { maxCopies } from "@/domain/commander/singleton";
@@ -60,6 +62,7 @@ function dropTarget(
  * Liste du deck : commandant(s), cartes regroupées par type ou par catégorie,
  * cartes à considérer. Les cartes se glissent d'un groupe à l'autre, à la
  * souris ou au clavier (Espace sur la poignée, flèches, puis Espace).
+ * Survoler une carte l'affiche dans l'aperçu de l'éditeur.
  */
 export function DeckList({
   deck,
@@ -85,7 +88,6 @@ export function DeckList({
     useSensor(KeyboardSensor),
   );
   const datalistId = useId();
-
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over) return;
     const [from, oracleId] = String(active.id).split("|") as [DeckZone, string];
@@ -238,7 +240,7 @@ function CardRow({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: entryId(entry) });
   const issues = zone === "maybe" ? [] : (cardIssues[oracleId] ?? []);
-  const multiple = zone !== "commander" && maxCopies(card) > 1;
+  const limit = Math.min(maxCopies(card), MAX_QUANTITY);
 
   function addCategory() {
     if (!newCategory.trim()) return;
@@ -276,18 +278,19 @@ function CardRow({
         >
           <GripVertical className="size-4" aria-hidden />
         </button>
-        {multiple ? (
-          <QuantityInput
-            value={quantity}
-            label={t("quantityOf", { name: card.name })}
+        {zone === "commander" ? (
+          <span className="w-[4.75rem] shrink-0 text-center text-muted-foreground text-sm tabular-nums">
+            {quantity}
+          </span>
+        ) : (
+          <QuantityStepper
+            name={card.name}
+            quantity={quantity}
+            limit={limit}
             onChange={(value) =>
               dispatch({ type: "setQuantity", oracleId, zone, quantity: value })
             }
           />
-        ) : (
-          <span className="w-12 shrink-0 text-center text-muted-foreground text-sm tabular-nums">
-            {quantity}
-          </span>
         )}
         <button
           type="button"
@@ -347,6 +350,10 @@ function CardRow({
         className="space-y-3 border-t bg-muted/40 px-3 py-3 text-sm"
       >
         <p className="text-muted-foreground text-xs">{card.typeLine}</p>
+        {/* Sur grand écran, l'aperçu de l'éditeur montre déjà le texte. */}
+        {open && card.oracleText && (
+          <OracleText text={card.oracleText} className="text-xs lg:hidden" />
+        )}
         <div className="flex flex-wrap gap-2">
           {DECK_ZONES.filter((target) => target !== zone).map((target) => (
             <Button
@@ -426,13 +433,79 @@ function CardRow({
   );
 }
 
+/**
+ * Boutons − et + autour de la quantité. Le − à un exemplaire retire la carte
+ * (Annuler la remet). Le + s'arrête à la limite Commander de la carte : un
+ * seul exemplaire, sauf terrains de base et exceptions, pour lesquels la
+ * quantité se saisit aussi au clavier.
+ */
+function QuantityStepper({
+  name,
+  quantity,
+  limit,
+  onChange,
+}: {
+  name: string;
+  quantity: number;
+  limit: number;
+  onChange: (value: number) => void;
+}) {
+  const t = useTranslations("DeckEditor");
+  const atLimit = quantity >= limit;
+  return (
+    <div className="flex shrink-0 items-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 text-muted-foreground"
+        onClick={() => onChange(quantity - 1)}
+        aria-label={t("decrease", { name })}
+        title={t("decrease", { name })}
+      >
+        <Minus className="size-3.5" aria-hidden />
+      </Button>
+      {limit > 1 ? (
+        <QuantityInput
+          value={quantity}
+          max={limit}
+          label={t("quantityOf", { name })}
+          onChange={onChange}
+        />
+      ) : (
+        <span className="w-7 text-center text-sm tabular-nums">{quantity}</span>
+      )}
+      {/* Un bouton désactivé n'affiche pas d'infobulle : elle est sur son conteneur. */}
+      <span
+        title={atLimit ? t("copyLimit", { count: limit, name }) : undefined}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 text-muted-foreground"
+          disabled={atLimit}
+          onClick={() => onChange(quantity + 1)}
+          aria-label={t("increase", { name })}
+          aria-description={
+            atLimit ? t("copyLimit", { count: limit, name }) : undefined
+          }
+          title={atLimit ? undefined : t("increase", { name })}
+        >
+          <Plus className="size-3.5" aria-hidden />
+        </Button>
+      </span>
+    </div>
+  );
+}
+
 /** Quantité modifiable : la saisie en cours peut être vide sans rien changer. */
 function QuantityInput({
   value,
+  max,
   label,
   onChange,
 }: {
   value: number;
+  max: number;
   label: string;
   onChange: (value: number) => void;
 }) {
@@ -442,7 +515,7 @@ function QuantityInput({
       type="number"
       inputMode="numeric"
       min={0}
-      max={MAX_QUANTITY}
+      max={max}
       value={draft ?? value}
       aria-label={label}
       onChange={(event) => {
@@ -451,7 +524,7 @@ function QuantityInput({
         if (Number.isInteger(number) && number >= 0) onChange(number);
       }}
       onBlur={() => setDraft(null)}
-      className="h-7 w-12 shrink-0 rounded-md border border-input bg-background px-1 text-center text-sm tabular-nums"
+      className="h-7 w-10 shrink-0 rounded-md border border-input bg-background px-1 text-center text-sm tabular-nums"
     />
   );
 }
