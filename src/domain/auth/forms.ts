@@ -23,6 +23,22 @@ export const displayNameSchema = z
   .max(32, "nameLength")
   .regex(/^[^\p{C}]*$/u, "nameCharacters");
 
+/**
+ * Pseudo tiré d'un profil Google : nom affiché, ou début de l'adresse email,
+ * ramené aux règles de `displayNameSchema` (l'utilisateur pourra le changer).
+ */
+export function displayNameFromProfile(
+  name: string | undefined,
+  email: string,
+): string {
+  const clean = (value: string) =>
+    value.replace(/\p{C}/gu, "").trim().slice(0, 32).trim();
+  const fromName = clean(name ?? "");
+  if (fromName.length >= 2) return fromName;
+  const fromEmail = clean(email.split("@")[0] ?? "");
+  return fromEmail.length >= 2 ? fromEmail : "Planeswalker";
+}
+
 export const emailSchema = z
   .string()
   .trim()
@@ -66,6 +82,11 @@ export const resetPasswordSchema = z
 export const profileSchema = z.object({
   name: displayNameSchema,
   locale: localeSchema,
+});
+
+/** Suppression d'un compte sans mot de passe (créé avec Google). */
+export const deleteAccountWithoutPasswordSchema = z.object({
+  confirm: z.literal("on", "confirmRequired"),
 });
 
 export const deleteAccountSchema = z.object({

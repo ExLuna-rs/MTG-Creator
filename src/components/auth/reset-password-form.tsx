@@ -1,5 +1,6 @@
 "use client";
 
+import { LockKeyhole } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { resetPasswordSchema } from "@/domain/auth/forms";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -49,6 +50,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         type="password"
         label={t("newPassword")}
         hint={t("passwordHint")}
+        icon={LockKeyhole}
         autoComplete="new-password"
         required
         minLength={8}
@@ -60,6 +62,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         name="confirmPassword"
         type="password"
         label={t("confirmPassword")}
+        icon={LockKeyhole}
         autoComplete="new-password"
         required
         error={form.fieldError("confirmPassword")}

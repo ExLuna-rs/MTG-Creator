@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import type { Locale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SignUpForm } from "@/components/auth/sign-up-form";
 import { Link } from "@/i18n/navigation";
+import { isGoogleEnabled } from "@/server/env";
 
 export async function generateMetadata({
   params,
@@ -22,6 +24,9 @@ export default async function SignUpPage({
   const { locale } = await params;
   setRequestLocale(locale as Locale);
   const t = await getTranslations("SignUpPage");
+  // Rendu à la demande : la configuration de Google est lue au démarrage du
+  // serveur, pas pendant le build de l'image.
+  await connection();
 
   return (
     <AuthCard
@@ -36,7 +41,7 @@ export default async function SignUpPage({
         </>
       }
     >
-      <SignUpForm />
+      <SignUpForm googleEnabled={isGoogleEnabled()} />
     </AuthCard>
   );
 }

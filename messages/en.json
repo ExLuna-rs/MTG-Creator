@@ -188,8 +188,16 @@
       "wrongPassword": "Incorrect password.",
       "invalidToken": "This link is no longer valid.",
       "tooManyRequests": "Too many attempts. Please wait a moment before trying again.",
-      "unknown": "Something went wrong. Please try again in a moment."
-    }
+      "unknown": "Something went wrong. Please try again in a moment.",
+      "sessionNotFresh": "For your security, sign out and sign in again before deleting your account.",
+      "oauthFailed": "Signing in with Google did not work. Please try again.",
+      "oauthLinkFailed": "An account already uses this address, but it is not confirmed yet. Confirm it with the link we emailed you, or sign in with your password."
+    },
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "continueWithGoogle": "Continue with Google",
+    "orWithEmail": "or with your email",
+    "devMailHint": "In development, no email is actually sent: open <link>Mailpit (localhost:8025)</link> to read it."
   },
   "SignUpPage": {
     "title": "Create an account",
@@ -242,7 +250,11 @@
     "deleteTitle": "Delete account",
     "deleteDescription": "Deletion is immediate and permanent: your account and all its data will be erased.",
     "deleteConfirm": "I understand that my account will be permanently deleted.",
-    "delete": "Delete my account"
+    "delete": "Delete my account",
+    "signInMethods": "Sign-in methods: {methods}.",
+    "methodPassword": "email and password",
+    "methodGoogle": "Google",
+    "deleteConfirmGoogle": "Your account has no password: tick the box to confirm."
   },
   "Emails": {
     "greeting": "Hello {name},",
@@ -260,5 +272,14 @@
       "action": "Choose a new password",
       "ignore": "If you did not make this request, ignore this email: your password stays the same."
     }
+  },
+  "AuthAside": {
+    "title": "Build, check and share your Commander decks.",
+    "points": {
+      "save": "Your decks saved online, on all your devices",
+      "rules": "Commander rules checked while you build",
+      "share": "Share a deck with a single link"
+    },
+    "fanContent": "Unofficial fan content, not approved by Wizards of the Coast."
   }
 }

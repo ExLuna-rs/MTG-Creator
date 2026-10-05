@@ -1,11 +1,12 @@
 "use client";
 
-import { MailCheck } from "lucide-react";
+import { Mail, MailCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { forgotPasswordSchema } from "@/domain/auth/forms";
 import { getPathname } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
+import { DevMailHint } from "./dev-mail-hint";
 import { FormField } from "./form-field";
 import { FormMessage } from "./form-message";
 import { SubmitButton } from "./submit-button";
@@ -34,6 +35,7 @@ export function ForgotPasswordForm() {
         <p className="text-muted-foreground">
           {tPage("sent", { email: sentTo })}
         </p>
+        <DevMailHint />
       </div>
     );
   }
@@ -53,6 +55,7 @@ export function ForgotPasswordForm() {
         name="email"
         type="email"
         label={t("email")}
+        icon={Mail}
         autoComplete="email"
         required
         error={form.fieldError("email")}

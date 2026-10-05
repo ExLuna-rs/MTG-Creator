@@ -2,7 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useId } from "react";
-import { deleteAccountSchema } from "@/domain/auth/forms";
+import {
+  deleteAccountSchema,
+  deleteAccountWithoutPasswordSchema,
+} from "@/domain/auth/forms";
 import { useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { FormField } from "./form-field";
@@ -10,15 +13,25 @@ import { FormMessage } from "./form-message";
 import { SubmitButton } from "./submit-button";
 import { useAuthForm } from "./use-auth-form";
 
-/** Suppression définitive du compte, confirmée par le mot de passe. */
-export function DeleteAccountForm() {
+/**
+ * Suppression définitive du compte, confirmée par le mot de passe. Un compte
+ * créé avec Google n'en a pas : Better Auth exige alors une session récente.
+ */
+export function DeleteAccountForm({ hasPassword }: { hasPassword: boolean }) {
   const t = useTranslations("AuthForm");
   const tPage = useTranslations("SettingsPage");
   const router = useRouter();
   const confirmId = useId();
 
-  const form = useAuthForm(deleteAccountSchema, async (data) => {
-    const response = await authClient.deleteUser({ password: data.password });
+  const schema = hasPassword
+    ? deleteAccountSchema
+    : deleteAccountWithoutPasswordSchema;
+  const form = useAuthForm(schema, async (data) => {
+    const password =
+      "password" in data && typeof data.password === "string"
+        ? data.password
+        : undefined;
+    const response = await authClient.deleteUser(password ? { password } : {});
     if (!response.error) {
       router.replace("/");
       router.refresh();
@@ -37,15 +50,21 @@ export function DeleteAccountForm() {
       {form.formError && (
         <FormMessage variant="error">{form.formError}</FormMessage>
       )}
-      <FormField
-        id="delete-account-password"
-        name="password"
-        type="password"
-        label={t("currentPassword")}
-        autoComplete="current-password"
-        required
-        error={form.fieldError("password")}
-      />
+      {hasPassword ? (
+        <FormField
+          id="delete-account-password"
+          name="password"
+          type="password"
+          label={t("currentPassword")}
+          autoComplete="current-password"
+          required
+          error={form.fieldError("password")}
+        />
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          {tPage("deleteConfirmGoogle")}
+        </p>
+      )}
       <div className="space-y-1.5">
         <div className="flex items-start gap-2">
           <input

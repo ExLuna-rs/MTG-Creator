@@ -4,8 +4,10 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthCard } from "@/components/auth/auth-card";
 import { FormMessage } from "@/components/auth/form-message";
 import { SignInForm } from "@/components/auth/sign-in-form";
+import { oauthErrorKey } from "@/domain/auth/errors";
 import { safeReturnPath } from "@/domain/auth/return-path";
 import { Link } from "@/i18n/navigation";
+import { isGoogleEnabled } from "@/server/env";
 
 export async function generateMetadata({
   params,
@@ -25,7 +27,10 @@ export default async function SignInPage({
   const { locale } = await params;
   setRequestLocale(locale as Locale);
   const t = await getTranslations("SignInPage");
-  const { next, reset } = await searchParams;
+  const tErrors = await getTranslations("AuthForm.errors");
+  const { next, reset, error } = await searchParams;
+  // Erreur renvoyée par Better Auth après un échec de connexion avec Google.
+  const oauthError = oauthErrorKey(error);
 
   return (
     <AuthCard
@@ -43,7 +48,11 @@ export default async function SignInPage({
       {reset === "1" && (
         <FormMessage variant="success">{t("passwordReset")}</FormMessage>
       )}
-      <SignInForm returnTo={safeReturnPath(next)} />
+      <SignInForm
+        returnTo={safeReturnPath(next)}
+        googleEnabled={isGoogleEnabled()}
+        oauthError={oauthError ? tErrors(oauthError) : undefined}
+      />
     </AuthCard>
   );
 }

@@ -33,8 +33,8 @@ export function SubmitButton({
       aria-busy={pending || undefined}
       className={
         variant === "destructive"
-          ? "w-full bg-destructive text-white hover:bg-destructive/90"
-          : "w-full"
+          ? "h-11 w-full bg-destructive text-white hover:bg-destructive/90"
+          : "h-11 w-full"
       }
     >
       {pending && <LoaderCircle className="animate-spin" aria-hidden />}

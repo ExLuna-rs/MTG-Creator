@@ -4,7 +4,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { hasLocale, type Locale } from "next-intl";
-import { displayNameSchema, localeSchema } from "@/domain/auth/forms";
+import {
+  displayNameFromProfile,
+  displayNameSchema,
+  localeSchema,
+} from "@/domain/auth/forms";
 import { routing } from "@/i18n/routing";
 import { getDb } from "@/server/db";
 import { accounts, sessions, users, verifications } from "@/server/db/schema";
@@ -65,6 +69,24 @@ function createAuth() {
         verification: verifications,
       },
     }),
+    // Connexion avec Google, si les identifiants OAuth sont fournis. Un compte
+    // existant avec la même adresse (confirmée) est relié automatiquement.
+    socialProviders:
+      env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+        ? {
+            google: {
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET,
+              // Toujours proposer le choix du compte Google.
+              prompt: "select_account",
+              mapProfileToUser: (profile) => ({
+                name: displayNameFromProfile(profile.name, profile.email),
+                locale: localeSchema.safeParse(profile.locale?.slice(0, 2))
+                  .data,
+              }),
+            },
+          }
+        : {},
     emailAndPassword: {
       enabled: true,
       // Pas de session tant que l'adresse n'est pas confirmée.

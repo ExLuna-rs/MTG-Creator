@@ -17,6 +17,18 @@ export type CurrentSession = NonNullable<
 >;
 
 /**
+ * Moyens de connexion de l'utilisateur connecté : « credential » (email et
+ * mot de passe), « google »…
+ */
+export async function getSignInMethods(): Promise<string[]> {
+  const requestHeaders = await headers();
+  const accounts = await getAuth().api.listUserAccounts({
+    headers: requestHeaders,
+  });
+  return accounts.map((account) => account.providerId);
+}
+
+/**
  * Session obligatoire : sans elle, redirige vers la page de connexion, qui
  * ramènera ensuite sur `returnTo` (chemin sans la langue, par exemple
  * « /settings »).
