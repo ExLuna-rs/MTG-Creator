@@ -226,14 +226,13 @@ test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", a
   await addCard(page, "Sol Ring");
   await addCard(page, "Plains");
 
-  // Survoler une carte affiche son image et son texte.
-  const preview = page.getByTestId("card-hover-preview");
+  // Survoler une carte l'affiche, avec son texte, dans l'aperçu de droite.
+  const preview = page.getByTestId("card-preview");
+  await deckRow(page, "Plains").getByText("Plains", { exact: true }).hover();
+  await expect(preview).toContainText("Basic Land");
   await deckRow(page, "Sol Ring").getByText("Sol Ring").hover();
-  await expect(preview).toBeVisible();
   await expect(preview).toContainText("Sol Ring");
   await expect(preview).toContainText("Artifact");
-  await page.mouse.move(0, 0);
-  await expect(preview).toHaveCount(0);
 
   // Terrain de base : le + ajoute un exemplaire.
   await page

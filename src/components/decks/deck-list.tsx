@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { ManaText, OracleText } from "@/components/cards/mana-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,6 @@ import type { EditorAction } from "@/domain/deck/editor";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
 import { type GroupMode, groupDeck } from "@/domain/deck/groups";
 import { cn } from "@/lib/utils";
-import { CardHoverPreview, type HoveredCard } from "./card-hover-preview";
 
 type Dispatch = (action: EditorAction) => void;
 
@@ -63,7 +62,7 @@ function dropTarget(
  * Liste du deck : commandant(s), cartes regroupées par type ou par catégorie,
  * cartes à considérer. Les cartes se glissent d'un groupe à l'autre, à la
  * souris ou au clavier (Espace sur la poignée, flèches, puis Espace).
- * Survoler une carte affiche son aperçu.
+ * Survoler une carte l'affiche dans l'aperçu de l'éditeur.
  */
 export function DeckList({
   deck,
@@ -71,6 +70,7 @@ export function DeckList({
   cardIssues,
   categories,
   dispatch,
+  onPreview,
 }: {
   deck: DeckCard[];
   mode: GroupMode;
@@ -78,6 +78,7 @@ export function DeckList({
   /** Catégories proposées à la saisie. */
   categories: string[];
   dispatch: Dispatch;
+  onPreview: (card: DeckCardData) => void;
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
@@ -87,24 +88,6 @@ export function DeckList({
     useSensor(KeyboardSensor),
   );
   const datalistId = useId();
-  const [hovered, setHovered] = useState<HoveredCard | null>(null);
-
-  // L'aperçu suit la ligne : il disparaît dès que la page défile.
-  useEffect(() => {
-    if (!hovered) return;
-    const hide = () => setHovered(null);
-    window.addEventListener("scroll", hide, { capture: true, passive: true });
-    return () => window.removeEventListener("scroll", hide, { capture: true });
-  }, [hovered]);
-
-  function onPreview(card: DeckCardData | null, element?: Element) {
-    setHovered(
-      card && element
-        ? { card, anchor: element.getBoundingClientRect() }
-        : null,
-    );
-  }
-
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over) return;
     const [from, oracleId] = String(active.id).split("|") as [DeckZone, string];
@@ -129,7 +112,6 @@ export function DeckList({
   return (
     <DndContext
       sensors={sensors}
-      onDragStart={() => setHovered(null)}
       onDragEnd={onDragEnd}
       accessibility={{
         screenReaderInstructions: { draggable: t("dragInstructions") },
@@ -193,7 +175,6 @@ export function DeckList({
           )}
         </Group>
       </div>
-      {hovered && <CardHoverPreview hovered={hovered} />}
     </DndContext>
   );
 }
@@ -247,7 +228,7 @@ function CardRow({
   cardIssues: Record<string, DeckIssueCode[]>;
   datalistId: string;
   dispatch: Dispatch;
-  onPreview: (card: DeckCardData | null, element?: Element) => void;
+  onPreview: (card: DeckCardData) => void;
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
@@ -276,10 +257,7 @@ function CardRow({
     <li
       ref={setNodeRef}
       data-card={card.name}
-      onMouseEnter={(event) =>
-        !isDragging && onPreview(card, event.currentTarget)
-      }
-      onMouseLeave={() => onPreview(null)}
+      onMouseEnter={() => onPreview(card)}
       style={
         transform
           ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -316,10 +294,7 @@ function CardRow({
         )}
         <button
           type="button"
-          onFocus={(event) =>
-            onPreview(card, event.currentTarget.closest("li") ?? undefined)
-          }
-          onBlur={() => onPreview(null)}
+          onFocus={() => onPreview(card)}
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls={detailsId}
@@ -375,7 +350,7 @@ function CardRow({
         className="space-y-3 border-t bg-muted/40 px-3 py-3 text-sm"
       >
         <p className="text-muted-foreground text-xs">{card.typeLine}</p>
-        {/* Sur grand écran, l'aperçu au survol montre déjà le texte. */}
+        {/* Sur grand écran, l'aperçu de l'éditeur montre déjà le texte. */}
         {open && card.oracleText && (
           <OracleText text={card.oracleText} className="text-xs lg:hidden" />
         )}
