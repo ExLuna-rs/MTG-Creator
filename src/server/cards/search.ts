@@ -7,7 +7,9 @@ import {
   eq,
   gte,
   inArray,
+  like,
   lte,
+  or,
   type SQL,
   sql,
 } from "drizzle-orm";
@@ -15,7 +17,7 @@ import type { CardImageUris } from "@/domain/cards/card";
 import { colorsToMask } from "@/domain/cards/colors";
 import { normalizeCardName } from "@/domain/cards/normalize";
 import { CARD_PAGE_SIZE, type CardSearch } from "@/domain/cards/search-query";
-import type { DeckCardData } from "@/domain/deck/deck";
+import { type DeckCardData, frontName } from "@/domain/deck/deck";
 import { getDb } from "@/server/db";
 import { cards } from "@/server/db/schema";
 
@@ -264,6 +266,111 @@ export async function getDeckCardData(
     .select(deckCardColumns)
     .from(cards)
     .where(inArray(cards.oracleId, [...new Set(oracleIds)]));
+}
+
+/** Résultat de la reconnaissance d'un nom de carte importé. */
+export interface ResolvedCardName {
+  name: string;
+  card: DeckCardData | null;
+  /** Cartes au nom proche, quand le nom n'est pas reconnu. */
+  suggestions: DeckCardData[];
+}
+
+/** Noms non reconnus pour lesquels des suggestions sont cherchées. */
+const MAX_SUGGESTED_NAMES = 20;
+const SUGGESTIONS_PER_NAME = 3;
+
+/** Garde, pour chaque nom normalisé, la carte la plus jouée. */
+function byPopularity(
+  rows: DeckCardData[],
+  key: (card: DeckCardData) => string,
+) {
+  const result = new Map<string, DeckCardData>();
+  for (const card of rows) {
+    const current = result.get(key(card));
+    if (
+      !current ||
+      (card.edhrecRank ?? Infinity) < (current.edhrecRank ?? Infinity)
+    ) {
+      result.set(key(card), card);
+    }
+  }
+  return result;
+}
+
+/**
+ * Reconnaît les noms d'une liste importée : nom exact (sans tenir compte
+ * des accents, de la casse ni de la ponctuation), puis nom de la face avant
+ * (« Delver of Secrets » pour « Delver of Secrets // Insectile Aberration »,
+ * comme l'exporte MTG Arena). Les noms inconnus reçoivent des suggestions.
+ */
+export async function resolveCardNames(
+  names: readonly string[],
+): Promise<ResolvedCardName[]> {
+  const db = getDb();
+  const normalized = names.map(normalizeCardName);
+  const wanted = [...new Set(normalized.filter(Boolean))];
+  if (wanted.length === 0) {
+    return names.map((name) => ({ name, card: null, suggestions: [] }));
+  }
+
+  const exact = byPopularity(
+    await db
+      .select(deckCardColumns)
+      .from(cards)
+      .where(inArray(cards.searchName, wanted)),
+    (card) => normalizeCardName(card.name),
+  );
+
+  const missing = wanted.filter((key) => !exact.has(key));
+  const faces =
+    missing.length === 0
+      ? new Map<string, DeckCardData>()
+      : byPopularity(
+          await db
+            .select(deckCardColumns)
+            .from(cards)
+            .where(
+              and(
+                like(cards.name, "% // %"),
+                or(
+                  ...missing.map((key) =>
+                    like(cards.searchName, `${escapeLike(key)} %`),
+                  ),
+                ),
+              ),
+            ),
+          (card) => normalizeCardName(frontName(card.name)),
+        );
+
+  const unknown = missing.filter((key) => !faces.has(key));
+  const suggestions = new Map<string, DeckCardData[]>();
+  for (const key of unknown.slice(0, MAX_SUGGESTED_NAMES)) {
+    suggestions.set(
+      key,
+      await db
+        .select(deckCardColumns)
+        .from(cards)
+        .where(nameCondition(key))
+        .orderBy(
+          sql`${nameRank(key)} asc`,
+          sql`word_similarity(${key}, ${cards.searchName}) desc`,
+          sql`${cards.edhrecRank} asc nulls last`,
+          asc(cards.name),
+        )
+        .limit(SUGGESTIONS_PER_NAME),
+    );
+  }
+
+  return names.map((name, index) => {
+    const key = normalized[index];
+    const card = exact.get(key) ?? faces.get(key) ?? null;
+    return {
+      name,
+      card,
+      suggestions: card ? [] : (suggestions.get(key) ?? []),
+    };
+  });
 }
 
 /** Suggestions de noms pendant la saisie. */

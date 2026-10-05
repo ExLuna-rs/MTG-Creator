@@ -243,6 +243,10 @@ test("protège les decks des autres utilisateurs", async ({ page, browser }) => 
     data: { name: "Volé", entries: [] },
   });
   expect(anonymousSave.status()).toBe(401);
+  const anonymousImport = await anonymous.request.post("/api/cards/resolve", {
+    data: { names: ["Sol Ring"] },
+  });
+  expect(anonymousImport.status()).toBe(401);
   await anonymous.close();
 });
 
@@ -253,4 +257,66 @@ test("supprime un deck", async ({ page }) => {
   await page.getByRole("button", { name: "Supprimer le deck" }).click();
   await expect(page).toHaveURL(/\/fr\/decks$/);
   await expect(page.getByText("Vous n'avez pas encore de deck.")).toBeVisible();
+});
+
+test("importe une liste de cartes", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Atraxa, Praetors' Voice");
+
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Importer une liste de cartes",
+  });
+  await dialog
+    .getByLabel("Liste de cartes")
+    .fill(
+      [
+        "Commander",
+        "1 Atraxa, Praetors' Voice",
+        "",
+        "Deck",
+        "1x Sol Ring (CMM) 410 *F* [Ramp]",
+        "1 Counterspel",
+        "1 Carte qui n'existe pas du tout",
+        "36 Island",
+        "",
+        "Sideboard",
+        "1 Lightning Bolt",
+      ].join("\n"),
+    );
+  await dialog.getByRole("button", { name: "Analyser la liste" }).click();
+
+  await expect(dialog.getByText("39 cartes reconnues.")).toBeVisible();
+  await expect(dialog.getByText("2 lignes non reconnues")).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Counterspell", exact: true })
+    .click();
+  await expect(dialog.getByText("40 cartes reconnues.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Importer 40 cartes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("40 cartes importées")).toBeVisible();
+
+  // Le commandant n'est pas ajouté une seconde fois au deck.
+  await expect(deckRow(page, "Atraxa, Praetors' Voice")).toHaveCount(1);
+  await expect(page.getByLabel("Quantité de Island")).toHaveValue("36");
+  await expect(deckRow(page, "Counterspell")).toBeVisible();
+  await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
+  await expect(
+    page.getByRole("heading", { name: "Deck (39 cartes)" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Catégorie", exact: true }).click();
+  await expect(group(page, "category:Ramp")).toContainText("Sol Ring");
+
+  // Tout l'import s'annule et se rétablit en une fois.
+  await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Deck (1 cartes)" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Rétablir", exact: true }).click();
+
+  await expectSaved(page);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Deck (39 cartes)" }),
+  ).toBeVisible();
 });

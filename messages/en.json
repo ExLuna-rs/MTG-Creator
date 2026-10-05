@@ -367,6 +367,34 @@
     "categoriesHint": "Drag the card onto a group to change its main category.",
     "defaultCategories": "Ramp, Card draw, Interaction, Board wipes, Protection, Tutors, Synergy, Win conditions"
   },
+  "DeckImport": {
+    "open": "Import a list",
+    "title": "Import a card list",
+    "close": "Close",
+    "label": "Card list",
+    "help": "Paste an export from Moxfield, Archidekt, MTG Arena or MTGO: one card per line (\"1 Sol Ring\"). Commander and Sideboard or Maybeboard sections are recognized; the sideboard goes to the cards to consider. The printing given is ignored for now.",
+    "mode": "Imported cards",
+    "add": "Add to the current deck",
+    "replace": "Replace the deck's contents",
+    "cancel": "Cancel",
+    "analyze": "Analyze the list",
+    "errors": {
+      "empty": "No card found in this text.",
+      "tooMany": "Too many different cards: {max} at most.",
+      "network": "Card recognition failed. Try again."
+    },
+    "recognized": "{count, plural, =0 {No card recognized.} one {# card recognized.} other {# cards recognized.}}",
+    "unknownTitle": "{count, plural, one {# line not recognized} other {# lines not recognized}}",
+    "unknownHelp": "These lines will be skipped, unless you pick one of the suggested cards.",
+    "line": "Line {line}:",
+    "didYouMean": "Did you mean:",
+    "noSuggestion": "No card with a similar name.",
+    "invalidLine": "Unreadable line (missing quantity or name).",
+    "replaceWarning": "The deck's current cards will be replaced; your commanders stay if the list names none. You can undo with Ctrl+Z.",
+    "back": "Edit the list",
+    "confirm": "{count, plural, one {Import # card} other {Import # cards}}",
+    "done": "{count, plural, one {# card imported} other {# cards imported}}"
+  },
   "DeckGroups": {
     "commander": "Commander",
     "main": "Deck",
