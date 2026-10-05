@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { maskToColors } from "@/domain/cards/colors";
 import { parseCardSearch } from "@/domain/cards/search-query";
-import { getCard, searchCards, suggestCardNames } from "./search";
+import {
+  getCard,
+  resolveCardNames,
+  searchCards,
+  suggestCardNames,
+} from "./search";
 
 // Tests sur une vraie base PostgreSQL remplie du jeu de test (172 cartes).
 type Params = Record<string, string | string[]>;
@@ -188,5 +193,37 @@ describe("suggestions et fiche carte", () => {
 
   it("renvoie null pour un identifiant inconnu", async () => {
     expect(await getCard("00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+describe("reconnaissance des noms importés", () => {
+  const resolved = async (names: string[]) =>
+    (await resolveCardNames(names)).map((result) => result.card?.name ?? null);
+
+  it("reconnaît les noms exacts sans tenir compte des accents ni de la casse", async () => {
+    expect(
+      await resolved(["Sol Ring", "jotun grunt", "LIM-DUL'S VAULT"]),
+    ).toEqual(["Sol Ring", "Jötun Grunt", "Lim-Dûl's Vault"]);
+  });
+
+  it("reconnaît les cartes doubles par leur nom complet ou leur face avant", async () => {
+    expect(
+      await resolved(["Fire // Ice", "Fire/Ice", "Delver of Secrets"]),
+    ).toEqual([
+      "Fire // Ice",
+      "Fire // Ice",
+      "Delver of Secrets // Insectile Aberration",
+    ]);
+  });
+
+  it("propose des cartes au nom proche pour un nom inconnu", async () => {
+    const [result] = await resolveCardNames(["Sol Rign"]);
+    expect(result.card).toBeNull();
+    expect(result.suggestions.map((card) => card.name)).toContain("Sol Ring");
+    expect(result.suggestions.length).toBeLessThanOrEqual(3);
+  });
+
+  it("ne prend pas un début de nom pour une carte", async () => {
+    expect(await resolved(["Sol", "Delver"])).toEqual([null, null]);
   });
 });
