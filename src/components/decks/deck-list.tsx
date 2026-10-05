@@ -36,20 +36,31 @@ import {
 import type { EditorAction } from "@/domain/deck/editor";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
 import { type GroupMode, groupDeck } from "@/domain/deck/groups";
+import { CARD_ROLES, type CardRole } from "@/domain/deck/roles";
 import { cn } from "@/lib/utils";
 
 type Dispatch = (action: EditorAction) => void;
 
 const entryId = (entry: DeckCard) => `${entry.zone}|${entry.oracleId}`;
 
-/** Zone et catégorie visées par un dépôt sur un groupe. */
+/**
+ * Zone et catégorie visées par un dépôt sur un groupe. Déposer sur un rôle
+ * donne à la carte la catégorie de ce rôle (« Rampe »), qui le désigne.
+ */
 function dropTarget(
   groupId: string,
+  roleCategory: (role: CardRole) => string,
 ): { zone: DeckZone; category?: string | null } | null {
   if (groupId === "zone:commander") return { zone: "commander" };
   if (groupId === "zone:maybe") return { zone: "maybe" };
   if (groupId === "zone:main" || groupId.startsWith("type:")) {
     return { zone: "main" };
+  }
+  if (groupId.startsWith("role:")) {
+    const role = groupId.slice("role:".length) as CardRole;
+    return CARD_ROLES.includes(role)
+      ? { zone: "main", category: roleCategory(role) }
+      : { zone: "main" };
   }
   if (groupId.startsWith("category:")) {
     const category = groupId.slice("category:".length);
@@ -82,6 +93,7 @@ export function DeckList({
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
+  const tRoles = useTranslations("CardRoles");
   const grouped = groupDeck(deck, mode);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -91,7 +103,7 @@ export function DeckList({
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over) return;
     const [from, oracleId] = String(active.id).split("|") as [DeckZone, string];
-    const target = dropTarget(String(over.id));
+    const target = dropTarget(String(over.id), (role) => tRoles(role));
     if (!target || !DECK_ZONES.includes(from)) return;
     dispatch({
       type: "drop",
@@ -145,9 +157,11 @@ export function DeckList({
               key={group.id}
               id={group.id}
               title={
-                group.kind === "type"
-                  ? tGroups(group.type)
-                  : (group.category ?? tGroups("uncategorized"))
+                group.kind === "role"
+                  ? tRoles(group.role ?? "other")
+                  : group.kind === "type"
+                    ? tGroups(group.type)
+                    : (group.category ?? tGroups("uncategorized"))
               }
               count={countCards(group.cards)}
             >

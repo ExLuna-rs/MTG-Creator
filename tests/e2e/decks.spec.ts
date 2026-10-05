@@ -36,6 +36,20 @@ const deckRow = (page: Page, name: string) =>
 const group = (page: Page, id: string) =>
   page.locator(`section[data-group="${id}"]`);
 
+/** Glisse une carte du deck sur un groupe, à la souris. */
+async function dragTo(page: Page, name: string, target: string) {
+  const handle = page.getByRole("button", { name: `Déplacer ${name}` });
+  const box = await group(page, target).boundingBox();
+  if (!box) throw new Error(`Groupe ${target} invisible`);
+  await handle.hover();
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 10, { steps: 10 });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 10,
+  });
+  await page.mouse.up();
+}
+
 async function expectSaved(page: Page) {
   await expect(
     page.getByRole("status").filter({ hasText: "Enregistré" }),
@@ -193,18 +207,7 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await expect(group(page, "category:")).toContainText("Lightning Bolt");
 
   // Glisser Lightning Bolt dans la catégorie Rampe, puis dans les cartes à considérer.
-  async function drag(name: string, target: string) {
-    const handle = page.getByRole("button", { name: `Déplacer ${name}` });
-    const box = await group(page, target).boundingBox();
-    if (!box) throw new Error(`Groupe ${target} invisible`);
-    await handle.hover();
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + 10, { steps: 10 });
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
-      steps: 10,
-    });
-    await page.mouse.up();
-  }
+  const drag = (name: string, target: string) => dragTo(page, name, target);
   await drag("Lightning Bolt", "category:Rampe");
   await expect(group(page, "category:Rampe")).toContainText("Lightning Bolt");
   await drag("Lightning Bolt", "zone:maybe");
@@ -216,6 +219,30 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await expectSaved(page);
   await page.reload();
   await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
+});
+
+test("regroupe les cartes par rôle et suit les objectifs du deck", async ({
+  page,
+}) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await addCard(page, "Sol Ring");
+  await addCard(page, "Lightning Bolt");
+
+  // Rôles déduits du texte : regroupement par défaut et objectifs.
+  const goal = (role: string) => page.locator(`li[data-goal="${role}"]`);
+  await expect(group(page, "role:ramp")).toContainText("Sol Ring");
+  await expect(group(page, "role:removal")).toContainText("Lightning Bolt");
+  await expect(goal("ramp")).toContainText("1/10");
+  await expect(goal("removal")).toContainText("1/8");
+
+  // Déposer une carte sur un rôle lui donne la catégorie de ce rôle.
+  await dragTo(page, "Lightning Bolt", "role:ramp");
+  await expect(group(page, "role:ramp")).toContainText("Lightning Bolt");
+  await expect(goal("ramp")).toContainText("2/10");
+  await expect(goal("removal")).toContainText("0/8");
+  await page.getByRole("button", { name: "Catégorie", exact: true }).click();
+  await expect(group(page, "category:Rampe")).toContainText("Lightning Bolt");
 });
 
 test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", async ({
