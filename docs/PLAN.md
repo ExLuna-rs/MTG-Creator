@@ -284,6 +284,13 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 **Terminé quand** : l'application est en ligne en HTTPS, les sauvegardes tournent, et un deck exporté depuis Moxfield s'importe sans erreur.
 
+**État** : en cours. L'import texte est fait (pull request « Importer une liste de cartes ») :
+
+- Bouton « Importer une liste » dans l'éditeur : on colle un export de Moxfield, Archidekt, MTG Arena ou MTGO, on choisit d'ajouter au deck ou de le remplacer, puis un rapport donne le nombre de cartes reconnues et liste les lignes non reconnues, avec jusqu'à trois cartes au nom proche à choisir. L'import entier s'annule en une étape (Ctrl+Z).
+- Lecture (`src/domain/import-export/deck-list.ts`) : quantités « 1 », « 1x » ou absentes ; sections Commander, Deck, Sideboard, Maybeboard, Companion (titres simples, « SIDEBOARD: », « // Commander (1) ») ; édition et numéro « (CMM) 410 », finitions « *F* », catégories d'Archidekt « [Ramp,Commander{top}] » (Commander et Maybeboard donnent la zone, les noms de types sont ignorés), étiquettes « ^…^ ». Le sideboard et le maybeboard vont dans les cartes à considérer ; jetons et section « About » de MTG Arena sont ignorés. L'édition est lue mais pas encore utilisée (table `printing`, phase 5).
+- Reconnaissance (`POST /api/cards/resolve`, utilisateurs connectés, 300 noms différents au maximum) : nom exact normalisé (accents, casse, ponctuation : « Fire/Ice » trouve « Fire // Ice »), puis nom de la face avant d'une carte double (« Delver of Secrets »), sinon suggestions par ressemblance (`pg_trgm`).
+- Fusion (`src/domain/import-export/import.ts`) : singleton respecté comme pour un ajout à la main, une carte déjà commandant n'est pas ajoutée au deck, 500 lignes au maximum ; en mode « Remplacer », les commandants restent si la liste n'en indique aucun.
+
 ### Phase 5 : outils Commander avancés (version 2)
 
 Estimation du bracket, objectifs par catégorie, test de main, choix de l'édition (table `printing`), suggestions de cartes.

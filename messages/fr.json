@@ -370,6 +370,34 @@
     "categoriesHint": "Glissez la carte sur un groupe pour changer sa catégorie principale.",
     "defaultCategories": "Rampe, Pioche, Interaction, Destruction de masse, Protection, Tuteurs, Synergie, Conditions de victoire"
   },
+  "DeckImport": {
+    "open": "Importer une liste",
+    "title": "Importer une liste de cartes",
+    "close": "Fermer",
+    "label": "Liste de cartes",
+    "help": "Collez un export de Moxfield, Archidekt, MTG Arena ou MTGO : une carte par ligne (« 1 Sol Ring »). Les sections Commander et Sideboard ou Maybeboard sont reconnues ; le sideboard va dans les cartes à considérer. L'édition indiquée est ignorée pour l'instant.",
+    "mode": "Cartes importées",
+    "add": "Ajouter au deck actuel",
+    "replace": "Remplacer le contenu du deck",
+    "cancel": "Annuler",
+    "analyze": "Analyser la liste",
+    "errors": {
+      "empty": "Aucune carte trouvée dans ce texte.",
+      "tooMany": "Trop de cartes différentes : {max} au maximum.",
+      "network": "La reconnaissance des cartes a échoué. Réessayez."
+    },
+    "recognized": "{count, plural, =0 {Aucune carte reconnue.} one {# carte reconnue.} other {# cartes reconnues.}}",
+    "unknownTitle": "{count, plural, one {# ligne non reconnue} other {# lignes non reconnues}}",
+    "unknownHelp": "Ces lignes seront ignorées, sauf si vous choisissez une des cartes proposées.",
+    "line": "Ligne {line} :",
+    "didYouMean": "Vouliez-vous dire :",
+    "noSuggestion": "Aucune carte au nom proche.",
+    "invalidLine": "Ligne illisible (quantité ou nom manquant).",
+    "replaceWarning": "Les cartes actuelles du deck seront remplacées ; vos commandants restent si la liste n'en indique pas. Vous pourrez annuler avec Ctrl+Z.",
+    "back": "Modifier la liste",
+    "confirm": "{count, plural, one {Importer # carte} other {Importer # cartes}}",
+    "done": "{count, plural, one {# carte importée} other {# cartes importées}}"
+  },
   "DeckGroups": {
     "commander": "Commandant",
     "main": "Deck",

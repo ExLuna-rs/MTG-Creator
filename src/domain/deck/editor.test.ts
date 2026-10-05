@@ -228,4 +228,37 @@ describe("glisser-déposer", () => {
       }),
     ).toBe(added);
   });
+  it("importe une liste en une seule étape d'historique", () => {
+    const entries = [
+      ...initial().present.entries,
+      {
+        oracleId: solRing.oracleId,
+        zone: "main" as const,
+        quantity: 1,
+        categories: [],
+      },
+      {
+        oracleId: island.oracleId,
+        zone: "main" as const,
+        quantity: 30,
+        categories: [],
+      },
+    ];
+    const state = run(initial(), {
+      type: "import",
+      entries,
+      cards: [solRing, island],
+    });
+    expect(state.present.entries).toEqual(entries);
+    expect(state.cards[island.oracleId]).toBe(island);
+    expect(state.past).toHaveLength(1);
+    expect(run(state, { type: "undo" }).present).toEqual(initial().present);
+  });
+
+  it("ignore un import qui ne change rien", () => {
+    const state = initial();
+    expect(
+      run(state, { type: "import", entries: state.present.entries, cards: [] }),
+    ).toBe(state);
+  });
 });

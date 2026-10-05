@@ -54,6 +54,15 @@ export type EditorAction =
       category?: string | null;
     }
   | { type: "rename"; name: string }
+  | {
+      /**
+       * Import d'une liste : remplace toutes les lignes du deck en une seule
+       * étape (calculées par `mergeImport`) et ajoute les données des cartes.
+       */
+      type: "import";
+      entries: DeckEntry[];
+      cards: DeckCardData[];
+    }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -243,6 +252,12 @@ function applyEdit(
       return moved === state.present ? null : moved;
     }
 
+    case "import": {
+      const unchanged =
+        JSON.stringify(action.entries) === JSON.stringify(entries);
+      return unchanged ? null : updateEntries(state, action.entries);
+    }
+
     case "rename": {
       const name = action.name.slice(0, 100);
       return name === state.present.name ? null : { ...state.present, name };
@@ -282,9 +297,21 @@ export function editorReducer(
     default: {
       const present = applyEdit(state, action);
       if (!present) return state;
+      const added =
+        action.type === "add"
+          ? [action.card]
+          : action.type === "import"
+            ? action.cards
+            : [];
+      const unknown = added.filter((card) => !state.cards[card.oracleId]);
       const cards =
-        action.type === "add" && !state.cards[action.card.oracleId]
-          ? { ...state.cards, [action.card.oracleId]: action.card }
+        unknown.length > 0
+          ? {
+              ...state.cards,
+              ...Object.fromEntries(
+                unknown.map((card) => [card.oracleId, card]),
+              ),
+            }
           : state.cards;
       return {
         past: [...state.past, state.present].slice(-HISTORY_LIMIT),

@@ -16,9 +16,11 @@ import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
 import { createEditorState, editorReducer } from "@/domain/deck/editor";
 import { GROUP_MODES, type GroupMode } from "@/domain/deck/groups";
 import { computeDeckStats } from "@/domain/deck/stats";
+import { mergeImport } from "@/domain/import-export/import";
 import { cn } from "@/lib/utils";
 import { deleteDeckAction } from "@/server/decks/actions";
 import { CardPreview } from "./card-preview";
+import { DeckImport } from "./deck-import";
 import { DeckList } from "./deck-list";
 import { DeckStats } from "./deck-stats";
 import { EditorSearch } from "./editor-search";
@@ -131,7 +133,26 @@ export function DeckEditor({
           onRename={(value) => dispatch({ type: "rename", name: value })}
         />
         <SaveIndicator status={status} onRetry={retry} />
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          <DeckImport
+            onImport={(imported, importedCards, replace) =>
+              dispatch({
+                type: "import",
+                entries: mergeImport(
+                  state.present.entries,
+                  imported,
+                  {
+                    ...state.cards,
+                    ...Object.fromEntries(
+                      importedCards.map((card) => [card.oracleId, card]),
+                    ),
+                  },
+                  { replace },
+                ),
+                cards: importedCards,
+              })
+            }
+          />
           <Button
             variant="outline"
             size="icon"
