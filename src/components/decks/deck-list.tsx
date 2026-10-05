@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   ChevronDown,
   CircleAlert,
@@ -35,19 +26,20 @@ import {
 } from "@/domain/deck/deck";
 import type { EditorAction } from "@/domain/deck/editor";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
-import { type GroupMode, groupDeck } from "@/domain/deck/groups";
+import type { GroupedDeck } from "@/domain/deck/groups";
 import { CARD_ROLES, type CardRole } from "@/domain/deck/roles";
 import { cn } from "@/lib/utils";
 
-type Dispatch = (action: EditorAction) => void;
+export type Dispatch = (action: EditorAction) => void;
 
-const entryId = (entry: DeckCard) => `${entry.zone}|${entry.oracleId}`;
+/** Identifiant d'une ligne du deck pour le glisser-déposer. */
+export const entryId = (entry: DeckCard) => `${entry.zone}|${entry.oracleId}`;
 
 /**
  * Zone et catégorie visées par un dépôt sur un groupe. Déposer sur un rôle
  * donne à la carte la catégorie de ce rôle (« Rampe »), qui le désigne.
  */
-function dropTarget(
+export function dropTarget(
   groupId: string,
   roleCategory: (role: CardRole) => string,
 ): { zone: DeckZone; category?: string | null } | null {
@@ -70,50 +62,29 @@ function dropTarget(
 }
 
 /**
- * Liste du deck : commandant(s), cartes regroupées par type ou par catégorie,
- * cartes à considérer. Les cartes se glissent d'un groupe à l'autre, à la
- * souris ou au clavier (Espace sur la poignée, flèches, puis Espace).
- * Survoler une carte l'affiche dans l'aperçu de l'éditeur.
+ * Vue Liste du deck : commandant(s), cartes regroupées, cartes à considérer.
+ * Les cartes se glissent d'un groupe à l'autre, à la souris ou au clavier
+ * (Espace sur la poignée, flèches, puis Espace). Survoler une carte
+ * l'affiche dans l'aperçu de l'éditeur.
  */
 export function DeckList({
-  deck,
-  mode,
+  grouped,
+  groupTitle,
   cardIssues,
-  categories,
+  datalistId,
   dispatch,
   onPreview,
 }: {
-  deck: DeckCard[];
-  mode: GroupMode;
+  grouped: GroupedDeck;
+  groupTitle: (group: GroupedDeck["groups"][number]) => string;
   cardIssues: Record<string, DeckIssueCode[]>;
-  /** Catégories proposées à la saisie. */
-  categories: string[];
+  /** Liste des catégories proposées à la saisie. */
+  datalistId: string;
   dispatch: Dispatch;
   onPreview: (card: DeckCardData) => void;
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
-  const tRoles = useTranslations("CardRoles");
-  const grouped = groupDeck(deck, mode);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor),
-  );
-  const datalistId = useId();
-  function onDragEnd({ active, over }: DragEndEvent) {
-    if (!over) return;
-    const [from, oracleId] = String(active.id).split("|") as [DeckZone, string];
-    const target = dropTarget(String(over.id), (role) => tRoles(role));
-    if (!target || !DECK_ZONES.includes(from)) return;
-    dispatch({
-      type: "drop",
-      oracleId,
-      from,
-      to: target.zone,
-      category: target.category,
-    });
-  }
-
   const rowProps = {
     cardIssues,
     datalistId,
@@ -122,74 +93,55 @@ export function DeckList({
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragEnd={onDragEnd}
-      accessibility={{
-        screenReaderInstructions: { draggable: t("dragInstructions") },
-      }}
-    >
-      <datalist id={datalistId}>
-        {categories.map((category) => (
-          <option key={category} value={category} />
+    <div className="space-y-6">
+      <Group
+        id="zone:commander"
+        title={tGroups("commander")}
+        count={countCards(grouped.commanders)}
+      >
+        {grouped.commanders.map((entry) => (
+          <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
         ))}
-      </datalist>
-      <div className="space-y-6">
-        <Group
-          id="zone:commander"
-          title={tGroups("commander")}
-          count={countCards(grouped.commanders)}
-        >
-          {grouped.commanders.map((entry) => (
-            <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
-          ))}
-        </Group>
+      </Group>
 
-        {grouped.groups.length === 0 ? (
-          <Group id="zone:main" title={tGroups("main")} count={0}>
-            <p className="px-2 py-3 text-muted-foreground text-sm">
-              {t("emptyDeck")}
-            </p>
+      {grouped.groups.length === 0 ? (
+        <Group id="zone:main" title={tGroups("main")} count={0}>
+          <p className="px-2 py-3 text-muted-foreground text-sm">
+            {t("emptyDeck")}
+          </p>
+        </Group>
+      ) : (
+        grouped.groups.map((group) => (
+          <Group
+            key={group.id}
+            id={group.id}
+            title={groupTitle(group)}
+            count={countCards(group.cards)}
+          >
+            {group.cards.map((entry) => (
+              <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
+            ))}
           </Group>
+        ))
+      )}
+
+      <Group
+        id="zone:maybe"
+        title={tGroups("maybe")}
+        count={countCards(grouped.maybe)}
+        muted
+      >
+        {grouped.maybe.length === 0 ? (
+          <p className="px-2 py-3 text-muted-foreground text-sm">
+            {t("emptyMaybe")}
+          </p>
         ) : (
-          grouped.groups.map((group) => (
-            <Group
-              key={group.id}
-              id={group.id}
-              title={
-                group.kind === "role"
-                  ? tRoles(group.role ?? "other")
-                  : group.kind === "type"
-                    ? tGroups(group.type)
-                    : (group.category ?? tGroups("uncategorized"))
-              }
-              count={countCards(group.cards)}
-            >
-              {group.cards.map((entry) => (
-                <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
-              ))}
-            </Group>
+          grouped.maybe.map((entry) => (
+            <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
           ))
         )}
-
-        <Group
-          id="zone:maybe"
-          title={tGroups("maybe")}
-          count={countCards(grouped.maybe)}
-          muted
-        >
-          {grouped.maybe.length === 0 ? (
-            <p className="px-2 py-3 text-muted-foreground text-sm">
-              {t("emptyMaybe")}
-            </p>
-          ) : (
-            grouped.maybe.map((entry) => (
-              <CardRow key={entryId(entry)} entry={entry} {...rowProps} />
-            ))
-          )}
-        </Group>
-      </div>
-    </DndContext>
+      </Group>
+    </div>
   );
 }
 
@@ -245,27 +197,14 @@ function CardRow({
   onPreview: (card: DeckCardData) => void;
 }) {
   const t = useTranslations("DeckEditor");
-  const tGroups = useTranslations("DeckGroups");
   const tIssues = useTranslations("DeckValidation.short");
   const [open, setOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
   const detailsId = useId();
   const { card, zone, oracleId, quantity } = entry;
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: entryId(entry) });
   const issues = zone === "maybe" ? [] : (cardIssues[oracleId] ?? []);
   const limit = Math.min(maxCopies(card), MAX_QUANTITY);
-
-  function addCategory() {
-    if (!newCategory.trim()) return;
-    dispatch({
-      type: "setCategories",
-      oracleId,
-      zone,
-      categories: [...entry.categories, newCategory],
-    });
-    setNewCategory("");
-  }
 
   return (
     <li
@@ -368,82 +307,120 @@ function CardRow({
         {open && card.oracleText && (
           <OracleText text={card.oracleText} className="text-xs lg:hidden" />
         )}
-        <div className="flex flex-wrap gap-2">
-          {DECK_ZONES.filter((target) => target !== zone).map((target) => (
-            <Button
-              key={target}
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                dispatch({ type: "move", oracleId, from: zone, to: target })
-              }
-            >
-              {t("moveTo", { zone: tGroups(target) })}
-            </Button>
-          ))}
-        </div>
-        {zone === "main" && (
-          <div className="space-y-2">
-            <p className="font-medium text-xs">{t("categories")}</p>
-            {entry.categories.length > 0 && (
-              <ul className="flex flex-wrap gap-1.5">
-                {entry.categories.map((category, index) => (
-                  <li
-                    key={category}
-                    className={cn(
-                      "flex items-center gap-1 rounded-full border bg-background py-0.5 pr-1 pl-2 text-xs",
-                      index === 0 && "border-primary",
-                    )}
-                  >
-                    {category}
-                    <button
-                      type="button"
-                      className="rounded-full p-0.5 hover:bg-accent"
-                      aria-label={t("removeCategory", { category })}
-                      onClick={() =>
-                        dispatch({
-                          type: "setCategories",
-                          oracleId,
-                          zone,
-                          categories: entry.categories.filter(
-                            (item) => item !== category,
-                          ),
-                        })
-                      }
-                    >
-                      <X className="size-3" aria-hidden />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                addCategory();
-              }}
-            >
-              <Input
-                list={datalistId}
-                value={newCategory}
-                onChange={(event) => setNewCategory(event.target.value)}
-                maxLength={40}
-                aria-label={t("newCategory", { name: card.name })}
-                placeholder={t("newCategoryPlaceholder")}
-                className="h-8"
-              />
-              <Button type="submit" variant="outline" size="sm">
-                {t("addCategory")}
-              </Button>
-            </form>
-            <p className="text-muted-foreground text-xs">
-              {t("categoriesHint")}
-            </p>
-          </div>
-        )}
+        <CardOptions
+          entry={entry}
+          datalistId={datalistId}
+          dispatch={dispatch}
+        />
       </div>
     </li>
+  );
+}
+
+/**
+ * Options d'une carte du deck : déplacement vers une autre zone et, dans le
+ * deck, catégories (la première sert au regroupement).
+ */
+export function CardOptions({
+  entry,
+  datalistId,
+  dispatch,
+}: {
+  entry: DeckCard;
+  datalistId: string;
+  dispatch: Dispatch;
+}) {
+  const t = useTranslations("DeckEditor");
+  const tGroups = useTranslations("DeckGroups");
+  const [newCategory, setNewCategory] = useState("");
+  const { card, zone, oracleId } = entry;
+
+  function addCategory() {
+    if (!newCategory.trim()) return;
+    dispatch({
+      type: "setCategories",
+      oracleId,
+      zone,
+      categories: [...entry.categories, newCategory],
+    });
+    setNewCategory("");
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {DECK_ZONES.filter((target) => target !== zone).map((target) => (
+          <Button
+            key={target}
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              dispatch({ type: "move", oracleId, from: zone, to: target })
+            }
+          >
+            {t("moveTo", { zone: tGroups(target) })}
+          </Button>
+        ))}
+      </div>
+      {zone === "main" && (
+        <div className="space-y-2">
+          <p className="font-medium text-xs">{t("categories")}</p>
+          {entry.categories.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5">
+              {entry.categories.map((category, index) => (
+                <li
+                  key={category}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full border bg-background py-0.5 pr-1 pl-2 text-xs",
+                    index === 0 && "border-primary",
+                  )}
+                >
+                  {category}
+                  <button
+                    type="button"
+                    className="rounded-full p-0.5 hover:bg-accent"
+                    aria-label={t("removeCategory", { category })}
+                    onClick={() =>
+                      dispatch({
+                        type: "setCategories",
+                        oracleId,
+                        zone,
+                        categories: entry.categories.filter(
+                          (item) => item !== category,
+                        ),
+                      })
+                    }
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addCategory();
+            }}
+          >
+            <Input
+              list={datalistId}
+              value={newCategory}
+              onChange={(event) => setNewCategory(event.target.value)}
+              maxLength={40}
+              aria-label={t("newCategory", { name: card.name })}
+              placeholder={t("newCategoryPlaceholder")}
+              className="h-8"
+            />
+            <Button type="submit" variant="outline" size="sm">
+              {t("addCategory")}
+            </Button>
+          </form>
+          <p className="text-muted-foreground text-xs">{t("categoriesHint")}</p>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -453,7 +430,7 @@ function CardRow({
  * seul exemplaire, sauf terrains de base et exceptions, pour lesquels la
  * quantité se saisit aussi au clavier.
  */
-function QuantityStepper({
+export function QuantityStepper({
   name,
   quantity,
   limit,

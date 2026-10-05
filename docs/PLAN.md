@@ -295,10 +295,13 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 Estimation du bracket, objectifs par catégorie, test de main, choix de l'édition (table `printing`), suggestions de cartes.
 
-**Refonte de l'éditeur** (en cours, avancée avant le reste de la phase 5 à la demande de Corentin) : inspirée d'Archidekt : deck en piles d'images avec glisser-déposer, statistiques en bandeau au-dessus du deck, aperçu de la carte à droite en vue Liste seulement, recherche au clavier façon Spotlight (Ctrl+K). Les suggestions de cartes et les objectifs par rôle sont mis de côté à la demande de Corentin. Première étape faite :
+**Refonte de l'éditeur** (en cours, avancée avant le reste de la phase 5 à la demande de Corentin) : inspirée d'Archidekt : deck en piles d'images avec glisser-déposer, statistiques en bandeau au-dessus du deck, aperçu de la carte à droite en vue Liste seulement, recherche au clavier façon Spotlight (Ctrl+K). Les suggestions de cartes et les objectifs par rôle sont mis de côté à la demande de Corentin. Fait :
 
 - Rôles des cartes (`src/domain/deck/roles.ts`) : terrain, rampe, pioche, retrait, destruction de masse, contresort, tuteur, protection, déduits du type et du texte Oracle (texte de rappel ignoré). Une catégorie au nom reconnu (« Rampe », « Ramp », « Board Wipe »…, en français ou en anglais) remplace la déduction ; les autres catégories la laissent s'appliquer.
 - Regroupement par rôle, par défaut dans l'éditeur ; déposer une carte sur un rôle lui donne la catégorie de ce rôle.
+- Trois affichages du deck, au choix retenu par le navigateur : **Piles** (par défaut ; les cartes d'un groupe se chevauchent, survoler une carte écarte celles du dessous pour la montrer ; chaque pile va dans la colonne la moins haute, `src/lib/masonry.ts`), **Grille** (cartes entières) et **Liste** (texte, quantités, avec l'aperçu à droite). En piles et en grille, cliquer une carte ouvre une fenêtre avec son texte, sa quantité, ses catégories, son déplacement et son retrait ; glisser son image la range dans un autre groupe.
+- Validation et statistiques (chiffres clés, courbe de mana, types, couleurs) en bandeau au-dessus du deck.
+- Recherche façon Spotlight (`card-spotlight.tsx`) : Ctrl+K, ⌘K ou « / » ; flèches pour choisir, Entrée ajoute au deck, Maj+Entrée aux cartes à considérer, la fenêtre reste ouverte pour enchaîner. « 12 island » ajoute 12 exemplaires (`src/domain/deck/quick-add.ts`). Limitée par défaut à l'identité couleur des commandants.
 
 ### Phase 6 et suivantes
 

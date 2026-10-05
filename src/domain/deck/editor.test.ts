@@ -62,6 +62,17 @@ describe("éditeur de deck", () => {
     expect(entry(state, island.oracleId)?.quantity).toBe(3);
   });
 
+  it("ajoute plusieurs exemplaires en une étape, dans la limite de la carte", () => {
+    const state = run(
+      initial(),
+      { type: "add", card: island, zone: "main", quantity: 12 },
+      { type: "add", card: solRing, zone: "main", quantity: 3 },
+    );
+    expect(entry(state, island.oracleId)?.quantity).toBe(12);
+    expect(entry(state, solRing.oracleId)?.quantity).toBe(1);
+    expect(state.past).toHaveLength(2);
+  });
+
   it("change la quantité, et retire la carte à zéro", () => {
     let state = run(
       initial(),
