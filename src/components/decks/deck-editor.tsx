@@ -217,7 +217,6 @@ export function DeckEditor({
             cardIssues={validation.cardIssues}
             categories={categories}
             dispatch={dispatch}
-            onPreview={setPreview}
           />
         </div>
 

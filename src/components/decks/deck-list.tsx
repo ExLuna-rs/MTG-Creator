@@ -14,12 +14,14 @@ import {
   ChevronDown,
   CircleAlert,
   GripVertical,
+  Minus,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useId, useState } from "react";
-import { ManaText } from "@/components/cards/mana-text";
+import { type ReactNode, useEffect, useId, useState } from "react";
+import { ManaText, OracleText } from "@/components/cards/mana-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { maxCopies } from "@/domain/commander/singleton";
@@ -35,6 +37,7 @@ import type { EditorAction } from "@/domain/deck/editor";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
 import { type GroupMode, groupDeck } from "@/domain/deck/groups";
 import { cn } from "@/lib/utils";
+import { CardHoverPreview, type HoveredCard } from "./card-hover-preview";
 
 type Dispatch = (action: EditorAction) => void;
 
@@ -60,6 +63,7 @@ function dropTarget(
  * Liste du deck : commandant(s), cartes regroupées par type ou par catégorie,
  * cartes à considérer. Les cartes se glissent d'un groupe à l'autre, à la
  * souris ou au clavier (Espace sur la poignée, flèches, puis Espace).
+ * Survoler une carte affiche son aperçu.
  */
 export function DeckList({
   deck,
@@ -67,7 +71,6 @@ export function DeckList({
   cardIssues,
   categories,
   dispatch,
-  onPreview,
 }: {
   deck: DeckCard[];
   mode: GroupMode;
@@ -75,7 +78,6 @@ export function DeckList({
   /** Catégories proposées à la saisie. */
   categories: string[];
   dispatch: Dispatch;
-  onPreview: (card: DeckCardData) => void;
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
@@ -85,6 +87,23 @@ export function DeckList({
     useSensor(KeyboardSensor),
   );
   const datalistId = useId();
+  const [hovered, setHovered] = useState<HoveredCard | null>(null);
+
+  // L'aperçu suit la ligne : il disparaît dès que la page défile.
+  useEffect(() => {
+    if (!hovered) return;
+    const hide = () => setHovered(null);
+    window.addEventListener("scroll", hide, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", hide, { capture: true });
+  }, [hovered]);
+
+  function onPreview(card: DeckCardData | null, element?: Element) {
+    setHovered(
+      card && element
+        ? { card, anchor: element.getBoundingClientRect() }
+        : null,
+    );
+  }
 
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over) return;
@@ -110,6 +129,7 @@ export function DeckList({
   return (
     <DndContext
       sensors={sensors}
+      onDragStart={() => setHovered(null)}
       onDragEnd={onDragEnd}
       accessibility={{
         screenReaderInstructions: { draggable: t("dragInstructions") },
@@ -173,6 +193,7 @@ export function DeckList({
           )}
         </Group>
       </div>
+      {hovered && <CardHoverPreview hovered={hovered} />}
     </DndContext>
   );
 }
@@ -226,7 +247,7 @@ function CardRow({
   cardIssues: Record<string, DeckIssueCode[]>;
   datalistId: string;
   dispatch: Dispatch;
-  onPreview: (card: DeckCardData) => void;
+  onPreview: (card: DeckCardData | null, element?: Element) => void;
 }) {
   const t = useTranslations("DeckEditor");
   const tGroups = useTranslations("DeckGroups");
@@ -238,7 +259,7 @@ function CardRow({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: entryId(entry) });
   const issues = zone === "maybe" ? [] : (cardIssues[oracleId] ?? []);
-  const multiple = zone !== "commander" && maxCopies(card) > 1;
+  const limit = Math.min(maxCopies(card), MAX_QUANTITY);
 
   function addCategory() {
     if (!newCategory.trim()) return;
@@ -255,7 +276,10 @@ function CardRow({
     <li
       ref={setNodeRef}
       data-card={card.name}
-      onMouseEnter={() => onPreview(card)}
+      onMouseEnter={(event) =>
+        !isDragging && onPreview(card, event.currentTarget)
+      }
+      onMouseLeave={() => onPreview(null)}
       style={
         transform
           ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -276,22 +300,26 @@ function CardRow({
         >
           <GripVertical className="size-4" aria-hidden />
         </button>
-        {multiple ? (
-          <QuantityInput
-            value={quantity}
-            label={t("quantityOf", { name: card.name })}
+        {zone === "commander" ? (
+          <span className="w-[4.75rem] shrink-0 text-center text-muted-foreground text-sm tabular-nums">
+            {quantity}
+          </span>
+        ) : (
+          <QuantityStepper
+            name={card.name}
+            quantity={quantity}
+            limit={limit}
             onChange={(value) =>
               dispatch({ type: "setQuantity", oracleId, zone, quantity: value })
             }
           />
-        ) : (
-          <span className="w-12 shrink-0 text-center text-muted-foreground text-sm tabular-nums">
-            {quantity}
-          </span>
         )}
         <button
           type="button"
-          onFocus={() => onPreview(card)}
+          onFocus={(event) =>
+            onPreview(card, event.currentTarget.closest("li") ?? undefined)
+          }
+          onBlur={() => onPreview(null)}
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls={detailsId}
@@ -347,6 +375,10 @@ function CardRow({
         className="space-y-3 border-t bg-muted/40 px-3 py-3 text-sm"
       >
         <p className="text-muted-foreground text-xs">{card.typeLine}</p>
+        {/* Sur grand écran, l'aperçu au survol montre déjà le texte. */}
+        {open && card.oracleText && (
+          <OracleText text={card.oracleText} className="text-xs lg:hidden" />
+        )}
         <div className="flex flex-wrap gap-2">
           {DECK_ZONES.filter((target) => target !== zone).map((target) => (
             <Button
@@ -426,13 +458,79 @@ function CardRow({
   );
 }
 
+/**
+ * Boutons − et + autour de la quantité. Le − à un exemplaire retire la carte
+ * (Annuler la remet). Le + s'arrête à la limite Commander de la carte : un
+ * seul exemplaire, sauf terrains de base et exceptions, pour lesquels la
+ * quantité se saisit aussi au clavier.
+ */
+function QuantityStepper({
+  name,
+  quantity,
+  limit,
+  onChange,
+}: {
+  name: string;
+  quantity: number;
+  limit: number;
+  onChange: (value: number) => void;
+}) {
+  const t = useTranslations("DeckEditor");
+  const atLimit = quantity >= limit;
+  return (
+    <div className="flex shrink-0 items-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 text-muted-foreground"
+        onClick={() => onChange(quantity - 1)}
+        aria-label={t("decrease", { name })}
+        title={t("decrease", { name })}
+      >
+        <Minus className="size-3.5" aria-hidden />
+      </Button>
+      {limit > 1 ? (
+        <QuantityInput
+          value={quantity}
+          max={limit}
+          label={t("quantityOf", { name })}
+          onChange={onChange}
+        />
+      ) : (
+        <span className="w-7 text-center text-sm tabular-nums">{quantity}</span>
+      )}
+      {/* Un bouton désactivé n'affiche pas d'infobulle : elle est sur son conteneur. */}
+      <span
+        title={atLimit ? t("copyLimit", { count: limit, name }) : undefined}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 text-muted-foreground"
+          disabled={atLimit}
+          onClick={() => onChange(quantity + 1)}
+          aria-label={t("increase", { name })}
+          aria-description={
+            atLimit ? t("copyLimit", { count: limit, name }) : undefined
+          }
+          title={atLimit ? undefined : t("increase", { name })}
+        >
+          <Plus className="size-3.5" aria-hidden />
+        </Button>
+      </span>
+    </div>
+  );
+}
+
 /** Quantité modifiable : la saisie en cours peut être vide sans rien changer. */
 function QuantityInput({
   value,
+  max,
   label,
   onChange,
 }: {
   value: number;
+  max: number;
   label: string;
   onChange: (value: number) => void;
 }) {
@@ -442,7 +540,7 @@ function QuantityInput({
       type="number"
       inputMode="numeric"
       min={0}
-      max={MAX_QUANTITY}
+      max={max}
       value={draft ?? value}
       aria-label={label}
       onChange={(event) => {
@@ -451,7 +549,7 @@ function QuantityInput({
         if (Number.isInteger(number) && number >= 0) onChange(number);
       }}
       onBlur={() => setDraft(null)}
-      className="h-7 w-12 shrink-0 rounded-md border border-input bg-background px-1 text-center text-sm tabular-nums"
+      className="h-7 w-10 shrink-0 rounded-md border border-input bg-background px-1 text-center text-sm tabular-nums"
     />
   );
 }
