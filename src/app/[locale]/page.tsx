@@ -1,7 +1,7 @@
 import { ChartColumn, Search, Share2, ShieldCheck } from "lucide-react";
 import type { Locale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 
 const MANA_COLORS = [
@@ -43,9 +43,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             {t("subtitle")}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" disabled>
+            <Link href="/decks/new" className={buttonVariants({ size: "lg" })}>
               {t("createDeck")}
-            </Button>
+            </Link>
             <Link
               href="/cards"
               className={buttonVariants({ size: "lg", variant: "outline" })}
@@ -53,7 +53,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               {t("searchCards")}
             </Link>
           </div>
-          <p className="text-muted-foreground text-sm">{t("comingSoon")}</p>
         </div>
       </section>
 

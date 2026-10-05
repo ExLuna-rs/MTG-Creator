@@ -22,6 +22,13 @@
       "when": 1791144734430,
       "tag": "0002_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791147657906,
+      "tag": "0003_decks",
+      "breakpoints": true
     }
   ]
 }
