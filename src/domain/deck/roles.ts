@@ -187,39 +187,3 @@ export function entryRoles(
   ];
   return chosen.length > 0 ? chosen : detectRoles(entry.card);
 }
-
-/** Objectif d'un deck pour un rôle : nombre de cartes visé. */
-export interface RoleGoal {
-  role: CardRole;
-  target: number;
-}
-
-/**
- * Objectifs par défaut d'un deck Commander, repris des recommandations
- * courantes (modèle de Command Zone, EDHREC) : 36 terrains, 10 rampes,
- * 10 pioches, 8 retraits ciblés et 3 destructions de masse.
- */
-export const DEFAULT_GOALS: readonly RoleGoal[] = [
-  { role: "land", target: 36 },
-  { role: "ramp", target: 10 },
-  { role: "draw", target: 10 },
-  { role: "removal", target: 8 },
-  { role: "wipe", target: 3 },
-];
-
-/**
- * Nombre de cartes du deck (quantités comprises, hors commandants et cartes
- * à considérer) pour chaque rôle. Une carte compte dans chacun de ses rôles.
- */
-export function countRoles(
-  deck: readonly (DeckEntry & { card: DeckCardData })[],
-): Record<CardRole, number> {
-  const counts = Object.fromEntries(
-    CARD_ROLES.map((role) => [role, 0]),
-  ) as Record<CardRole, number>;
-  for (const entry of deck) {
-    if (entry.zone !== "main") continue;
-    for (const role of entryRoles(entry)) counts[role] += entry.quantity;
-  }
-  return counts;
-}

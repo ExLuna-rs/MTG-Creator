@@ -221,26 +221,20 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
 });
 
-test("regroupe les cartes par rôle et suit les objectifs du deck", async ({
-  page,
-}) => {
+test("regroupe les cartes par rôle", async ({ page }) => {
   await signUpViaApi(page);
   await createDeck(page, "Edgar Markov");
   await addCard(page, "Sol Ring");
   await addCard(page, "Lightning Bolt");
 
-  // Rôles déduits du texte : regroupement par défaut et objectifs.
-  const goal = (role: string) => page.locator(`li[data-goal="${role}"]`);
+  // Rôles déduits du texte : regroupement par défaut.
   await expect(group(page, "role:ramp")).toContainText("Sol Ring");
   await expect(group(page, "role:removal")).toContainText("Lightning Bolt");
-  await expect(goal("ramp")).toContainText("1/10");
-  await expect(goal("removal")).toContainText("1/8");
 
   // Déposer une carte sur un rôle lui donne la catégorie de ce rôle.
   await dragTo(page, "Lightning Bolt", "role:ramp");
   await expect(group(page, "role:ramp")).toContainText("Lightning Bolt");
-  await expect(goal("ramp")).toContainText("2/10");
-  await expect(goal("removal")).toContainText("0/8");
+  await expect(group(page, "role:removal")).toHaveCount(0);
   await page.getByRole("button", { name: "Catégorie", exact: true }).click();
   await expect(group(page, "category:Rampe")).toContainText("Lightning Bolt");
 });

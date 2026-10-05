@@ -453,11 +453,6 @@
     "protection": "Protection",
     "other": "Autres"
   },
-  "DeckGoals": {
-    "title": "Objectifs",
-    "progress": "{count} sur {target}",
-    "hint": "Rôles déduits du texte des cartes. Une catégorie comme « Rampe » ou « Pioche » remplace la déduction."
-  },
   "DeckStats": {
     "title": "Statistiques",
     "cards": "Cartes",

@@ -15,13 +15,11 @@ import { validateCommanderDeck } from "@/domain/commander/validate";
 import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
 import { createEditorState, editorReducer } from "@/domain/deck/editor";
 import { GROUP_MODES, type GroupMode } from "@/domain/deck/groups";
-import { countRoles, DEFAULT_GOALS } from "@/domain/deck/roles";
 import { computeDeckStats } from "@/domain/deck/stats";
 import { mergeImport } from "@/domain/import-export/import";
 import { cn } from "@/lib/utils";
 import { deleteDeckAction } from "@/server/decks/actions";
 import { CardPreview } from "./card-preview";
-import { DeckGoals } from "./deck-goals";
 import { DeckImport } from "./deck-import";
 import { DeckList } from "./deck-list";
 import { DeckStats } from "./deck-stats";
@@ -85,7 +83,6 @@ export function DeckEditor({
   );
   const validation = useMemo(() => validateCommanderDeck(deck), [deck]);
   const stats = useMemo(() => computeDeckStats(deck), [deck]);
-  const roleCounts = useMemo(() => countRoles(deck), [deck]);
   const commanders = deck.filter((entry) => entry.zone === "commander");
 
   const quantities = useMemo(() => {
@@ -267,7 +264,6 @@ export function DeckEditor({
             </div>
           )}
           <ValidationPanel validation={validation} />
-          <DeckGoals goals={DEFAULT_GOALS} counts={roleCounts} />
           <DeckStats stats={stats} />
         </aside>
       </div>

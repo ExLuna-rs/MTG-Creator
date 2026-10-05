@@ -453,11 +453,6 @@
     "protection": "Protection",
     "other": "Other"
   },
-  "DeckGoals": {
-    "title": "Goals",
-    "progress": "{count} of {target}",
-    "hint": "Roles are inferred from card text. A category such as “Ramp” or “Draw” overrides the guess."
-  },
   "DeckStats": {
     "title": "Statistics",
     "cards": "Cards",

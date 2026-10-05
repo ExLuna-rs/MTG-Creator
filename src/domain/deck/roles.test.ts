@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryRole, countRoles, detectRoles, entryRoles } from "./roles";
+import { categoryRole, detectRoles, entryRoles } from "./roles";
 import { cardData, deckCard } from "./test-helpers";
 
 const roles = (name: string) => detectRoles(cardData(name));
@@ -85,19 +85,5 @@ describe("rôles désignés par les catégories", () => {
     expect(
       entryRoles(deckCard("Sol Ring", { categories: ["Synergie"] })),
     ).toEqual(["ramp"]);
-  });
-});
-
-describe("compte des rôles du deck", () => {
-  it("compte les quantités du deck, sans commandant ni cartes à considérer", () => {
-    const counts = countRoles([
-      deckCard("Forest", { quantity: 30 }),
-      deckCard("Command Tower"),
-      deckCard("Sol Ring"),
-      deckCard("Solemn Simulacrum"),
-      deckCard("Rhystic Study", { zone: "maybe" }),
-      deckCard("Thrasios, Triton Hero", { zone: "commander" }),
-    ]);
-    expect(counts).toMatchObject({ land: 31, ramp: 2, draw: 1, removal: 0 });
   });
 });

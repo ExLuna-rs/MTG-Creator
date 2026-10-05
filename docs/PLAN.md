@@ -295,11 +295,10 @@ Chaque phase se fait sur sa propre branche et se termine par une pull request re
 
 Estimation du bracket, objectifs par catégorie, test de main, choix de l'édition (table `printing`), suggestions de cartes.
 
-**Refonte de l'éditeur** (en cours, avancée avant le reste de la phase 5 à la demande de Corentin) : un mélange d'Archidekt (deck en piles d'images, glisser-déposer) et d'EDHREC (suggestions selon le commandant et les manques du deck). Maquette interactive proposée à Corentin ; les briques indépendantes de la mise en page avancent en parallèle. Première étape faite :
+**Refonte de l'éditeur** (en cours, avancée avant le reste de la phase 5 à la demande de Corentin) : inspirée d'Archidekt : deck en piles d'images avec glisser-déposer, statistiques en bandeau au-dessus du deck, aperçu de la carte à droite en vue Liste seulement, recherche au clavier façon Spotlight (Ctrl+K). Les suggestions de cartes et les objectifs par rôle sont mis de côté à la demande de Corentin. Première étape faite :
 
 - Rôles des cartes (`src/domain/deck/roles.ts`) : terrain, rampe, pioche, retrait, destruction de masse, contresort, tuteur, protection, déduits du type et du texte Oracle (texte de rappel ignoré). Une catégorie au nom reconnu (« Rampe », « Ramp », « Board Wipe »…, en français ou en anglais) remplace la déduction ; les autres catégories la laissent s'appliquer.
 - Regroupement par rôle, par défaut dans l'éditeur ; déposer une carte sur un rôle lui donne la catégorie de ce rôle.
-- Objectifs du deck dans le panneau de droite : 36 terrains, 10 rampes, 10 pioches, 8 retraits, 3 destructions de masse (valeurs par défaut, pas encore modifiables).
 
 ### Phase 6 et suivantes
 
