@@ -32,6 +32,15 @@ Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : e
 
 Une fois connecté, « Mes decks » (<http://localhost:3000/fr/decks>) permet de créer un deck à partir d'un commandant puis de le construire dans l'éditeur.
 
+### Connexion avec Google (facultative)
+
+Le bouton « Continuer avec Google » n'apparaît que si des identifiants OAuth sont fournis :
+
+1. Dans la [console Google Cloud](https://console.cloud.google.com/), créez un projet, puis ouvrez « API et services » → « Écran de consentement OAuth ». Choisissez « Externe » et renseignez le nom de l'application et votre email.
+2. Dans « Identifiants » → « Créer des identifiants » → « ID client OAuth », choisissez le type « Application Web ».
+3. Ajoutez l'URI de redirection autorisée `http://localhost:3000/api/auth/callback/google` (puis, en production, `https://votre-domaine/api/auth/callback/google`).
+4. Copiez l'ID client et le code secret dans `.env` (`GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`), puis relancez `docker compose up`.
+
 Sous Linux, macOS ou WSL, `make dev` fait la même chose, et `make help` liste toutes les commandes (voir plus bas).
 
 Si le port 5432 est déjà pris (un PostgreSQL installé sur la machine, par exemple), copiez `.env.example` en `.env` et changez `DB_PORT`.

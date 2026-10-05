@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { routing } from "@/i18n/routing";
 import {
   deleteAccountSchema,
+  displayNameFromProfile,
   displayNameSchema,
   LOCALES,
   profileSchema,
@@ -102,4 +103,28 @@ describe("validateForm", () => {
 
 it("propose les mêmes langues que le routage", () => {
   expect([...LOCALES]).toEqual([...routing.locales]);
+});
+
+describe("displayNameFromProfile", () => {
+  it("garde le nom du profil quand il est valide", () => {
+    expect(displayNameFromProfile("  Liliana Vess ", "l@example.com")).toBe(
+      "Liliana Vess",
+    );
+  });
+
+  it("raccourcit un nom trop long", () => {
+    const name = displayNameFromProfile("x".repeat(40), "l@example.com");
+    expect(name).toHaveLength(32);
+    expect(displayNameSchema.safeParse(name).success).toBe(true);
+  });
+
+  it("se rabat sur l'adresse email, puis sur un nom par défaut", () => {
+    expect(displayNameFromProfile(undefined, "liliana@example.com")).toBe(
+      "liliana",
+    );
+    expect(displayNameFromProfile("L", "l@example.com")).toBe("Planeswalker");
+    expect(displayNameFromProfile("\u0000\u0007", "l@example.com")).toBe(
+      "Planeswalker",
+    );
+  });
 });

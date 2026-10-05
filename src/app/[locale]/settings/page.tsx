@@ -3,7 +3,7 @@ import type { Locale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { DeleteAccountForm } from "@/components/auth/delete-account-form";
 import { ProfileForm } from "@/components/auth/profile-form";
-import { requireSession } from "@/server/auth/session";
+import { getSignInMethods, requireSession } from "@/server/auth/session";
 
 export async function generateMetadata({
   params,
@@ -24,13 +24,21 @@ export default async function SettingsPage({
   // Page réservée : sans session, redirection vers la connexion.
   const { user } = await requireSession(locale as Locale, "/settings");
   const t = await getTranslations("SettingsPage");
+  const methods = await getSignInMethods();
+  const hasPassword = methods.includes("credential");
+  const methodNames = [
+    hasPassword && t("methodPassword"),
+    methods.includes("google") && t("methodGoogle"),
+  ].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 px-4 py-10">
       <div className="space-y-2">
         <h1 className="font-semibold text-3xl tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">
-          {t("signedInAs", { email: user.email })}
+          {t("signedInAs", { email: user.email })}{" "}
+          {methodNames.length > 0 &&
+            t("signInMethods", { methods: methodNames.join(", ") })}
         </p>
       </div>
 
@@ -56,7 +64,7 @@ export default async function SettingsPage({
             {t("deleteDescription")}
           </p>
         </div>
-        <DeleteAccountForm />
+        <DeleteAccountForm hasPassword={hasPassword} />
       </section>
     </div>
   );

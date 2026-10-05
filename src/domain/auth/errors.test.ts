@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authErrorKey } from "./errors";
+import { authErrorKey, oauthErrorKey } from "./errors";
 
 describe("authErrorKey", () => {
   it("traduit les codes connus de Better Auth", () => {
@@ -23,5 +23,18 @@ describe("authErrorKey", () => {
     );
     expect(authErrorKey({})).toBe("unknown");
     expect(authErrorKey(null)).toBe("unknown");
+  });
+});
+
+describe("oauthErrorKey", () => {
+  it("ne signale rien sans erreur", () => {
+    expect(oauthErrorKey(undefined)).toBeNull();
+    expect(oauthErrorKey("")).toBeNull();
+  });
+
+  it("distingue le compte existant non confirmé des autres échecs", () => {
+    expect(oauthErrorKey("unable_to_link_account")).toBe("oauthLinkFailed");
+    expect(oauthErrorKey("access_denied")).toBe("oauthFailed");
+    expect(oauthErrorKey(["a", "b"])).toBeNull();
   });
 });

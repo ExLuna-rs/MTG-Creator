@@ -10,6 +10,9 @@ export type AuthErrorKey =
   | "nameLength"
   | "invalidToken"
   | "tooManyRequests"
+  | "sessionNotFresh"
+  | "oauthFailed"
+  | "oauthLinkFailed"
   | "unknown";
 
 const ERROR_KEYS: Record<string, AuthErrorKey> = {
@@ -22,6 +25,8 @@ const ERROR_KEYS: Record<string, AuthErrorKey> = {
   INVALID_NAME: "nameLength",
   INVALID_TOKEN: "invalidToken",
   TOKEN_EXPIRED: "invalidToken",
+  // Suppression du compte sans mot de passe avec une session trop ancienne.
+  SESSION_EXPIRED: "sessionNotFresh",
 };
 
 /** Clé de traduction d'une erreur de Better Auth (code et statut HTTP). */
@@ -31,4 +36,15 @@ export function authErrorKey(
   if (!error) return "unknown";
   if (error.status === 429) return "tooManyRequests";
   return (error.code && ERROR_KEYS[error.code]) || "unknown";
+}
+
+/**
+ * Clé de traduction d'une erreur de connexion avec Google (paramètre
+ * `?error=` de la page de connexion), ou null s'il n'y en a pas.
+ */
+export function oauthErrorKey(error: unknown): AuthErrorKey | null {
+  if (typeof error !== "string" || !error) return null;
+  // Un compte existe avec cette adresse, mais elle n'est pas confirmée.
+  if (error === "unable_to_link_account") return "oauthLinkFailed";
+  return "oauthFailed";
 }

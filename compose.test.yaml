@@ -56,6 +56,10 @@ services:
       BETTER_AUTH_SECRET: test-only-secret-not-for-production-use
       BETTER_AUTH_URL: http://localhost:3000
       SMTP_URL: smtp://mailpit:1025
+      # Identifiants factices : le bouton Google s'affiche, Google n'est
+      # jamais contacté par les tests.
+      GOOGLE_CLIENT_ID: test-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: test-client-secret
     depends_on:
       seed:
         condition: service_completed_successfully
