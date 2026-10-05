@@ -9,6 +9,7 @@ import {
   displayNameSchema,
   localeSchema,
 } from "@/domain/auth/forms";
+import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getDb } from "@/server/db";
 import { accounts, sessions, users, verifications } from "@/server/db/schema";
@@ -40,6 +41,41 @@ function sendAccountEmail(
   sendEmail(user.email, content).catch((error: unknown) => {
     console.error(`Échec de l'envoi de l'email « ${kind} »`, error);
   });
+}
+
+/**
+ * Inscription avec une adresse déjà enregistrée. La réponse reste la même
+ * que pour une nouvelle adresse (pas de déduction des comptes existants),
+ * mais le titulaire de l'adresse reçoit un email : sans cela, une personne
+ * qui se réinscrit après avoir perdu le premier email n'en reçoit aucun.
+ * - adresse pas encore confirmée : nouveau lien de confirmation ;
+ * - compte déjà actif : rappel qu'il existe, avec le lien de connexion.
+ */
+function onExistingUserSignUp(user: {
+  email: string;
+  name: string;
+  emailVerified: boolean;
+  locale?: unknown;
+}) {
+  const locale = userLocale(user);
+  if (!user.emailVerified) {
+    getAuth()
+      .api.sendVerificationEmail({
+        body: {
+          email: user.email,
+          callbackURL: getPathname({ locale, href: "/verify-email" }),
+        },
+      })
+      .catch((error: unknown) => {
+        console.error("Échec du renvoi de l'email de confirmation", error);
+      });
+    return;
+  }
+  const signInUrl = new URL(
+    getPathname({ locale, href: "/sign-in" }),
+    getAuthEnv().BETTER_AUTH_URL,
+  );
+  sendAccountEmail("accountExists", user, signInUrl.href);
 }
 
 /** Refuse un pseudo invalide, à la création comme à la modification. */
@@ -97,6 +133,9 @@ function createAuth() {
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
         sendAccountEmail("resetPassword", user, url);
+      },
+      onExistingUserSignUp: async ({ user }) => {
+        onExistingUserSignUp(user);
       },
     },
     emailVerification: {

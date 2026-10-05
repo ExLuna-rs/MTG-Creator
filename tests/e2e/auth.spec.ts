@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
-import { emailLink } from "./mailpit";
+import { emailCount, emailLink } from "./mailpit";
 
 // Parcours des comptes : les emails sont lus dans Mailpit (service Docker).
 
@@ -125,6 +125,50 @@ test("crée un compte, confirme l'adresse et ouvre la session", async ({
   await expect(
     page.getByText("Méthodes de connexion : email et mot de passe."),
   ).toBeVisible();
+});
+
+test("renvoie le lien de confirmation à une nouvelle inscription", async ({
+  page,
+}) => {
+  const account = newAccount();
+  await fillSignUp(page, account);
+  await expect
+    .poll(() =>
+      emailCount(page.request, account.email, "Confirmez votre adresse email"),
+    )
+    .toBe(1);
+
+  // Même réponse qu'une première inscription, et un nouveau lien qui marche.
+  await fillSignUp(page, account);
+  await expect
+    .poll(() =>
+      emailCount(page.request, account.email, "Confirmez votre adresse email"),
+    )
+    .toBe(2);
+  const link = await emailLink(
+    page.request,
+    account.email,
+    "Confirmez votre adresse email",
+  );
+  await page.goto(link);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Adresse confirmée" }),
+  ).toBeVisible();
+});
+
+test("prévient le titulaire d'une adresse déjà inscrite", async ({ page }) => {
+  const account = newAccount();
+  await signUpAndVerify(page, account);
+  await signOut(page);
+
+  await fillSignUp(page, account);
+  const link = await emailLink(
+    page.request,
+    account.email,
+    "Vous avez déjà un compte MTG Creator",
+  );
+  await page.goto(link);
+  await expect(page).toHaveURL(/\/fr\/sign-in$/);
 });
 
 test("affiche ou masque le mot de passe", async ({ page }) => {

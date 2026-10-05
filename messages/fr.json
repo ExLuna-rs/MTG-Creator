@@ -271,6 +271,12 @@
       "body": "Vous avez demandé à changer le mot de passe de votre compte MTG Creator. Le lien est valable une heure.",
       "action": "Choisir un nouveau mot de passe",
       "ignore": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe reste inchangé."
+    },
+    "accountExists": {
+      "subject": "Vous avez déjà un compte MTG Creator",
+      "body": "Quelqu'un vient de demander la création d'un compte MTG Creator avec cette adresse, mais elle est déjà associée à un compte. Connectez-vous simplement ; si vous avez oublié votre mot de passe, la page de connexion permet de le réinitialiser.",
+      "action": "Me connecter",
+      "ignore": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre compte n'a pas été modifié."
     }
   },
   "DecksPage": {

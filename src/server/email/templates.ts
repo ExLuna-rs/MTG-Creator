@@ -11,7 +11,10 @@ export type EmailContent = {
   html: string;
 };
 
-export type AccountEmailKind = "verifyEmail" | "resetPassword";
+export type AccountEmailKind =
+  | "verifyEmail"
+  | "resetPassword"
+  | "accountExists";
 
 /** Échappe le texte inséré dans le HTML (le pseudo est choisi par l'utilisateur). */
 export function escapeHtml(value: string) {
@@ -24,7 +27,8 @@ export function escapeHtml(value: string) {
 }
 
 /**
- * Email lié au compte (confirmation de l'adresse, mot de passe oublié),
+ * Email lié au compte (confirmation de l'adresse, mot de passe oublié,
+ * inscription avec une adresse déjà enregistrée),
  * dans la langue de l'utilisateur. `url` est le lien à suivre.
  */
 export function accountEmail(
