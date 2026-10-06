@@ -51,3 +51,6 @@ next-env.d.ts
 
 # analyse des images
 /.scan/
+
+# fichiers de Tesseract.js copiés par `pnpm ocr:assets`
+/public/tesseract/

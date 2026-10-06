@@ -35,6 +35,12 @@ export function SiteHeader() {
             >
               {t("decks")}
             </Link>
+            <Link
+              href="/collection"
+              className="rounded-md px-2 py-1 font-medium text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {t("collection")}
+            </Link>
           </nav>
           <UserMenu />
           <LocaleSwitcher />

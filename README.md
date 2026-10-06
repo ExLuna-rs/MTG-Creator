@@ -32,6 +32,8 @@ Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : e
 
 Une fois connecté, « Mes decks » (<http://localhost:3000/fr/decks>) permet de créer un deck à partir d'un commandant puis de le construire dans l'éditeur.
 
+« Collection » (<http://localhost:3000/fr/collection>) liste les cartes possédées. Le bouton « Scanner avec mon téléphone » affiche un QR code qui ouvre la page de scan sur le téléphone, reliée à la collection. Le navigateur du téléphone n'autorise la caméra qu'en HTTPS, et l'application de développement n'écoute que sur `localhost` : pour essayer le scan sur un vrai téléphone, exposez-la par un tunnel HTTPS (par exemple `cloudflared tunnel --url http://localhost:3000`), mettez l'adresse du tunnel dans `BETTER_AUTH_URL` (fichier `.env`) et ouvrez la collection depuis cette adresse. Sans caméra, la page de scan permet toujours d'ajouter les cartes par leur nom.
+
 ### Connexion avec Google (facultative)
 
 Le bouton « Continuer avec Google » n'apparaît que si des identifiants OAuth sont fournis :

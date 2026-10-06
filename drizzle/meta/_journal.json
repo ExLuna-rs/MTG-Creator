@@ -29,6 +29,13 @@
       "when": 1791147657906,
       "tag": "0003_decks",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791278224216,
+      "tag": "0004_collection",
+      "breakpoints": true
     }
   ]
 }

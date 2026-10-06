@@ -241,3 +241,77 @@ export const deckCards = pgTable(
     primaryKey({ columns: [table.deckId, table.zone, table.oracleId] }),
   ],
 );
+
+// -----------------------------------------------------------------------------
+// Collection
+// -----------------------------------------------------------------------------
+
+/**
+ * Cartes possédées par un utilisateur, référencées par `oracle_id` sans clé
+ * étrangère, comme les cartes des decks.
+ */
+export const collectionCards = pgTable(
+  "collection_card",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    oracleId: uuid("oracle_id").notNull(),
+    quantity: integer("quantity").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.oracleId] })],
+);
+
+/**
+ * Téléphone relié à une collection par un QR code : le jeton du lien n'est
+ * stocké que haché, et expire après une période sans activité.
+ */
+export const scanSessions = pgTable(
+  "scan_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    // Dernière requête du téléphone (null tant qu'il ne s'est pas connecté).
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("scan_session_token_hash_idx").on(table.tokenHash),
+    index("scan_session_user_id_idx").on(table.userId),
+  ],
+);
+
+/**
+ * Cartes ajoutées par un scan, pour les afficher en direct sur l'ordinateur
+ * et pouvoir annuler un ajout depuis le téléphone.
+ */
+export const scannedCards = pgTable(
+  "scanned_card",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Téléphone relié qui a scanné la carte (null : scan sans QR code).
+    scanSessionId: uuid("scan_session_id").references(() => scanSessions.id, {
+      onDelete: "set null",
+    }),
+    oracleId: uuid("oracle_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("scanned_card_user_id_idx").on(table.userId, table.id)],
+);
