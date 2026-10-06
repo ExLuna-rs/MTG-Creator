@@ -22,19 +22,73 @@ async function createDeck(page: Page, commander: string) {
   await expect(page).toHaveURL(/\/fr\/decks\/[0-9a-f-]+\/edit$/);
 }
 
-/** Recherche une carte dans l'éditeur et l'ajoute au deck. */
-async function addCard(page: Page, name: string, zone = "au deck") {
-  await page.getByRole("searchbox", { name: "Nom de la carte" }).fill(name);
-  await page
-    .getByRole("button", { name: `Ajouter ${name} ${zone}`, exact: true })
-    .click();
+const spotlight = (page: Page) =>
+  page.getByRole("dialog", { name: "Rechercher une carte" });
+
+/** Ouvre la recherche (Ctrl+K) si elle est fermée. */
+async function openSpotlight(page: Page) {
+  if (!(await spotlight(page).isVisible())) {
+    await page.keyboard.press("Control+k");
+  }
+  await expect(spotlight(page)).toBeVisible();
+  return spotlight(page);
 }
 
+/**
+ * Recherche une carte et l'ajoute au deck (ou, avec `maybe`, aux cartes à
+ * considérer). `search` peut porter une quantité : « 12 island ».
+ */
+async function addCard(
+  page: Page,
+  name: string,
+  { maybe = false, search = name } = {},
+) {
+  const dialog = await openSpotlight(page);
+  await dialog.getByRole("combobox", { name: "Nom de la carte" }).fill(search);
+  await dialog
+    .getByRole("option", { name, exact: true })
+    .click({ modifiers: maybe ? ["Shift"] : [] });
+  await expect(dialog.getByRole("status")).toContainText(name);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+}
+
+/** Change l'affichage du deck : Piles, Grille ou Liste. */
+async function showView(page: Page, view: "Piles" | "Grille" | "Liste") {
+  await page.getByRole("button", { name: view, exact: true }).click();
+}
+
+/** Une carte du deck, dans n'importe quel affichage. */
 const deckRow = (page: Page, name: string) =>
-  page.locator(`li[data-card="${name}"]`);
+  page.locator(`[data-card="${name}"]`);
 
 const group = (page: Page, id: string) =>
   page.locator(`section[data-group="${id}"]`);
+
+/** Une carte dans un groupe du deck. */
+const cardIn = (page: Page, id: string, name: string) =>
+  group(page, id).locator(`[data-card="${name}"]`);
+
+/**
+ * Glisse une carte du deck sur un groupe, à la souris : par sa poignée en
+ * liste, par son image (le bandeau du nom) en piles et en grille.
+ */
+async function dragTo(page: Page, name: string, target: string) {
+  // La souris ne sort pas de la fenêtre : la carte et le groupe visé doivent
+  // y tenir ensemble, sous le bandeau de validation et de statistiques.
+  await page.setViewportSize({ width: 1280, height: 1400 });
+  const handle = page.getByRole("button", { name: `Déplacer ${name}` });
+  const box = await group(page, target).boundingBox();
+  if (!box) throw new Error(`Groupe ${target} invisible`);
+  if (await handle.count()) await handle.hover();
+  else await deckRow(page, name).hover({ position: { x: 30, y: 8 } });
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 10, { steps: 10 });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 10,
+  });
+  await page.mouse.up();
+}
 
 async function expectSaved(page: Page) {
   await expect(
@@ -63,6 +117,7 @@ test("construit un deck de 100 cartes valide", async ({ page }) => {
     "Atraxa, Praetors' Voice",
   );
   await expect(page.getByText("Choisissez un commandant")).toHaveCount(0);
+  await showView(page, "Liste");
 
   for (const name of ["Sol Ring", "Counterspell", "Swords to Plowshares"]) {
     await addCard(page, name);
@@ -71,19 +126,21 @@ test("construit un deck de 100 cartes valide", async ({ page }) => {
   await expect(page.getByText("4 cartes : un deck Commander")).toBeVisible();
 
   // La recherche est limitée à l'identité couleur d'Atraxa (WUBG).
-  await page
-    .getByRole("searchbox", { name: "Nom de la carte" })
+  const search = await openSpotlight(page);
+  await search
+    .getByRole("combobox", { name: "Nom de la carte" })
     .fill("Lightning");
   await expect(
-    page.getByRole("button", { name: "Ajouter Lightning Greaves au deck" }),
+    search.getByRole("option", { name: "Lightning Greaves" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Ajouter Lightning Bolt au deck" }),
+    search.getByRole("option", { name: "Lightning Bolt" }),
   ).toHaveCount(0);
+  await page.keyboard.press("Escape");
 
-  // Terrains de base : autant d'exemplaires qu'on veut.
-  await addCard(page, "Island");
-  await page.getByLabel("Quantité de Island").fill("96");
+  // Terrains de base : autant d'exemplaires qu'on veut, en une saisie.
+  await addCard(page, "Island", { search: "96 island" });
+  await expect(page.getByLabel("Quantité de Island")).toHaveValue("96");
   await expect(
     page.getByRole("heading", { name: "Deck (100 cartes)" }),
   ).toBeVisible();
@@ -112,10 +169,10 @@ test("construit un deck de 100 cartes valide", async ({ page }) => {
   await expect(deckRow(page, "Sol Ring")).toBeVisible();
 
   // Les cartes à considérer ne comptent pas dans le deck.
-  await page
+  await (await openSpotlight(page))
     .getByRole("checkbox", { name: "Identité du commandant" })
     .uncheck();
-  await addCard(page, "Lightning Bolt", "aux cartes à considérer");
+  await addCard(page, "Lightning Bolt", { maybe: true });
   await expect(
     group(page, "zone:maybe").getByText("Lightning Bolt"),
   ).toBeVisible();
@@ -170,7 +227,7 @@ test("crée un deck avec deux commandants partenaires", async ({ page }) => {
     "Thrasios, Triton Hero & Tymna the Weaver",
   );
   const commanders = group(page, "zone:commander");
-  await expect(commanders.locator("li")).toHaveCount(2);
+  await expect(commanders.locator("[data-card]")).toHaveCount(2);
   await expect(page.getByText("Choisissez un commandant")).toHaveCount(0);
   await expect(page.getByText("Ces commandants ne peuvent pas")).toHaveCount(0);
 });
@@ -180,6 +237,7 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
 }) => {
   await signUpViaApi(page);
   await createDeck(page, "Edgar Markov");
+  await showView(page, "Liste");
   await addCard(page, "Sol Ring");
   await addCard(page, "Lightning Bolt");
 
@@ -189,33 +247,40 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await solRing.getByLabel("Nouvelle catégorie pour Sol Ring").fill("Rampe");
   await solRing.getByRole("button", { name: "Ajouter", exact: true }).click();
   await page.getByRole("button", { name: "Catégorie", exact: true }).click();
-  await expect(group(page, "category:Rampe")).toContainText("Sol Ring");
-  await expect(group(page, "category:")).toContainText("Lightning Bolt");
+  await expect(cardIn(page, "category:Rampe", "Sol Ring")).toBeVisible();
+  await expect(cardIn(page, "category:", "Lightning Bolt")).toBeVisible();
 
   // Glisser Lightning Bolt dans la catégorie Rampe, puis dans les cartes à considérer.
-  async function drag(name: string, target: string) {
-    const handle = page.getByRole("button", { name: `Déplacer ${name}` });
-    const box = await group(page, target).boundingBox();
-    if (!box) throw new Error(`Groupe ${target} invisible`);
-    await handle.hover();
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + 10, { steps: 10 });
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
-      steps: 10,
-    });
-    await page.mouse.up();
-  }
+  const drag = (name: string, target: string) => dragTo(page, name, target);
   await drag("Lightning Bolt", "category:Rampe");
-  await expect(group(page, "category:Rampe")).toContainText("Lightning Bolt");
+  await expect(cardIn(page, "category:Rampe", "Lightning Bolt")).toBeVisible();
   await drag("Lightning Bolt", "zone:maybe");
-  await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
+  await expect(cardIn(page, "zone:maybe", "Lightning Bolt")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Deck (2 cartes)" }),
   ).toBeVisible();
 
   await expectSaved(page);
   await page.reload();
-  await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
+  await expect(cardIn(page, "zone:maybe", "Lightning Bolt")).toBeVisible();
+});
+
+test("regroupe les cartes par rôle", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await addCard(page, "Sol Ring");
+  await addCard(page, "Lightning Bolt");
+
+  // Rôles déduits du texte : regroupement par défaut, en piles.
+  await expect(cardIn(page, "role:ramp", "Sol Ring")).toBeVisible();
+  await expect(cardIn(page, "role:removal", "Lightning Bolt")).toBeVisible();
+
+  // Déposer une carte (son image) sur un rôle lui donne la catégorie de ce rôle.
+  await dragTo(page, "Lightning Bolt", "role:ramp");
+  await expect(cardIn(page, "role:ramp", "Lightning Bolt")).toBeVisible();
+  await expect(group(page, "role:removal")).toHaveCount(0);
+  await page.getByRole("button", { name: "Catégorie", exact: true }).click();
+  await expect(cardIn(page, "category:Rampe", "Lightning Bolt")).toBeVisible();
 });
 
 test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", async ({
@@ -225,6 +290,7 @@ test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", a
   await createDeck(page, "Edgar Markov");
   await addCard(page, "Sol Ring");
   await addCard(page, "Plains");
+  await showView(page, "Liste");
 
   // Survoler une carte l'affiche, avec son texte, dans l'aperçu de droite.
   const preview = page.getByTestId("card-preview");
@@ -251,6 +317,86 @@ test("affiche l'aperçu d'une carte et ajuste les quantités depuis la liste", a
   await expect(
     page.getByRole("heading", { name: "Deck (3 cartes)" }),
   ).toBeVisible();
+});
+
+test("ouvre une carte des piles et de la grille dans une fenêtre", async ({
+  page,
+}) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await addCard(page, "Sol Ring");
+  await addCard(page, "Plains", { search: "3 plains" });
+  // Piles par défaut : une image par carte, la quantité sur l'image.
+  await expect(
+    group(page, "role:ramp").getByRole("button", { name: "Sol Ring" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Plains (3 exemplaires)" }),
+  ).toBeVisible();
+
+  // Cliquer une carte ouvre ses options : la déplacer, puis la retirer.
+  await deckRow(page, "Sol Ring").click();
+  const card = page.getByRole("dialog", { name: "Sol Ring" });
+  await expect(card).toContainText("Artifact");
+  await card
+    .getByRole("button", { name: "Déplacer vers : À considérer" })
+    .click();
+  await expect(cardIn(page, "zone:maybe", "Sol Ring")).toBeVisible();
+  await card.getByRole("button", { name: "Retirer Sol Ring" }).click();
+  await expect(card).toBeHidden();
+  await expect(deckRow(page, "Sol Ring")).toHaveCount(0);
+
+  // La grille montre les mêmes cartes ; l'affichage est retenu.
+  await showView(page, "Grille");
+  await expect(
+    page.getByRole("button", { name: "Grille", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await deckRow(page, "Plains").click();
+  await page
+    .getByRole("dialog", { name: "Plains" })
+    .getByRole("button", { name: "Ajouter un exemplaire de Plains" })
+    .click();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Plains (4 exemplaires)" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Grille", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
+test("enchaîne les ajouts au clavier dans la recherche", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+
+  // « / » ouvre la recherche ; Entrée ajoute, Maj+Entrée met de côté.
+  await page.keyboard.press("/");
+  const dialog = spotlight(page);
+  const input = dialog.getByRole("combobox", { name: "Nom de la carte" });
+  await expect(input).toBeFocused();
+  await input.fill("Sol Ring");
+  await expect(
+    dialog.getByRole("option", { name: "Sol Ring", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await input.press("Enter");
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Sol Ring ajouté au deck",
+  );
+  await expect(input).toHaveValue("");
+  await input.fill("Lightning Bolt");
+  await expect(
+    dialog.getByRole("option", { name: "Lightning Bolt", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await input.press("Shift+Enter");
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Lightning Bolt ajouté aux cartes à considérer",
+  );
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  await expect(cardIn(page, "role:ramp", "Sol Ring")).toBeVisible();
+  await expect(cardIn(page, "zone:maybe", "Lightning Bolt")).toBeVisible();
 });
 
 test("protège les decks des autres utilisateurs", async ({ page, browser }) => {
@@ -332,15 +478,16 @@ test("importe une liste de cartes", async ({ page }) => {
   await expect(page.getByText("40 cartes importées")).toBeVisible();
 
   // Le commandant n'est pas ajouté une seconde fois au deck.
+  await showView(page, "Liste");
   await expect(deckRow(page, "Atraxa, Praetors' Voice")).toHaveCount(1);
   await expect(page.getByLabel("Quantité de Island")).toHaveValue("36");
   await expect(deckRow(page, "Counterspell")).toBeVisible();
-  await expect(group(page, "zone:maybe")).toContainText("Lightning Bolt");
+  await expect(cardIn(page, "zone:maybe", "Lightning Bolt")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Deck (39 cartes)" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Catégorie", exact: true }).click();
-  await expect(group(page, "category:Ramp")).toContainText("Sol Ring");
+  await expect(cardIn(page, "category:Ramp", "Sol Ring")).toBeVisible();
 
   // Tout l'import s'annule et se rétablit en une fois.
   await page.getByRole("button", { name: "Annuler", exact: true }).click();

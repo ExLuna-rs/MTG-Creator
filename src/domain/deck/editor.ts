@@ -26,7 +26,13 @@ export const MAX_QUANTITY = 99;
 export const MAX_CATEGORIES = 10;
 
 export type EditorAction =
-  | { type: "add"; card: DeckCardData; zone: DeckZone }
+  | {
+      /** Ajoute `quantity` exemplaires (1 par défaut), dans la limite de la zone. */
+      type: "add";
+      card: DeckCardData;
+      zone: DeckZone;
+      quantity?: number;
+    }
   | { type: "setQuantity"; oracleId: string; zone: DeckZone; quantity: number }
   | { type: "remove"; oracleId: string; zone: DeckZone }
   | { type: "move"; oracleId: string; from: DeckZone; to: DeckZone }
@@ -115,16 +121,17 @@ function applyEdit(
 
   switch (action.type) {
     case "add": {
+      const added = Math.max(1, Math.floor(action.quantity ?? 1));
+      if (!Number.isFinite(added)) return null;
+      const limit = zoneLimit(action.card, action.zone);
       const existing = entries.find(isEntry(action.card.oracleId, action.zone));
       if (existing) {
-        if (existing.quantity >= zoneLimit(action.card, action.zone)) {
-          return null;
-        }
+        if (existing.quantity >= limit) return null;
         return updateEntries(
           state,
           entries.map((entry) =>
             entry === existing
-              ? { ...entry, quantity: entry.quantity + 1 }
+              ? { ...entry, quantity: Math.min(entry.quantity + added, limit) }
               : entry,
           ),
         );
@@ -134,7 +141,7 @@ function applyEdit(
         {
           oracleId: action.card.oracleId,
           zone: action.zone,
-          quantity: 1,
+          quantity: Math.min(added, limit),
           categories: [],
         },
       ]);

@@ -58,4 +58,23 @@ describe("regroupement du deck", () => {
       ["category:", ["Island"]],
     ]);
   });
+
+  it("par rôle principal, « autres » en dernier", () => {
+    const grouped = groupDeck(
+      [...deck, deckCard("Swords to Plowshares"), deckCard("Eternal Witness")],
+      "role",
+    );
+    expect(
+      grouped.groups.map((group) => [
+        group.id,
+        group.cards.map((entry) => entry.card.name),
+      ]),
+    ).toEqual([
+      ["role:land", ["Island"]],
+      ["role:ramp", ["Birds of Paradise", "Sol Ring"]],
+      // Catégories « Interaction » puis « Ramp » : la première l'emporte.
+      ["role:removal", ["Counterspell", "Swords to Plowshares"]],
+      ["role:", ["Eternal Witness"]],
+    ]);
+  });
 });

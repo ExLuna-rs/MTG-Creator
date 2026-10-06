@@ -90,3 +90,40 @@
     @apply bg-background font-sans text-foreground;
   }
 }
+
+/*
+ * Vue Piles de l'éditeur de deck : les cartes d'une pile se chevauchent et
+ * ne montrent que leur bandeau de nom. Survoler (ou atteindre au clavier)
+ * une carte écarte celles du dessous pour la montrer en entier, et la pile
+ * pousse le groupe suivant d'autant. Tailles relatives à la largeur de la
+ * pile (unités cqw du conteneur).
+ */
+.deck-pile {
+  --pile-step: 13cqw;
+  --pile-card: calc(100cqw * 680 / 488);
+  position: relative;
+  height: calc((var(--pile-count) - 1) * var(--pile-step) + var(--pile-card));
+  transition: margin-bottom 150ms ease;
+}
+
+.deck-pile-slot {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(var(--pile-index) * var(--pile-step));
+  transition: transform 150ms ease;
+}
+
+.deck-pile-slot:is(:hover, :focus-visible) ~ .deck-pile-slot {
+  transform: translateY(calc(var(--pile-card) - var(--pile-step)));
+}
+
+.deck-pile:has(.deck-pile-slot:not(:last-child):is(:hover, :focus-visible)) {
+  margin-bottom: calc(var(--pile-card) - var(--pile-step));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-pile,
+  .deck-pile-slot {
+    transition: none;
+  }
+}

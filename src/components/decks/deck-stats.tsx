@@ -12,7 +12,10 @@ const COLOR_BARS = {
   G: "bg-mana-g",
 } as const;
 
-/** Statistiques du deck : chiffres clés, courbe de mana, types, couleurs. */
+/**
+ * Statistiques du deck, en bandeau : chiffres clés et courbe de mana, types,
+ * couleurs demandées comparées aux sources.
+ */
 export function DeckStats({ stats }: { stats: Stats }) {
   const t = useTranslations("DeckStats");
   const tGroups = useTranslations("DeckGroups");
@@ -31,81 +34,96 @@ export function DeckStats({ stats }: { stats: Stats }) {
   const usedColors = COLORS.filter((color) => stats.colorPips[color] > 0);
 
   return (
-    <section aria-labelledby="stats-title" className="space-y-5">
-      <h2 id="stats-title" className="font-semibold">
+    <section
+      aria-labelledby="stats-title"
+      className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+    >
+      <h2 id="stats-title" className="sr-only">
         {t("title")}
       </h2>
 
-      <dl className="grid grid-cols-2 gap-2 text-sm">
-        {[
-          [t("cards"), format.number(stats.cardCount)],
-          [t("lands"), format.number(stats.landCount)],
-          [
-            t("averageManaValue"),
-            format.number(stats.averageManaValue, { maximumFractionDigits: 2 }),
-          ],
-          [
-            t("price"),
-            format.number(stats.price.eur, {
-              style: "currency",
-              currency: "EUR",
-            }),
-          ],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-md border px-3 py-2">
-            <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd className="font-semibold tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="text-muted-foreground text-xs">
-        {t("priceDetail", {
-          usd: format.number(stats.price.usd, {
-            style: "currency",
-            currency: "USD",
-          }),
-          missing: stats.price.missingEur,
-        })}
-      </p>
-
-      <figure className="space-y-2">
-        <figcaption className="font-medium text-sm">
-          {t("manaCurve")}
-        </figcaption>
-        <ol className="flex h-28 items-end gap-1" aria-label={t("manaCurve")}>
-          {stats.manaCurve.map((count, manaValue) => {
-            const label =
-              manaValue === MANA_CURVE_MAX
-                ? `${MANA_CURVE_MAX}+`
-                : String(manaValue);
-            return (
-              <li
-                // biome-ignore lint/suspicious/noArrayIndexKey: colonnes fixes
-                key={manaValue}
-                className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+      <div className="space-y-4">
+        <dl className="grid grid-cols-2 gap-2 text-sm">
+          {[
+            [t("cards"), format.number(stats.cardCount)],
+            [t("lands"), format.number(stats.landCount)],
+            [
+              t("averageManaValue"),
+              format.number(stats.averageManaValue, {
+                maximumFractionDigits: 2,
+              }),
+            ],
+            [
+              t("price"),
+              format.number(stats.price.eur, {
+                style: "currency",
+                currency: "EUR",
+              }),
+            ],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="min-w-0 rounded-md border px-2.5 py-1.5"
+            >
+              <dt
+                className="truncate text-muted-foreground text-xs"
+                title={label}
               >
-                <span
-                  className="text-muted-foreground text-xs tabular-nums"
-                  aria-hidden
-                >
-                  {count}
-                </span>
-                <span
-                  className="w-full rounded-t-sm bg-primary/70"
-                  style={{ height: `${(count / curveMax) * 70}%` }}
-                  aria-hidden
-                />
-                <span className="text-xs tabular-nums" aria-hidden>
-                  {label}
-                </span>
-                <span className="sr-only">
-                  {t("curveColumn", { count, manaValue: label })}
-                </span>
-              </li>
-            );
+                {label}
+              </dt>
+              <dd className="truncate font-semibold tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-muted-foreground text-xs">
+          {t("priceDetail", {
+            usd: format.number(stats.price.usd, {
+              style: "currency",
+              currency: "USD",
+            }),
+            missing: stats.price.missingEur,
           })}
-        </ol>
-      </figure>
+        </p>
+
+        <figure className="space-y-2">
+          <figcaption className="font-medium text-sm">
+            {t("manaCurve")}
+          </figcaption>
+          <ol className="flex h-24 items-end gap-1" aria-label={t("manaCurve")}>
+            {stats.manaCurve.map((count, manaValue) => {
+              const label =
+                manaValue === MANA_CURVE_MAX
+                  ? `${MANA_CURVE_MAX}+`
+                  : String(manaValue);
+              return (
+                <li
+                  // biome-ignore lint/suspicious/noArrayIndexKey: colonnes fixes
+                  key={manaValue}
+                  className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+                >
+                  <span
+                    className="text-muted-foreground text-xs tabular-nums"
+                    aria-hidden
+                  >
+                    {count}
+                  </span>
+                  <span
+                    className="w-full rounded-t-sm bg-primary/70"
+                    style={{ height: `${(count / curveMax) * 70}%` }}
+                    aria-hidden
+                  />
+                  <span className="text-xs tabular-nums" aria-hidden>
+                    {label}
+                  </span>
+                  <span className="sr-only">
+                    {t("curveColumn", { count, manaValue: label })}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </figure>
+      </div>
 
       <div className="space-y-2">
         <h3 className="font-medium text-sm">{t("types")}</h3>

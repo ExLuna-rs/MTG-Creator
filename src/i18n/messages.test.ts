@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CARD_ROLES, categoryRole } from "@/domain/deck/roles";
 import en from "../../messages/en.json";
 import fr from "../../messages/fr.json";
 import { routing } from "./routing";
@@ -32,6 +33,15 @@ describe("traductions", () => {
     for (const messages of [fr, en]) {
       for (const value of flattenValues(messages)) {
         expect(value.trim()).not.toBe("");
+      }
+    }
+  });
+
+  it("nomment chaque rôle par une catégorie qui le désigne", () => {
+    // Déposer une carte sur un rôle lui donne ce nom comme catégorie.
+    for (const messages of [fr, en]) {
+      for (const role of CARD_ROLES) {
+        expect(categoryRole(messages.CardRoles[role])).toBe(role);
       }
     }
   });
