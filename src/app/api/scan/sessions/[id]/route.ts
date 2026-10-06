@@ -7,7 +7,7 @@ import {
 } from "@/server/collection/scan";
 
 // État d'un lien de scan, interrogé régulièrement par l'ordinateur : le
-// téléphone est-il connecté, quelles cartes a-t-il ajoutées ?
+// téléphone est-il connecté, le lien a-t-il expiré ?
 export async function GET(
   _request: NextRequest,
   ctx: RouteContext<"/api/scan/sessions/[id]">,

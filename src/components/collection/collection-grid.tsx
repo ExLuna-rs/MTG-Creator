@@ -4,8 +4,8 @@ import { Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
 import { Button } from "@/components/ui/button";
+import type { CollectionEntry } from "@/domain/collection/collection";
 import { Link } from "@/i18n/navigation";
-import type { CollectionEntry } from "@/server/collection/collection";
 import { useCollectionChange } from "./use-collection-change";
 
 /** Cartes de la collection, avec leur nombre d'exemplaires. */
@@ -20,8 +20,11 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
           {error}
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {entries.map(({ card, quantity }) => (
+      <ul
+        data-testid="collection-grid"
+        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+      >
+        {entries.map((card) => (
           <li key={card.oracleId} data-card={card.name} className="space-y-2">
             <Link
               href={`/cards/${card.oracleId}`}
@@ -32,12 +35,12 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
                 name={card.name}
                 sizes="(min-width: 1024px) 160px, (min-width: 640px) 30vw, 45vw"
               />
-              {quantity > 1 && (
+              {card.quantity > 1 && (
                 <span
                   aria-hidden
                   className="absolute top-2 right-2 rounded-full bg-background/90 px-2 py-0.5 font-semibold text-sm tabular-nums shadow"
                 >
-                  ×{quantity}
+                  ×{card.quantity}
                 </span>
               )}
             </Link>
@@ -56,7 +59,7 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
                 className="text-center text-muted-foreground text-sm tabular-nums"
                 data-testid="quantity"
               >
-                {t("quantity", { count: quantity })}
+                {t("quantity", { count: card.quantity })}
               </span>
               <Button
                 variant="outline"

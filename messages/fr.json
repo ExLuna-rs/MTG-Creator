@@ -497,12 +497,16 @@
     "increase": "Ajouter un exemplaire de {name}",
     "decrease": "Retirer un exemplaire de {name}",
     "quantity": "{count, plural, one {# exemplaire} other {# exemplaires}}",
-    "scanHere": "Scanner avec ce téléphone"
+    "scanHere": "Scanner avec ce téléphone",
+    "search": "Rechercher dans la collection",
+    "searchPlaceholder": "Nom de la carte",
+    "sort": "Trier par",
+    "noMatch": "Aucune carte de la collection ne correspond à « {query} »."
   },
   "PhoneScan": {
     "open": "Scanner avec mon téléphone",
     "title": "Relier mon téléphone",
-    "instructions": "Scannez ce QR code avec l'appareil photo de votre téléphone : la page de scan s'ouvre, reliée à votre collection. Les cartes scannées apparaissent ici en direct.",
+    "instructions": "Scannez ce QR code avec l'appareil photo de votre téléphone : la page de scan s'ouvre, reliée à votre compte. Les cartes scannées apparaissent en direct dans la liste de scan de cette page.",
     "qrLabel": "QR code du lien de scan",
     "copyLink": "Copier le lien",
     "copied": "Lien copié",
@@ -512,8 +516,6 @@
     "newLink": "Nouveau lien",
     "disconnect": "Déconnecter le téléphone",
     "close": "Fermer",
-    "scanned": "Cartes scannées",
-    "noneYet": "Aucune carte scannée pour l'instant.",
     "error": "Le lien de scan n'a pas pu être créé. Réessayez."
   },
   "Scanner": {
@@ -525,21 +527,42 @@
     "expired": "Ce lien de scan a expiré. Affichez un nouveau QR code sur votre ordinateur.",
     "startCamera": "Activer la caméra",
     "stopCamera": "Arrêter la caméra",
-    "cameraHint": "Placez la carte dans le cadre, le nom en haut : elle est ajoutée dès qu'elle est reconnue. Pour un deuxième exemplaire, retirez la carte du cadre puis remettez-la.",
+    "cameraHint": "Placez la carte dans le cadre, le nom en haut : elle s'ajoute à la liste dès qu'elle est reconnue. Pour un deuxième exemplaire, retirez la carte du cadre puis remettez-la.",
     "cameraUnavailable": "La caméra n'est pas disponible sur cette page (elle demande une connexion HTTPS). Vous pouvez ajouter les cartes par leur nom.",
     "cameraDenied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur, ou ajoutez les cartes par leur nom.",
     "loadingOcr": "Chargement de la reconnaissance de texte…",
     "reading": "Lu : {text}",
-    "added": "{name} ajoutée",
+    "added": "{name} ajoutée à la liste",
     "choose": "Quelle carte est-ce ?",
     "searchLabel": "Ajouter par le nom",
     "searchPlaceholder": "Nom de la carte",
     "add": "Ajouter {name}",
-    "recent": "Ajoutées pendant ce scan",
-    "undo": "Annuler",
-    "undoLabel": "Retirer {name} de la collection",
-    "error": "Une erreur est survenue. Réessayez.",
     "collection": "Voir ma collection",
     "guide": "Cadre de visée : placez-y la carte"
+  },
+  "ScanList": {
+    "title": "Liste de scan",
+    "empty": "Aucune carte scannée pour l'instant.",
+    "hint": "Vérifiez la liste et corrigez les cartes mal reconnues, puis ajoutez-les à votre collection.",
+    "decrease": "Retirer un exemplaire de {name}",
+    "increase": "Ajouter un exemplaire de {name}",
+    "quantity": "{count, plural, one {# exemplaire} other {# exemplaires}} de {name}",
+    "fix": "Corriger {name}",
+    "fixLabel": "Bonne carte à la place de {name}",
+    "fixPlaceholder": "Nom de la bonne carte",
+    "remove": "Retirer {name} de la liste",
+    "commit": "{count, plural, one {Ajouter # carte à la collection} other {Ajouter # cartes à la collection}}",
+    "committed": "{count, plural, one {# carte ajoutée à la collection} other {# cartes ajoutées à la collection}}",
+    "error": "La liste n'a pas pu être modifiée. Réessayez."
+  },
+  "CollectionSorts": {
+    "name": "Nom",
+    "color": "Couleur",
+    "type": "Type",
+    "manaValue": "Valeur de mana",
+    "rarity": "Rareté",
+    "price": "Prix",
+    "quantity": "Quantité",
+    "recent": "Ajout le plus récent"
   }
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { Check, Undo2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { CardImage } from "@/components/cards/card-image";
 import { CardNameInput } from "@/components/cards/card-name-input";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { scanTokenSchema } from "@/domain/collection/schema";
 import {
   type AutoAddState,
@@ -14,13 +14,13 @@ import {
 } from "@/domain/scan/auto-add";
 import { cleanScannedName } from "@/domain/scan/ocr-name";
 import { Link } from "@/i18n/navigation";
-import type { ScanMatch, ScannedCard } from "@/server/collection/scan";
+import type { ScanMatch } from "@/server/collection/scan";
 import { CameraView } from "./camera-view";
+import { ScanListView } from "./scan-list-view";
+import { useScanList } from "./use-scan-list";
 
 /** Jeton du lien de scan, gardé le temps de l'onglet. */
 const TOKEN_KEY = "mtg-creator:scan-token";
-/** Intervalle entre deux signes de vie envoyés à l'ordinateur. */
-const PING_MS = 30_000;
 
 type LinkState = "checking" | "ready" | "expired" | "none";
 
@@ -62,9 +62,7 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
   );
   const [reading, setReading] = useState("");
   const [choices, setChoices] = useState<ScanMatch[]>([]);
-  const [recent, setRecent] = useState<ScannedCard[]>([]);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const autoAdd = useRef<AutoAddState>(INITIAL_AUTO_ADD);
 
@@ -75,7 +73,19 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
     return fetch(path, { ...init, headers });
   }, []);
 
-  // Vérifie le lien (ou la session), puis donne régulièrement signe de vie.
+  const expire = useCallback(() => {
+    try {
+      sessionStorage.removeItem(TOKEN_KEY);
+    } catch {}
+    setLinkState("expired");
+  }, []);
+  // La liste, relue régulièrement, sert aussi de signe de vie pour l'ordinateur.
+  const list = useScanList(api, {
+    enabled: linkState === "ready",
+    onUnauthorized: expire,
+  });
+
+  // Vérifie le lien (ou la session).
   useEffect(() => {
     token.current = takeToken();
     if (!token.current && !signedIn) {
@@ -88,10 +98,7 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
         const response = await api("/api/scan/me");
         if (cancelled) return;
         if (response.status === 401) {
-          try {
-            sessionStorage.removeItem(TOKEN_KEY);
-          } catch {}
-          setLinkState("expired");
+          expire();
           return;
         }
         if (response.ok) {
@@ -103,42 +110,17 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
       }
     }
     void check();
-    const timer = setInterval(check, PING_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
-  }, [api, signedIn]);
+  }, [api, signedIn, expire]);
 
   async function addCard(oracleId: string) {
-    setError(false);
-    const response = await api("/api/scan/cards", {
-      method: "POST",
-      body: JSON.stringify({ oracleId }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      if (response?.status === 401) setLinkState("expired");
-      else setError(true);
-      return;
-    }
-    const { card }: { card: ScannedCard } = await response.json();
-    setRecent((cards) => [card, ...cards]);
+    const item = await list.add(oracleId);
+    if (!item) return;
     setChoices([]);
-    setMessage(t("added", { name: card.name }));
+    setMessage(t("added", { name: item.name }));
     navigator.vibrate?.(50);
-  }
-
-  async function undo(card: ScannedCard) {
-    setError(false);
-    const response = await api(`/api/scan/cards/${card.id}`, {
-      method: "DELETE",
-    }).catch(() => null);
-    if (!response?.ok && response?.status !== 404) {
-      setError(true);
-      return;
-    }
-    setRecent((cards) => cards.filter((other) => other.id !== card.id));
-    setMessage(null);
   }
 
   async function onReading(text: string) {
@@ -153,7 +135,7 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
       body: JSON.stringify({ text: name }),
     });
     if (response.status === 401) {
-      setLinkState("expired");
+      expire();
       return;
     }
     if (!response.ok) return;
@@ -197,15 +179,11 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
       <CameraView onReading={onReading} />
 
       <div role="status" className="min-h-6 space-y-1 text-sm">
-        {error ? (
-          <p className="text-destructive">{t("error")}</p>
-        ) : (
-          message && (
-            <p className="flex items-center gap-1.5 font-medium">
-              <Check className="size-4 text-primary" aria-hidden />
-              {message}
-            </p>
-          )
+        {message && (
+          <p className="flex items-center gap-1.5 font-medium">
+            <Check className="size-4 text-primary" aria-hidden />
+            {message}
+          </p>
         )}
         {reading && (
           <p className="truncate text-muted-foreground">
@@ -260,41 +238,13 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
         />
       </div>
 
-      {recent.length > 0 && (
-        <section aria-labelledby="scan-recent" className="space-y-2">
-          <h2 id="scan-recent" className="font-medium text-sm">
-            {t("recent")}
-          </h2>
-          <ul className="divide-y rounded-md border">
-            {recent.map((card) => (
-              <li
-                key={card.id}
-                data-card={card.name}
-                className="flex items-center gap-3 px-3 py-2 text-sm"
-              >
-                <span className="w-8 shrink-0">
-                  <CardImage
-                    imageUris={card.imageUris}
-                    name={card.name}
-                    decorative
-                    sizes="32px"
-                  />
-                </span>
-                <span className="min-w-0 flex-1 truncate">{card.name}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t("undoLabel", { name: card.name })}
-                  onClick={() => undo(card)}
-                >
-                  <Undo2 aria-hidden />
-                  {t("undo")}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <ScanListView
+        list={list}
+        onCommitted={() => {
+          setMessage(null);
+          setChoices([]);
+        }}
+      />
 
       {signedIn && (
         <Link

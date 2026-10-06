@@ -1,5 +1,5 @@
 {
-  "id": "f4b0cf11-2bb2-4378-8660-fe364f656bca",
+  "id": "254eafb6-6300-45dd-87e0-7c671b91258d",
   "prevId": "47b9a0f3-390a-4fa1-9585-fd7abaefcbc3",
   "version": "7",
   "dialect": "postgresql",
@@ -820,17 +820,18 @@
           "primaryKey": false,
           "notNull": true
         },
-        "scan_session_id": {
-          "name": "scan_session_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "oracle_id": {
           "name": "oracle_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -841,8 +842,8 @@
         }
       },
       "indexes": {
-        "scanned_card_user_id_idx": {
-          "name": "scanned_card_user_id_idx",
+        "scanned_card_user_oracle_idx": {
+          "name": "scanned_card_user_oracle_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -851,13 +852,13 @@
               "nulls": "last"
             },
             {
-              "expression": "id",
+              "expression": "oracle_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -875,19 +876,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "scanned_card_scan_session_id_scan_session_id_fk": {
-          "name": "scanned_card_scan_session_id_scan_session_id_fk",
-          "tableFrom": "scanned_card",
-          "tableTo": "scan_session",
-          "columnsFrom": [
-            "scan_session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

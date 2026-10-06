@@ -294,8 +294,8 @@ export const scanSessions = pgTable(
 );
 
 /**
- * Cartes ajoutées par un scan, pour les afficher en direct sur l'ordinateur
- * et pouvoir annuler un ajout depuis le téléphone.
+ * Liste de scan : cartes scannées en attente, modifiables depuis le téléphone
+ * et l'ordinateur, puis ajoutées ensemble à la collection.
  */
 export const scannedCards = pgTable(
   "scanned_card",
@@ -304,14 +304,16 @@ export const scannedCards = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    // Téléphone relié qui a scanné la carte (null : scan sans QR code).
-    scanSessionId: uuid("scan_session_id").references(() => scanSessions.id, {
-      onDelete: "set null",
-    }),
     oracleId: uuid("oracle_id").notNull(),
+    quantity: integer("quantity").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => [index("scanned_card_user_id_idx").on(table.userId, table.id)],
+  (table) => [
+    uniqueIndex("scanned_card_user_oracle_idx").on(
+      table.userId,
+      table.oracleId,
+    ),
+  ],
 );

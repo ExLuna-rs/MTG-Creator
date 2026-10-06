@@ -16,8 +16,20 @@ export const collectionChangeSchema = z.object({
 
 export type CollectionChange = z.infer<typeof collectionChangeSchema>;
 
-/** Carte scannée à ajouter à la collection. */
+/** Carte scannée à ajouter à la liste de scan. */
 export const scannedCardSchema = z.object({ oracleId: z.uuid() });
+
+/** Correction d'une ligne de la liste de scan : autre carte, autre quantité. */
+export const scanListChangeSchema = z
+  .object({
+    oracleId: z.uuid().optional(),
+    quantity: z.number().int().min(0).max(MAX_COLLECTION_QUANTITY).optional(),
+  })
+  .refine(
+    (change) => change.oracleId !== undefined || change.quantity !== undefined,
+  );
+
+export type ScanListChange = z.infer<typeof scanListChangeSchema>;
 
 /** Texte lu sur la bande du nom d'une carte. */
 export const scanTextSchema = z.object({ text: z.string().max(200) });

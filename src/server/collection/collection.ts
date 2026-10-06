@@ -1,10 +1,10 @@
 import "server-only";
-import { and, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, lte, sql } from "drizzle-orm";
+import type { CollectionEntry } from "@/domain/collection/collection";
 import { MAX_COLLECTION_QUANTITY } from "@/domain/collection/schema";
-import type { DeckCardData } from "@/domain/deck/deck";
 import { getDeckCardData } from "@/server/cards/search";
 import { type Database, getDb } from "@/server/db";
-import { collectionCards } from "@/server/db/schema";
+import { cards, collectionCards } from "@/server/db/schema";
 
 /** Base de données, ou transaction en cours. */
 export type DbExecutor =
@@ -13,12 +13,6 @@ export type DbExecutor =
 
 // Collection de cartes. Chaque fonction reçoit l'identifiant de l'utilisateur
 // et ne lit ou n'écrit que sa propre collection.
-
-/** Une carte de la collection et son nombre d'exemplaires. */
-export interface CollectionEntry {
-  card: DeckCardData;
-  quantity: number;
-}
 
 export interface Collection {
   entries: CollectionEntry[];
@@ -30,35 +24,35 @@ export interface Collection {
 
 /** Collection de l'utilisateur, triée par nom de carte. */
 export async function getCollection(userId: string): Promise<Collection> {
-  const rows = await getDb()
+  // Une carte retirée par Scryfall reste en base mais n'est pas affichée.
+  const entries = await getDb()
     .select({
-      oracleId: collectionCards.oracleId,
+      oracleId: cards.oracleId,
+      name: cards.name,
+      typeLine: cards.typeLine,
+      types: cards.types,
+      manaValue: cards.manaValue,
+      colorIdentity: cards.colorIdentity,
+      rarity: cards.rarity,
+      priceEur: cards.priceEur,
+      priceUsd: cards.priceUsd,
+      imageUris: cards.imageUris,
       quantity: collectionCards.quantity,
+      addedAt: collectionCards.createdAt,
     })
     .from(collectionCards)
-    .where(eq(collectionCards.userId, userId));
-  const cards = new Map(
-    (await getDeckCardData(rows.map((row) => row.oracleId))).map((card) => [
-      card.oracleId,
-      card,
-    ]),
-  );
-  // Une carte retirée par Scryfall reste en base mais n'est pas affichée.
-  const entries = rows
-    .flatMap(({ oracleId, quantity }) => {
-      const card = cards.get(oracleId);
-      return card ? [{ card, quantity }] : [];
-    })
-    .sort((a, b) => a.card.name.localeCompare(b.card.name, "en"));
+    .innerJoin(cards, eq(cards.oracleId, collectionCards.oracleId))
+    .where(eq(collectionCards.userId, userId))
+    .orderBy(asc(cards.name));
   return {
     entries,
     total: entries.reduce((sum, entry) => sum + entry.quantity, 0),
     priceEur: entries.reduce(
-      (sum, entry) => sum + (entry.card.priceEur ?? 0) * entry.quantity,
+      (sum, entry) => sum + (entry.priceEur ?? 0) * entry.quantity,
       0,
     ),
     priceUsd: entries.reduce(
-      (sum, entry) => sum + (entry.card.priceUsd ?? 0) * entry.quantity,
+      (sum, entry) => sum + (entry.priceUsd ?? 0) * entry.quantity,
       0,
     ),
   };

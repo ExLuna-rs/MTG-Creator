@@ -6,10 +6,17 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server";
+import { z } from "zod";
 import { AddCollectionCard } from "@/components/collection/add-collection-card";
+import { CollectionFilters } from "@/components/collection/collection-filters";
 import { CollectionGrid } from "@/components/collection/collection-grid";
+import { PendingScans } from "@/components/collection/pending-scans";
 import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  COLLECTION_SORTS,
+  selectCollection,
+} from "@/domain/collection/collection";
 import { Link } from "@/i18n/navigation";
 import { requireSession } from "@/server/auth/session";
 import { getCollection } from "@/server/collection/collection";
@@ -25,8 +32,14 @@ export async function generateMetadata({
   return { title: t("title") };
 }
 
+const searchSchema = z.object({
+  q: z.string().max(100).catch(""),
+  sort: z.enum(COLLECTION_SORTS).catch("name"),
+});
+
 export default async function CollectionPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/collection">) {
   const { locale } = await params;
   setRequestLocale(locale as Locale);
@@ -35,6 +48,16 @@ export default async function CollectionPage({
   const format = await getFormatter();
   const collection = await getCollection(user.id);
   const currency = locale === "en" ? "USD" : "EUR";
+  const raw = await searchParams;
+  const { q, sort } = searchSchema.parse({
+    q: typeof raw.q === "string" ? raw.q : "",
+    sort: typeof raw.sort === "string" ? raw.sort : "name",
+  });
+  const shown = selectCollection(collection.entries, {
+    query: q,
+    sort,
+    currency,
+  });
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
@@ -75,6 +98,8 @@ export default async function CollectionPage({
         </div>
       </div>
 
+      <PendingScans />
+
       <AddCollectionCard />
 
       {collection.entries.length === 0 ? (
@@ -83,7 +108,16 @@ export default async function CollectionPage({
           <p className="mt-1 text-muted-foreground text-sm">{t("emptyHint")}</p>
         </div>
       ) : (
-        <CollectionGrid entries={collection.entries} />
+        <div className="space-y-4">
+          <CollectionFilters query={q} sort={sort} />
+          {shown.length === 0 ? (
+            <p className="text-muted-foreground">
+              {t("noMatch", { query: q })}
+            </p>
+          ) : (
+            <CollectionGrid entries={shown} />
+          )}
+        </div>
       )}
     </div>
   );

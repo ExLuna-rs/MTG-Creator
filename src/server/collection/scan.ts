@@ -3,10 +3,20 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm";
 import type { CardImageUris } from "@/domain/cards/card";
 import { normalizeCardName } from "@/domain/cards/normalize";
+import {
+  MAX_COLLECTION_QUANTITY,
+  type ScanListChange,
+} from "@/domain/collection/schema";
 import { cleanScannedName, type ScanCandidate } from "@/domain/scan/ocr-name";
 import { getDb } from "@/server/db";
-import { cards, scannedCards, scanSessions, users } from "@/server/db/schema";
-import { changeCollectionCard } from "./collection";
+import {
+  cards,
+  collectionCards,
+  scannedCards,
+  scanSessions,
+  users,
+} from "@/server/db/schema";
+import type { DbExecutor } from "./collection";
 
 // Scan de cartes vers la collection, depuis le téléphone de l'utilisateur
 // connecté ou depuis un téléphone relié par QR code.
@@ -17,8 +27,8 @@ export const SCAN_SESSION_IDLE_MS = 60 * 60 * 1000;
 export const SCAN_SESSION_MAX_MS = 12 * 60 * 60 * 1000;
 /** Le téléphone est dit connecté s'il a fait une requête depuis ce délai. */
 export const SCAN_SESSION_ONLINE_MS = 90 * 1000;
-/** Cartes scannées renvoyées à l'ordinateur (les plus récentes). */
-const MAX_LISTED_SCANS = 200;
+/** Lignes affichées de la liste de scan (les plus récentes). */
+const MAX_SCAN_LIST = 500;
 /** Liens de scan gardés par utilisateur (les plus récents). */
 const MAX_SCAN_SESSIONS = 5;
 
@@ -117,23 +127,10 @@ export async function findScanSession(
   };
 }
 
-/** Carte ajoutée par un scan, telle qu'affichée sur l'ordinateur et le téléphone. */
-export interface ScannedCard {
-  id: number;
-  oracleId: string;
-  name: string;
-  imageUris: CardImageUris | null;
-}
-
 export interface ScanSessionStatus {
   /** Le téléphone a fait une requête récemment. */
   connected: boolean;
   expired: boolean;
-  /**
-   * Cartes scannées par ce téléphone, des plus anciennes aux plus récentes
-   * (les ajouts annulés n'y sont plus).
-   */
-  cards: ScannedCard[];
 }
 
 /** État d'un lien de scan de l'utilisateur, ou null s'il n'existe pas. */
@@ -142,8 +139,7 @@ export async function getScanSessionStatus(
   scanSessionId: string,
   now = new Date(),
 ): Promise<ScanSessionStatus | null> {
-  const db = getDb();
-  const [session] = await db
+  const [session] = await getDb()
     .select({
       expiresAt: scanSessions.expiresAt,
       lastSeenAt: scanSessions.lastSeenAt,
@@ -154,30 +150,11 @@ export async function getScanSessionStatus(
     )
     .limit(1);
   if (!session) return null;
-
-  const rows = await db
-    .select({
-      id: scannedCards.id,
-      oracleId: scannedCards.oracleId,
-      name: cards.name,
-      imageUris: cards.imageUris,
-    })
-    .from(scannedCards)
-    .innerJoin(cards, eq(cards.oracleId, scannedCards.oracleId))
-    .where(
-      and(
-        eq(scannedCards.userId, userId),
-        eq(scannedCards.scanSessionId, scanSessionId),
-      ),
-    )
-    .orderBy(desc(scannedCards.id))
-    .limit(MAX_LISTED_SCANS);
   return {
     connected:
       session.lastSeenAt !== null &&
       now.getTime() - session.lastSeenAt.getTime() < SCAN_SESSION_ONLINE_MS,
     expired: session.expiresAt <= now,
-    cards: rows.reverse(),
   };
 }
 
@@ -195,69 +172,170 @@ export async function deleteScanSession(
   return deleted.length > 0;
 }
 
-export type AddScannedCardResult =
-  | { ok: true; card: ScannedCard; quantity: number }
-  | { ok: false; error: "unknownCard" };
+// -----------------------------------------------------------------------------
+// Liste de scan : cartes en attente, ajoutées ensemble à la collection
+// -----------------------------------------------------------------------------
 
-/** Ajoute un exemplaire de la carte scannée à la collection. */
-export async function addScannedCard(
-  actor: ScanActor,
+/** Une ligne de la liste de scan. */
+export interface ScanListItem {
+  id: number;
+  oracleId: string;
+  name: string;
+  imageUris: CardImageUris | null;
+  quantity: number;
+}
+
+const listColumns = {
+  id: scannedCards.id,
+  oracleId: scannedCards.oracleId,
+  name: cards.name,
+  imageUris: cards.imageUris,
+  quantity: scannedCards.quantity,
+};
+
+/** Liste de scan de l'utilisateur, de la carte la plus récente à la plus ancienne. */
+export async function getScanList(userId: string): Promise<ScanListItem[]> {
+  return getDb()
+    .select(listColumns)
+    .from(scannedCards)
+    .innerJoin(cards, eq(cards.oracleId, scannedCards.oracleId))
+    .where(eq(scannedCards.userId, userId))
+    .orderBy(desc(scannedCards.createdAt), desc(scannedCards.id))
+    .limit(MAX_SCAN_LIST);
+}
+
+async function cardExists(db: DbExecutor, oracleId: string) {
+  const [card] = await db
+    .select({ oracleId: cards.oracleId })
+    .from(cards)
+    .where(eq(cards.oracleId, oracleId))
+    .limit(1);
+  return Boolean(card);
+}
+
+/**
+ * Ajoute un exemplaire d'une carte à la liste de scan (la carte remonte en
+ * tête de liste). Renvoie la ligne, ou null si la carte est inconnue.
+ */
+export async function addToScanList(
+  userId: string,
   oracleId: string,
-): Promise<AddScannedCardResult> {
+  db: DbExecutor = getDb(),
+): Promise<ScanListItem | null> {
+  if (!(await cardExists(db, oracleId))) return null;
+  const [row] = await db
+    .insert(scannedCards)
+    .values({ userId, oracleId, quantity: 1 })
+    .onConflictDoUpdate({
+      target: [scannedCards.userId, scannedCards.oracleId],
+      set: {
+        quantity: sql`least(${scannedCards.quantity} + 1, ${MAX_COLLECTION_QUANTITY})`,
+        createdAt: new Date(),
+      },
+    })
+    .returning({ id: scannedCards.id });
+  return getScanListItem(db, userId, row.id);
+}
+
+async function getScanListItem(
+  db: DbExecutor,
+  userId: string,
+  id: number,
+): Promise<ScanListItem | null> {
+  const [item] = await db
+    .select(listColumns)
+    .from(scannedCards)
+    .innerJoin(cards, eq(cards.oracleId, scannedCards.oracleId))
+    .where(and(eq(scannedCards.id, id), eq(scannedCards.userId, userId)))
+    .limit(1);
+  return item ?? null;
+}
+
+export type UpdateScanListResult =
+  | { ok: true; item: ScanListItem | null }
+  | { ok: false; error: "notFound" | "unknownCard" };
+
+/**
+ * Corrige une ligne de la liste de scan : autre carte (carte mal reconnue)
+ * et / ou autre quantité. Une quantité nulle retire la ligne ; une carte
+ * déjà présente dans la liste reçoit les exemplaires de la ligne corrigée.
+ */
+export async function updateScanListItem(
+  userId: string,
+  id: number,
+  change: ScanListChange,
+): Promise<UpdateScanListResult> {
   return getDb().transaction(async (tx) => {
-    const change = await changeCollectionCard(actor.userId, oracleId, 1, tx);
-    if (!change.ok) return change;
     const [row] = await tx
+      .select({
+        oracleId: scannedCards.oracleId,
+        quantity: scannedCards.quantity,
+      })
+      .from(scannedCards)
+      .where(and(eq(scannedCards.id, id), eq(scannedCards.userId, userId)))
+      .for("update");
+    if (!row) return { ok: false, error: "notFound" } as const;
+
+    const quantity = change.quantity ?? row.quantity;
+    const oracleId = change.oracleId ?? row.oracleId;
+    if (quantity === 0) {
+      await tx.delete(scannedCards).where(eq(scannedCards.id, id));
+      return { ok: true, item: null } as const;
+    }
+    if (oracleId === row.oracleId) {
+      await tx
+        .update(scannedCards)
+        .set({ quantity })
+        .where(eq(scannedCards.id, id));
+      return { ok: true, item: await getScanListItem(tx, userId, id) } as const;
+    }
+
+    if (!(await cardExists(tx, oracleId))) {
+      return { ok: false, error: "unknownCard" } as const;
+    }
+    await tx.delete(scannedCards).where(eq(scannedCards.id, id));
+    const [merged] = await tx
       .insert(scannedCards)
-      .values({
-        userId: actor.userId,
-        scanSessionId: actor.scanSessionId,
-        oracleId,
+      .values({ userId, oracleId, quantity })
+      .onConflictDoUpdate({
+        target: [scannedCards.userId, scannedCards.oracleId],
+        set: {
+          quantity: sql`least(${scannedCards.quantity} + ${quantity}, ${MAX_COLLECTION_QUANTITY})`,
+        },
       })
       .returning({ id: scannedCards.id });
-    const [card] = await tx
-      .select({ name: cards.name, imageUris: cards.imageUris })
-      .from(cards)
-      .where(eq(cards.oracleId, oracleId));
     return {
       ok: true,
-      card: { id: row.id, oracleId, ...card },
-      quantity: change.quantity,
-    };
+      item: await getScanListItem(tx, userId, merged.id),
+    } as const;
   });
 }
 
 /**
- * Annule l'ajout d'une carte scannée par l'utilisateur : l'exemplaire est
- * retiré de la collection. Renvoie la nouvelle quantité, ou null si ce scan
- * n'existe pas (ou appartient à quelqu'un d'autre).
+ * Ajoute toute la liste de scan à la collection, puis la vide. Renvoie le
+ * nombre d'exemplaires ajoutés.
  */
-export async function undoScannedCard(
-  actor: ScanActor,
-  scannedCardId: number,
-): Promise<number | null> {
+export async function commitScanList(userId: string): Promise<number> {
   return getDb().transaction(async (tx) => {
-    const [row] = await tx
+    const rows = await tx
       .delete(scannedCards)
-      .where(
-        and(
-          eq(scannedCards.id, scannedCardId),
-          eq(scannedCards.userId, actor.userId),
-          // Un téléphone relié n'annule que ses propres scans.
-          actor.scanSessionId
-            ? eq(scannedCards.scanSessionId, actor.scanSessionId)
-            : undefined,
-        ),
-      )
-      .returning({ oracleId: scannedCards.oracleId });
-    if (!row) return null;
-    const change = await changeCollectionCard(
-      actor.userId,
-      row.oracleId,
-      -1,
-      tx,
-    );
-    return change.ok ? change.quantity : 0;
+      .where(eq(scannedCards.userId, userId))
+      .returning({
+        oracleId: scannedCards.oracleId,
+        quantity: scannedCards.quantity,
+      });
+    if (rows.length === 0) return 0;
+    await tx
+      .insert(collectionCards)
+      .values(rows.map((row) => ({ ...row, userId })))
+      .onConflictDoUpdate({
+        target: [collectionCards.userId, collectionCards.oracleId],
+        set: {
+          quantity: sql`least(${collectionCards.quantity} + excluded.quantity, ${MAX_COLLECTION_QUANTITY})`,
+          updatedAt: new Date(),
+        },
+      });
+    return rows.reduce((sum, row) => sum + row.quantity, 0);
   });
 }
 

@@ -497,12 +497,16 @@
     "increase": "Add a copy of {name}",
     "decrease": "Remove a copy of {name}",
     "quantity": "{count, plural, one {# copy} other {# copies}}",
-    "scanHere": "Scan with this phone"
+    "scanHere": "Scan with this phone",
+    "search": "Search the collection",
+    "searchPlaceholder": "Card name",
+    "sort": "Sort by",
+    "noMatch": "No card in the collection matches “{query}”."
   },
   "PhoneScan": {
     "open": "Scan with my phone",
     "title": "Link my phone",
-    "instructions": "Scan this QR code with your phone's camera: the scan page opens, linked to your collection. Scanned cards show up here live.",
+    "instructions": "Scan this QR code with your phone's camera: the scan page opens, linked to your account. Scanned cards show up live in this page's scan list.",
     "qrLabel": "QR code of the scan link",
     "copyLink": "Copy link",
     "copied": "Link copied",
@@ -512,8 +516,6 @@
     "newLink": "New link",
     "disconnect": "Disconnect the phone",
     "close": "Close",
-    "scanned": "Scanned cards",
-    "noneYet": "No cards scanned yet.",
     "error": "The scan link could not be created. Please try again."
   },
   "Scanner": {
@@ -525,21 +527,42 @@
     "expired": "This scan link has expired. Show a new QR code on your computer.",
     "startCamera": "Turn on camera",
     "stopCamera": "Turn off camera",
-    "cameraHint": "Place the card in the frame, name at the top: it is added as soon as it is recognized. For a second copy, take the card out of the frame and put it back.",
+    "cameraHint": "Place the card in the frame, name at the top: it is added to the list as soon as it is recognized. For a second copy, take the card out of the frame and put it back.",
     "cameraUnavailable": "The camera is not available on this page (it requires an HTTPS connection). You can add cards by name.",
     "cameraDenied": "Camera access was denied. Allow it in your browser settings, or add cards by name.",
     "loadingOcr": "Loading text recognition…",
     "reading": "Read: {text}",
-    "added": "{name} added",
+    "added": "{name} added to the list",
     "choose": "Which card is it?",
     "searchLabel": "Add by name",
     "searchPlaceholder": "Card name",
     "add": "Add {name}",
-    "recent": "Added during this scan",
-    "undo": "Undo",
-    "undoLabel": "Remove {name} from the collection",
-    "error": "Something went wrong. Please try again.",
     "collection": "View my collection",
     "guide": "Viewfinder: place the card in it"
+  },
+  "ScanList": {
+    "title": "Scan list",
+    "empty": "No cards scanned yet.",
+    "hint": "Check the list and fix any misread cards, then add them to your collection.",
+    "decrease": "Remove a copy of {name}",
+    "increase": "Add a copy of {name}",
+    "quantity": "{count, plural, one {# copy} other {# copies}} of {name}",
+    "fix": "Fix {name}",
+    "fixLabel": "Right card instead of {name}",
+    "fixPlaceholder": "Name of the right card",
+    "remove": "Remove {name} from the list",
+    "commit": "{count, plural, one {Add # card to the collection} other {Add # cards to the collection}}",
+    "committed": "{count, plural, one {# card added to the collection} other {# cards added to the collection}}",
+    "error": "The list could not be updated. Please try again."
+  },
+  "CollectionSorts": {
+    "name": "Name",
+    "color": "Color",
+    "type": "Type",
+    "manaValue": "Mana value",
+    "rarity": "Rarity",
+    "price": "Price",
+    "quantity": "Quantity",
+    "recent": "Most recently added"
   }
 }

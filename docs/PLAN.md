@@ -145,7 +145,7 @@ La recherche par nom compare la saisie à une version normalisée du nom (minusc
 | `deck_card` | Deck, carte (`oracle_id`), quantité, zone (commandant / deck / à considérer), catégories ; édition choisie (facultative) en phase 5 |
 | `collection_card` | Utilisateur, carte (`oracle_id`), quantité |
 | `scan_session` | Téléphone relié par QR code : utilisateur, empreinte du jeton, expiration, dernière activité |
-| `scanned_card` | Cartes ajoutées par un scan (pour l'affichage en direct et l'annulation) |
+| `scanned_card` | Liste de scan : cartes scannées en attente (utilisateur, carte, quantité), avant validation vers la collection |
 
 Les decks référencent les cartes par `oracle_id`, un identifiant stable qui ne change pas quand Scryfall met ses données à jour.
 
@@ -201,8 +201,8 @@ Makefile                   raccourcis (make dev, make test…)
 | Deck (lecture) | `/fr/decks/[id]` | Liste, statistiques, export, « Copier ce deck » |
 | Explorer | `/fr/explore` | Decks publics, filtrables par commandant et par couleurs |
 | Compte | `/fr/settings` | Pseudo, langue, connexions, suppression du compte |
-| Ma collection | `/fr/collection` | Cartes possédées et leurs quantités, ajout par le nom, QR code pour relier son téléphone |
-| Scan | `/fr/scan` | Sur le téléphone : caméra, reconnaissance du nom, ajout à la collection |
+| Ma collection | `/fr/collection` | Cartes possédées et leurs quantités, recherche et tris, ajout par le nom, liste de scan à valider, QR code pour relier son téléphone |
+| Scan | `/fr/scan` | Sur le téléphone : caméra, reconnaissance du nom, liste de scan modifiable, validation vers la collection |
 
 Toutes les pages existent aussi en anglais sous `/en/…`.
 
@@ -365,9 +365,10 @@ Avant l'étape F1, le scan ne reconnaît que les cartes en anglais ; ensuite, le
 
 **État** : S1 et S5 livrées, S2 en partie (pull request « Collection de cartes et scan depuis le téléphone ») ; reste à valider le taux de reconnaissance sur de vrais téléphones.
 
-- **Collection** (`/fr/collection`, table `collection_card`, migration `0004_collection`) : cartes possédées avec leurs quantités et leur valeur, ajout par le nom avec suggestions, boutons − / +. La collection est rangée par `oracle_id`, sans édition ni finition (brillante ou non) pour l'instant : l'édition exacte viendra avec S4.
-- **Scan** (`/fr/scan`) : caméra arrière, cadre de visée au format d'une carte, bande du nom lue en continu par Tesseract.js (modèle anglais `best_int`, moteur LSTM ; fichiers copiés dans `public/tesseract` par `scripts/copy-ocr-assets.mts` avant `next dev` et `next build`, jamais versionnés). Le texte lu est nettoyé (`src/domain/scan/ocr-name.ts`) puis comparé aux noms par `similarity()` de `pg_trgm` (pour une carte à deux faces, à la face avant). Une carte est ajoutée seule quand elle est reconnue avec assurance sur deux lectures de suite, et une seule fois tant qu'elle reste dans le cadre (`src/domain/scan/auto-add.ts`) ; sinon, l'utilisateur choisit parmi les trois propositions. Ajout par le nom et bouton « Annuler » sur chaque carte ajoutée. `Permissions-Policy` autorise maintenant la caméra pour le site lui-même.
-- **Téléphone relié par QR code** : sur l'ordinateur, « Scanner avec mon téléphone » crée un lien de scan (`scan_session`) et l'affiche en QR code. Le jeton (32 octets aléatoires) est dans le fragment de l'adresse (`/fr/scan#…`) : il n'est jamais envoyé au serveur avec la page ni gardé dans ses journaux ; la page le garde pour l'onglet, l'efface de l'adresse et l'envoie en `Authorization: Bearer`. La base n'en garde que l'empreinte SHA-256. Le lien expire après une heure sans activité, douze heures au plus, et l'ordinateur peut le révoquer. L'ordinateur interroge le serveur toutes les deux secondes : il voit le téléphone se connecter et les cartes arriver, et la collection affichée se met à jour.
+- **Collection** (`/fr/collection`, table `collection_card`, migration `0004_collection`) : cartes possédées avec leurs quantités et leur valeur, ajout par le nom avec suggestions, boutons − / +, recherche par nom et tri par nom, couleur, type, valeur de mana, rareté, prix, quantité ou date d'ajout (`src/domain/collection/collection.ts`). La collection est rangée par `oracle_id`, sans édition ni finition (brillante ou non) pour l'instant. Pas de tri par extension tant que l'extension réelle de chaque carte n'est pas connue (décision du 6 octobre 2026) : il viendra avec la phase 5 et S4.
+- **Scan** (`/fr/scan`) : caméra arrière, cadre de visée au format d'une carte, bande du nom lue en continu par Tesseract.js (modèle anglais `best_int`, moteur LSTM ; fichiers copiés dans `public/tesseract` par `scripts/copy-ocr-assets.mts` avant `next dev` et `next build`, jamais versionnés). Le texte lu est nettoyé (`src/domain/scan/ocr-name.ts`) puis comparé aux noms par `similarity()` de `pg_trgm` (pour une carte à deux faces, à la face avant). Une carte s'ajoute seule à la liste de scan quand elle est reconnue avec assurance sur deux lectures de suite, et une seule fois tant qu'elle reste dans le cadre (`src/domain/scan/auto-add.ts`) ; sinon, l'utilisateur choisit parmi les trois propositions. Ajout par le nom possible.
+- **Liste de scan** (table `scanned_card`) : les cartes scannées attendent dans une liste partagée entre le téléphone et l'ordinateur, relue toutes les 2,5 s par chacun. On y change les quantités, on corrige une carte mal reconnue (recherche par nom) ou on la retire ; rien n'entre dans la collection avant « Ajouter à la collection », qui ajoute toute la liste puis la vide. `Permissions-Policy` autorise maintenant la caméra pour le site lui-même.
+- **Téléphone relié par QR code** : sur l'ordinateur, « Scanner avec mon téléphone » crée un lien de scan (`scan_session`) et l'affiche en QR code. Le jeton (32 octets aléatoires) est dans le fragment de l'adresse (`/fr/scan#…`) : il n'est jamais envoyé au serveur avec la page ni gardé dans ses journaux ; la page le garde pour l'onglet, l'efface de l'adresse et l'envoie en `Authorization: Bearer`. La base n'en garde que l'empreinte SHA-256. Le lien expire après une heure sans activité, douze heures au plus, et l'ordinateur peut le révoquer. L'ordinateur voit le téléphone se connecter et la liste de scan se remplir en direct.
 - **Reste à faire** : export texte de la liste scannée (S2), cartes françaises (après F1, avec le modèle `fra`), édition exacte (S4).
 
 ## 6. Tests et qualité
