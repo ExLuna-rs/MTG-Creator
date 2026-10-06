@@ -11,7 +11,8 @@
     "signUp": "Sign up",
     "account": "My account ({name})",
     "signOut": "Sign out",
-    "decks": "My decks"
+    "decks": "My decks",
+    "collection": "Collection"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -480,5 +481,88 @@
       "share": "Share a deck with a single link"
     },
     "fanContent": "Unofficial fan content, not approved by Wizards of the Coast."
+  },
+  "CollectionPage": {
+    "title": "My collection",
+    "count": "{count, plural, =0 {No cards yet} one {# card} other {# cards}}",
+    "distinct": "{count, plural, one {# unique card} other {# unique cards}}",
+    "value": "Estimated value: {value}",
+    "empty": "Your collection is empty.",
+    "emptyHint": "Add cards by name, or scan them with your phone's camera.",
+    "addLabel": "Add a card",
+    "addPlaceholder": "Card name",
+    "suggestions": "Suggestions",
+    "added": "{name} added to your collection",
+    "error": "The collection could not be updated. Please try again.",
+    "increase": "Add a copy of {name}",
+    "decrease": "Remove a copy of {name}",
+    "quantity": "{count, plural, one {# copy} other {# copies}}",
+    "scanHere": "Scan with this phone",
+    "search": "Search the collection",
+    "searchPlaceholder": "Card name",
+    "sort": "Sort by",
+    "noMatch": "No card in the collection matches “{query}”."
+  },
+  "PhoneScan": {
+    "open": "Scan with my phone",
+    "title": "Link my phone",
+    "instructions": "Scan this QR code with your phone's camera: the scan page opens, linked to your account. Scanned cards show up live in this page's scan list.",
+    "qrLabel": "QR code of the scan link",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "waiting": "Waiting for the phone…",
+    "connected": "Phone connected",
+    "expired": "This link has expired.",
+    "newLink": "New link",
+    "disconnect": "Disconnect the phone",
+    "close": "Close",
+    "error": "The scan link could not be created. Please try again."
+  },
+  "Scanner": {
+    "title": "Scan cards",
+    "linked": "Linked to {name}'s collection",
+    "signedIn": "Scanned cards are added to your collection.",
+    "needLink": "To scan, sign in on this phone, or scan the QR code shown on the “My collection” page on your computer.",
+    "signIn": "Sign in",
+    "expired": "This scan link has expired. Show a new QR code on your computer.",
+    "startCamera": "Turn on camera",
+    "stopCamera": "Turn off camera",
+    "cameraHint": "Place the card in the frame, name at the top: it is added to the list as soon as it is recognized. For a second copy, take the card out of the frame and put it back.",
+    "cameraUnavailable": "The camera is not available on this page (it requires an HTTPS connection). You can add cards by name.",
+    "cameraDenied": "Camera access was denied. Allow it in your browser settings, or add cards by name.",
+    "loadingOcr": "Loading text recognition…",
+    "reading": "Read: {text}",
+    "added": "{name} added to the list",
+    "choose": "Which card is it?",
+    "searchLabel": "Add by name",
+    "searchPlaceholder": "Card name",
+    "add": "Add {name}",
+    "collection": "View my collection",
+    "guide": "Viewfinder: place the card in it"
+  },
+  "ScanList": {
+    "title": "Scan list",
+    "empty": "No cards scanned yet.",
+    "hint": "Check the list and fix any misread cards, then add them to your collection.",
+    "decrease": "Remove a copy of {name}",
+    "increase": "Add a copy of {name}",
+    "quantity": "{count, plural, one {# copy} other {# copies}} of {name}",
+    "fix": "Fix {name}",
+    "fixLabel": "Right card instead of {name}",
+    "fixPlaceholder": "Name of the right card",
+    "remove": "Remove {name} from the list",
+    "commit": "{count, plural, one {Add # card to the collection} other {Add # cards to the collection}}",
+    "committed": "{count, plural, one {# card added to the collection} other {# cards added to the collection}}",
+    "error": "The list could not be updated. Please try again."
+  },
+  "CollectionSorts": {
+    "name": "Name",
+    "color": "Color",
+    "type": "Type",
+    "manaValue": "Mana value",
+    "rarity": "Rarity",
+    "price": "Price",
+    "quantity": "Quantity",
+    "recent": "Most recently added"
   }
 }

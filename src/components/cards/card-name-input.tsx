@@ -4,7 +4,7 @@ import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
-interface Suggestion {
+export interface Suggestion {
   oracleId: string;
   name: string;
 }
@@ -25,6 +25,7 @@ export function CardNameInput({
   onValueChange,
   placeholder,
   suggestionsLabel,
+  onSelect,
   className,
 }: {
   id: string;
@@ -33,6 +34,8 @@ export function CardNameInput({
   onValueChange: (value: string) => void;
   placeholder: string;
   suggestionsLabel: string;
+  /** Carte choisie dans les suggestions ; par défaut, sa fiche s'ouvre. */
+  onSelect?: (suggestion: Suggestion) => void;
   className?: string;
 }) {
   const router = useRouter();
@@ -78,8 +81,12 @@ export function CardNameInput({
   }
 
   function openCard(suggestion: Suggestion) {
-    onValueChange(suggestion.name);
     close();
+    if (onSelect) {
+      onSelect(suggestion);
+      return;
+    }
+    onValueChange(suggestion.name);
     router.push(`/cards/${suggestion.oracleId}`);
   }
 

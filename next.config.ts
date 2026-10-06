@@ -15,7 +15,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // La caméra sert au scan des cartes (page /scan), sur le site lui-même.
+    value: "camera=(self), microphone=(), geolocation=()",
   },
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ];
@@ -31,7 +32,15 @@ const nextConfig: NextConfig = {
   // à charger les ressources du serveur de développement.
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Fichiers de la reconnaissance de caractères (≈ 7 Mo, scripts/copy-ocr-assets.mts) :
+      // gardés en cache par le navigateur entre deux visites de la page de scan.
+      {
+        source: "/tesseract/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
+      },
+    ];
   },
 };
 
