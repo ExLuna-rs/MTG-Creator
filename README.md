@@ -28,7 +28,7 @@ docker compose run --rm --build app pnpm cards:sync
 
 ou, sans accès à Internet, le jeu de test de 172 cartes : `docker compose run --rm --build app pnpm cards:seed`. Les mêmes commandes s'écrivent `make sync` et `make seed`.
 
-Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : en développement, aucun email ne part vraiment, le lien de confirmation (comme celui du mot de passe oublié) arrive dans Mailpit, sur <http://localhost:8025>.
+Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : en développement, aucun email ne part vraiment, le lien de confirmation (comme celui du mot de passe oublié) arrive dans Mailpit, sur <http://localhost:8025>. Les emails y sont conservés d'un redémarrage de Docker à l'autre. Une nouvelle inscription avec une adresse déjà enregistrée renvoie le lien de confirmation (ou, si le compte est déjà actif, un email qui le rappelle).
 
 Une fois connecté, « Mes decks » (<http://localhost:3000/fr/decks>) permet de créer un deck à partir d'un commandant puis de le construire dans l'éditeur.
 

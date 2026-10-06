@@ -271,6 +271,12 @@
       "body": "You asked to change the password of your MTG Creator account. The link is valid for one hour.",
       "action": "Choose a new password",
       "ignore": "If you did not make this request, ignore this email: your password stays the same."
+    },
+    "accountExists": {
+      "subject": "You already have an MTG Creator account",
+      "body": "Someone just asked to create an MTG Creator account with this address, but it already belongs to an account. Just sign in; if you forgot your password, you can reset it from the sign-in page.",
+      "action": "Sign in",
+      "ignore": "If you didn't make this request, ignore this email: your account has not been changed."
     }
   },
   "DecksPage": {
