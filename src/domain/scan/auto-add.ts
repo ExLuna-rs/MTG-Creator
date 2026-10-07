@@ -1,10 +1,10 @@
 /**
- * Ajout automatique pendant le scan en continu. Une image est lue environ
- * chaque seconde : une carte est ajoutée quand elle est reconnue sur deux
- * lectures de suite (une lecture isolée peut être fausse), puis n'est plus
- * ajoutée tant qu'elle reste devant la caméra. Pour ajouter un deuxième
- * exemplaire de la même carte, il suffit de la retirer du cadre : une lecture
- * sans carte reconnue réarme l'ajout.
+ * Ajout automatique pendant le scan en continu. Une carte reconnue sans
+ * aucun doute (nom presque identique) est ajoutée dès la première lecture ;
+ * sinon, il faut deux lectures de suite (une lecture isolée peut être
+ * fausse). Elle n'est ensuite plus ajoutée tant qu'elle reste devant la
+ * caméra. Pour ajouter un deuxième exemplaire de la même carte, il suffit de
+ * la retirer du cadre : une lecture sans carte reconnue réarme l'ajout.
  */
 export interface AutoAddState {
   /** Carte reconnue à la lecture précédente. */
@@ -15,19 +15,24 @@ export interface AutoAddState {
 
 export const INITIAL_AUTO_ADD: AutoAddState = { pending: null, added: null };
 
+/** Ressemblance à partir de laquelle une seule lecture suffit. */
+export const INSTANT_SIMILARITY = 0.9;
+
 /**
  * Nouvel état après une lecture (`oracleId` : carte reconnue avec assurance,
- * ou null), et carte à ajouter le cas échéant.
+ * ou null ; `similarity` : sa ressemblance avec le texte lu), et carte à
+ * ajouter le cas échéant.
  */
 export function nextAutoAdd(
   state: AutoAddState,
   oracleId: string | null,
+  similarity = 0,
 ): { state: AutoAddState; add: string | null } {
   if (!oracleId) return { state: INITIAL_AUTO_ADD, add: null };
   if (oracleId === state.added) {
     return { state: { pending: oracleId, added: oracleId }, add: null };
   }
-  if (oracleId === state.pending) {
+  if (oracleId === state.pending || similarity >= INSTANT_SIMILARITY) {
     return { state: { pending: oracleId, added: oracleId }, add: oracleId };
   }
   return { state: { pending: oracleId, added: state.added }, add: null };

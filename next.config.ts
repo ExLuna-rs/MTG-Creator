@@ -51,6 +51,11 @@ const nextConfig: NextConfig = {
         source: "/tesseract/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
       },
+      // Détection du contour des cartes (OpenCV.js, ≈ 11 Mo), même règle.
+      {
+        source: "/opencv/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
+      },
     ];
   },
 };

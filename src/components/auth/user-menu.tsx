@@ -14,8 +14,9 @@ const navLinkClassName =
 /**
  * Liens de connexion, ou compte et déconnexion. La session est lue dans le
  * navigateur : les pages publiques restent statiques et mises en cache.
+ * `inMenu` : affiché dans le menu mobile, où il y a la place de tout montrer.
  */
-export function UserMenu() {
+export function UserMenu({ inMenu = false }: { inMenu?: boolean } = {}) {
   const t = useTranslations("Header");
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -33,10 +34,11 @@ export function UserMenu() {
         </Link>
         <Link
           href="/sign-up"
-          // Sur mobile, la page de connexion mène à l'inscription.
+          // Dans la barre sur petit écran, la page de connexion mène à
+          // l'inscription ; le menu mobile a la place de l'afficher.
           className={cn(
             buttonVariants({ size: "sm", variant: "outline" }),
-            "hidden sm:inline-flex",
+            !inMenu && "hidden sm:inline-flex",
           )}
         >
           {t("signUp")}
@@ -60,7 +62,9 @@ export function UserMenu() {
         aria-label={t("account", { name: session.user.name })}
         className={cn(
           navLinkClassName,
-          "flex max-w-28 items-center gap-1.5 sm:max-w-48",
+          inMenu
+            ? "flex min-w-0 flex-1 items-center gap-1.5"
+            : "flex max-w-28 items-center gap-1.5 sm:max-w-48",
         )}
       >
         <UserRound className="size-4 shrink-0" aria-hidden />

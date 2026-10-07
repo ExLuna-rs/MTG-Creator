@@ -30,5 +30,6 @@ Dockerfile
 compose*.yaml
 Makefile
 
-# Fichiers de Tesseract.js : copiés pendant le build (pnpm ocr:assets)
+# Fichiers de Tesseract.js et d'OpenCV.js : copiés pendant le build (pnpm ocr:assets)
 public/tesseract
+public/opencv

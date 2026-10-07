@@ -62,3 +62,24 @@ test("le contrôle de santé répond avec la base de données", async ({
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual({ status: "ok" });
 });
+
+test.describe("sur téléphone", () => {
+  test.use({ locale: "fr-FR", viewport: { width: 390, height: 844 } });
+
+  test("le menu burger mène aux pages et se referme", async ({ page }) => {
+    await page.goto("/fr");
+    // La barre ne déborde pas de l'écran.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    await page.getByRole("button", { name: "Ouvrir le menu" }).click();
+    const menu = page.getByRole("dialog", { name: "Menu" });
+    await expect(menu.getByRole("link", { name: "Connexion" })).toBeVisible();
+    await expect(
+      menu.getByRole("link", { name: "Créer un compte" }),
+    ).toBeVisible();
+    await menu.getByRole("link", { name: "Cartes" }).click();
+    await expect(page).toHaveURL(/\/fr\/cards/);
+    await expect(menu).toBeHidden();
+  });
+});

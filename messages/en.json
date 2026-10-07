@@ -12,7 +12,10 @@
     "account": "My account ({name})",
     "signOut": "Sign out",
     "decks": "My decks",
-    "collection": "Collection"
+    "collection": "Collection",
+    "openMenu": "Open the menu",
+    "closeMenu": "Close the menu",
+    "menu": "Menu"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -532,7 +535,7 @@
     "cameraHint": "Place the card in the frame, name at the top: it is added to the list as soon as it is recognized. For a second copy, take the card out of the frame and put it back.",
     "cameraUnavailable": "The camera is not available on this page (it requires an HTTPS connection). You can add cards by name.",
     "cameraDenied": "Camera access was denied. Allow it in your browser settings, or add cards by name.",
-    "loadingOcr": "Loading text recognition…",
+    "loadingOcr": "Loading card detection…",
     "reading": "Read: {text}",
     "added": "{name} added to the list",
     "choose": "Which card is it?",
@@ -540,7 +543,17 @@
     "searchPlaceholder": "Card name",
     "add": "Add {name}",
     "collection": "View my collection",
-    "guide": "Viewfinder: place the card in it"
+    "guide": "Viewfinder: place the card in it",
+    "startingCamera": "Opening the camera…",
+    "aim": "Hold a card in front of the camera: its outline appears, then it is read",
+    "addedShort": "Added to the list",
+    "undo": "Undo adding {name}",
+    "undoShort": "Undo",
+    "undone": "{name} removed from the list",
+    "openList": "Scan list ({count, plural, =0 {empty} one {# card} other {# cards}})",
+    "closeList": "Close the scan list",
+    "torchOn": "Turn the flashlight on",
+    "torchOff": "Turn the flashlight off"
   },
   "ScanList": {
     "title": "Scan list",
