@@ -265,6 +265,30 @@ test("range les cartes par catégorie et par glisser-déposer", async ({
   await expect(cardIn(page, "zone:maybe", "Lightning Bolt")).toBeVisible();
 });
 
+test("relie les cartes aux instructions de glisser-déposer dès le rendu serveur", async ({
+  page,
+}) => {
+  const hydrationErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("hydrated")) {
+      hydrationErrors.push(message.text());
+    }
+  });
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await page.reload();
+
+  // Le serveur et le client doivent donner le même id aux instructions,
+  // sinon la carte pointe vers un élément qui n'existe pas.
+  const commander = deckRow(page, "Edgar Markov");
+  await expect(commander).toBeVisible();
+  const id = await commander.getAttribute("aria-describedby");
+  await expect(page.locator(`[id="${id}"]`)).toContainText(
+    "Pour déplacer une carte",
+  );
+  expect(hydrationErrors).toEqual([]);
+});
+
 test("regroupe les cartes par rôle", async ({ page }) => {
   await signUpViaApi(page);
   await createDeck(page, "Edgar Markov");

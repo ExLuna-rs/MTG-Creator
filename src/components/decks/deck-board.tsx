@@ -90,6 +90,10 @@ export function DeckBoard({
   const tRoles = useTranslations("CardRoles");
   const grouped = groupDeck(deck, mode);
   const datalistId = useId();
+  // Id stable entre serveur et client : sans lui, dnd-kit numérote ses
+  // descriptions d'accessibilité avec un compteur global, différent à
+  // l'hydratation (aria-describedby="DndDescribedBy-0" puis "-1").
+  const dndId = useId();
   const [opened, setOpened] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -161,6 +165,7 @@ export function DeckBoard({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       onDragEnd={onDragEnd}
       accessibility={{
