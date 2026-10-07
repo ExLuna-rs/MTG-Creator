@@ -11,7 +11,7 @@
 # -----------------------------------------------------------------------------
 # base : Node.js et pnpm (version lue dans le champ packageManager)
 # -----------------------------------------------------------------------------
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS base
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS base
 ENV COREPACK_HOME=/corepack \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
@@ -62,7 +62,7 @@ RUN pnpm build && pnpm build:scripts
 # -----------------------------------------------------------------------------
 # runner : image de production de l'application
 # -----------------------------------------------------------------------------
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runner
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS runner
 # npm, npx, corepack et yarn ne servent pas à l'exécution : retirés pour
 # réduire la surface d'attaque et le bruit des analyses de vulnérabilités.
 # Les paquets Alpine sont mis à jour : une faille corrigée entre deux versions
@@ -99,7 +99,7 @@ CMD ["node", "server.js"]
 # tools : scripts d'exploitation (migrations, puis synchronisation des cartes)
 # -----------------------------------------------------------------------------
 # Chaque script est un fichier autonome (pnpm build:scripts) : pas de node_modules.
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS tools
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS tools
 # npm, npx, corepack et yarn ne servent pas à l'exécution : retirés pour
 # réduire la surface d'attaque et le bruit des analyses de vulnérabilités.
 # Les paquets Alpine sont mis à jour : une faille corrigée entre deux versions
