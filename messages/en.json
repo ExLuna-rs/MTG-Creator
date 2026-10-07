@@ -516,7 +516,9 @@
     "newLink": "New link",
     "disconnect": "Disconnect the phone",
     "close": "Close",
-    "error": "The scan link could not be created. Please try again."
+    "error": "The scan link could not be created. Please try again.",
+    "localWarning": "This QR code points to “localhost”: on the phone, that address means the phone itself. To scan from a real phone, open the app through an HTTPS address the phone can reach (a tunnel in development, see the README).",
+    "insecureWarning": "This address uses HTTP: the phone's browser will not allow the camera there. Open the app over HTTPS to scan (adding cards by name still works)."
   },
   "Scanner": {
     "title": "Scan cards",

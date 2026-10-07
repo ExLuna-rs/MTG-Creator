@@ -516,7 +516,9 @@
     "newLink": "Nouveau lien",
     "disconnect": "Déconnecter le téléphone",
     "close": "Fermer",
-    "error": "Le lien de scan n'a pas pu être créé. Réessayez."
+    "error": "Le lien de scan n'a pas pu être créé. Réessayez.",
+    "localWarning": "Ce QR code pointe vers « localhost » : sur le téléphone, cette adresse désigne le téléphone lui-même. Pour scanner depuis un vrai téléphone, ouvrez l'application par une adresse HTTPS joignable depuis le téléphone (un tunnel en développement, voir le README).",
+    "insecureWarning": "Cette adresse est en HTTP : le navigateur du téléphone n'y autorisera pas la caméra. Ouvrez l'application en HTTPS pour scanner (l'ajout par nom reste possible)."
   },
   "Scanner": {
     "title": "Scanner des cartes",
