@@ -12,7 +12,10 @@
     "account": "My account ({name})",
     "signOut": "Sign out",
     "decks": "My decks",
-    "collection": "Collection"
+    "collection": "Collection",
+    "openMenu": "Open the menu",
+    "closeMenu": "Close the menu",
+    "menu": "Menu"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -516,7 +519,9 @@
     "newLink": "New link",
     "disconnect": "Disconnect the phone",
     "close": "Close",
-    "error": "The scan link could not be created. Please try again."
+    "error": "The scan link could not be created. Please try again.",
+    "localWarning": "This QR code points to “localhost”: on the phone, that address means the phone itself. To scan from a real phone, open the app through an HTTPS address the phone can reach (a tunnel in development, see the README).",
+    "insecureWarning": "This address uses HTTP: the phone's browser will not allow the camera there. Open the app over HTTPS to scan (adding cards by name still works)."
   },
   "Scanner": {
     "title": "Scan cards",
@@ -530,7 +535,7 @@
     "cameraHint": "Place the card in the frame, name at the top: it is added to the list as soon as it is recognized. For a second copy, take the card out of the frame and put it back.",
     "cameraUnavailable": "The camera is not available on this page (it requires an HTTPS connection). You can add cards by name.",
     "cameraDenied": "Camera access was denied. Allow it in your browser settings, or add cards by name.",
-    "loadingOcr": "Loading text recognition…",
+    "loadingOcr": "Loading card detection…",
     "reading": "Read: {text}",
     "added": "{name} added to the list",
     "choose": "Which card is it?",
@@ -538,7 +543,18 @@
     "searchPlaceholder": "Card name",
     "add": "Add {name}",
     "collection": "View my collection",
-    "guide": "Viewfinder: place the card in it"
+    "guide": "Viewfinder: place the card in it",
+    "startingCamera": "Opening the camera…",
+    "aim": "Hold a card in front of the camera: its outline appears, then it is read",
+    "addedShort": "Added to the list",
+    "undo": "Undo adding {name}",
+    "undoShort": "Undo",
+    "undone": "{name} removed from the list",
+    "openList": "Scan list ({count, plural, =0 {empty} one {# card} other {# cards}})",
+    "closeList": "Close the scan list",
+    "torchOn": "Turn the flashlight on",
+    "torchOff": "Turn the flashlight off",
+    "dismissChoices": "Dismiss"
   },
   "ScanList": {
     "title": "Scan list",
@@ -553,7 +569,10 @@
     "remove": "Remove {name} from the list",
     "commit": "{count, plural, one {Add # card to the collection} other {Add # cards to the collection}}",
     "committed": "{count, plural, one {# card added to the collection} other {# cards added to the collection}}",
-    "error": "The list could not be updated. Please try again."
+    "error": "The list could not be updated. Please try again.",
+    "confirmRemove": "Remove {name} from the list?",
+    "confirmRemoveYes": "Remove",
+    "keep": "Keep"
   },
   "CollectionSorts": {
     "name": "Name",

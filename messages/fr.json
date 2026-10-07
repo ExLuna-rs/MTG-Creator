@@ -12,7 +12,10 @@
     "account": "Mon compte ({name})",
     "signOut": "Se déconnecter",
     "decks": "Mes decks",
-    "collection": "Collection"
+    "collection": "Collection",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "menu": "Menu"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -516,7 +519,9 @@
     "newLink": "Nouveau lien",
     "disconnect": "Déconnecter le téléphone",
     "close": "Fermer",
-    "error": "Le lien de scan n'a pas pu être créé. Réessayez."
+    "error": "Le lien de scan n'a pas pu être créé. Réessayez.",
+    "localWarning": "Ce QR code pointe vers « localhost » : sur le téléphone, cette adresse désigne le téléphone lui-même. Pour scanner depuis un vrai téléphone, ouvrez l'application par une adresse HTTPS joignable depuis le téléphone (un tunnel en développement, voir le README).",
+    "insecureWarning": "Cette adresse est en HTTP : le navigateur du téléphone n'y autorisera pas la caméra. Ouvrez l'application en HTTPS pour scanner (l'ajout par nom reste possible)."
   },
   "Scanner": {
     "title": "Scanner des cartes",
@@ -530,7 +535,7 @@
     "cameraHint": "Placez la carte dans le cadre, le nom en haut : elle s'ajoute à la liste dès qu'elle est reconnue. Pour un deuxième exemplaire, retirez la carte du cadre puis remettez-la.",
     "cameraUnavailable": "La caméra n'est pas disponible sur cette page (elle demande une connexion HTTPS). Vous pouvez ajouter les cartes par leur nom.",
     "cameraDenied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur, ou ajoutez les cartes par leur nom.",
-    "loadingOcr": "Chargement de la reconnaissance de texte…",
+    "loadingOcr": "Chargement de la détection des cartes…",
     "reading": "Lu : {text}",
     "added": "{name} ajoutée à la liste",
     "choose": "Quelle carte est-ce ?",
@@ -538,7 +543,18 @@
     "searchPlaceholder": "Nom de la carte",
     "add": "Ajouter {name}",
     "collection": "Voir ma collection",
-    "guide": "Cadre de visée : placez-y la carte"
+    "guide": "Cadre de visée : placez-y la carte",
+    "startingCamera": "Ouverture de la caméra…",
+    "aim": "Placez une carte devant la caméra : son contour s'affiche, puis elle est lue",
+    "addedShort": "Ajoutée à la liste",
+    "undo": "Annuler l'ajout de {name}",
+    "undoShort": "Annuler",
+    "undone": "Ajout de {name} annulé",
+    "openList": "Liste de scan ({count, plural, =0 {vide} one {# carte} other {# cartes}})",
+    "closeList": "Fermer la liste de scan",
+    "torchOn": "Allumer la lampe",
+    "torchOff": "Éteindre la lampe",
+    "dismissChoices": "Ignorer"
   },
   "ScanList": {
     "title": "Liste de scan",
@@ -553,7 +569,10 @@
     "remove": "Retirer {name} de la liste",
     "commit": "{count, plural, one {Ajouter # carte à la collection} other {Ajouter # cartes à la collection}}",
     "committed": "{count, plural, one {# carte ajoutée à la collection} other {# cartes ajoutées à la collection}}",
-    "error": "La liste n'a pas pu être modifiée. Réessayez."
+    "error": "La liste n'a pas pu être modifiée. Réessayez.",
+    "confirmRemove": "Retirer {name} de la liste ?",
+    "confirmRemoveYes": "Retirer",
+    "keep": "Garder"
   },
   "CollectionSorts": {
     "name": "Nom",

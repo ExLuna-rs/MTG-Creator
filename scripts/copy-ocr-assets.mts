@@ -1,5 +1,6 @@
 // Copie les fichiers de la reconnaissance de caractères (Tesseract.js) dans
-// public/tesseract : la page de scan les charge depuis le site lui-même, sans
+// public/tesseract, et ceux de la détection des cartes (OpenCV.js) dans
+// public/opencv : la page de scan les charge depuis le site lui-même, sans
 // CDN externe. Lancé avant `next dev` et `next build` ; le dossier n'est pas
 // versionné.
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
@@ -38,4 +39,14 @@ for (const file of [
 copyFileSync(
   join(langDir, "4.0.0_best_int", "eng.traineddata.gz"),
   join(target, "lang", "eng.traineddata.gz"),
+);
+
+// Détection du contour des cartes (OpenCV.js, ≈ 11 Mo, chargé seulement
+// quand la caméra démarre) : public/opencv, non versionné non plus.
+const opencvTarget = join(import.meta.dirname, "..", "public", "opencv");
+rmSync(opencvTarget, { recursive: true, force: true });
+mkdirSync(opencvTarget, { recursive: true });
+copyFileSync(
+  require.resolve("@techstark/opencv-js"),
+  join(opencvTarget, "opencv.js"),
 );

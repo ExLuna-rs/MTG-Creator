@@ -21,6 +21,17 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ];
 
+// Adresse publique du site en développement (tunnel HTTPS pour le scan au
+// téléphone, voir README) : le serveur de développement doit la laisser
+// charger ses ressources (rechargement à chaud), comme localhost.
+function publicHostname(): string[] {
+  try {
+    return [new URL(process.env.BETTER_AUTH_URL ?? "").hostname];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   // Image autonome pour Docker : seul le nécessaire est copié dans l'image.
   output: "standalone",
@@ -28,9 +39,9 @@ const nextConfig: NextConfig = {
   // Les images des cartes viennent du CDN Scryfall : l'optimiseur d'images
   // de Next.js (qui a connu plusieurs failles) n'est pas utilisé.
   images: { unoptimized: true },
-  // En développement uniquement : autorise 127.0.0.1, en plus de localhost,
-  // à charger les ressources du serveur de développement.
-  allowedDevOrigins: ["127.0.0.1"],
+  // En développement uniquement : autorise 127.0.0.1 et l'adresse publique,
+  // en plus de localhost, à charger les ressources du serveur de développement.
+  allowedDevOrigins: ["127.0.0.1", ...publicHostname()],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
@@ -38,6 +49,11 @@ const nextConfig: NextConfig = {
       // gardés en cache par le navigateur entre deux visites de la page de scan.
       {
         source: "/tesseract/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
+      },
+      // Détection du contour des cartes (OpenCV.js, ≈ 11 Mo), même règle.
+      {
+        source: "/opencv/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=604800" }],
       },
     ];

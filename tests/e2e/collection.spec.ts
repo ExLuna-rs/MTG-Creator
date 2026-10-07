@@ -110,6 +110,11 @@ test("relie un téléphone par QR code et valide sa liste de scan", async ({
     dialog.getByRole("img", { name: "QR code du lien de scan" }),
   ).toBeVisible();
   await expect(dialog.getByText("En attente du téléphone…")).toBeVisible();
+  // Ouverte depuis localhost, l'application prévient que le lien ne marchera
+  // pas sur un vrai téléphone.
+  await expect(
+    dialog.getByText(/Ce QR code pointe vers « localhost »/),
+  ).toBeVisible();
 
   const url = await dialog.getByTestId("scan-link").getAttribute("href");
   expect(url).toMatch(/\/fr\/scan#[A-Za-z0-9_-]{43}$/);

@@ -1,13 +1,18 @@
-import { guideRect, nameBand } from "@/domain/scan/frame";
+/** Lecture d'une image : carte absente, ou texte lu sur la bande du nom. */
+export type Reading = { verdict: "empty" } | { verdict: "read"; text: string };
 
-/** Lecteur du nom d'une carte sur l'image de la caméra. */
+/** Lecteur du nom d'une carte sur la bande du nom, déjà redressée. */
 export interface NameReader {
-  read(video: HTMLVideoElement): Promise<string>;
+  read(band: HTMLCanvasElement): Promise<string>;
   terminate(): Promise<void>;
 }
 
-/** Hauteur de la bande du nom envoyée à l'OCR, en pixels. */
-const BAND_HEIGHT = 72;
+/**
+ * Caractères des noms de cartes : limiter l'OCR à ces caractères accélère la
+ * lecture et évite les signes parasites (symboles de mana, bord du cadre).
+ */
+const NAME_CHARACTERS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÆæáàâäéèêëíîïóôöúûü' ,-";
 
 /**
  * Charge Tesseract.js (≈ 7 Mo la première fois, puis en cache) depuis le site
@@ -24,62 +29,16 @@ export async function createNameReader(): Promise<NameReader> {
   await worker.setParameters({
     tessedit_pageseg_mode: PSM.SINGLE_LINE,
     preserve_interword_spaces: "1",
+    tessedit_char_whitelist: NAME_CHARACTERS,
   });
-  const canvas = document.createElement("canvas");
 
   return {
-    async read(video) {
-      const { videoWidth, videoHeight } = video;
-      if (!videoWidth || !videoHeight) return "";
-      const band = nameBand(guideRect(videoWidth, videoHeight));
-      const scale = BAND_HEIGHT / band.height;
-      canvas.width = Math.round(band.width * scale);
-      canvas.height = BAND_HEIGHT;
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context) return "";
-      context.drawImage(
-        video,
-        band.x,
-        band.y,
-        band.width,
-        band.height,
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      );
-      toHighContrastGray(context, canvas.width, canvas.height);
-      const { data } = await worker.recognize(canvas);
+    async read(band) {
+      const { data } = await worker.recognize(band);
       return data.text;
     },
     async terminate() {
       await worker.terminate();
     },
   };
-}
-
-/** Niveaux de gris, contraste étiré entre le pixel le plus sombre et le plus clair. */
-function toHighContrastGray(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-) {
-  const image = context.getImageData(0, 0, width, height);
-  const { data } = image;
-  let min = 255;
-  let max = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    data[i] = gray;
-    if (gray < min) min = gray;
-    if (gray > max) max = gray;
-  }
-  const range = Math.max(1, max - min);
-  for (let i = 0; i < data.length; i += 4) {
-    const value = ((data[i] - min) * 255) / range;
-    data[i] = value;
-    data[i + 1] = value;
-    data[i + 2] = value;
-  }
-  context.putImageData(image, 0, 0);
 }

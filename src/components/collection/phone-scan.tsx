@@ -4,6 +4,7 @@ import { Check, Copy, Smartphone, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { phoneLinkProblem } from "@/domain/scan/phone-link";
 import type { ScanSessionStatus } from "@/server/collection/scan";
 import { PendingScans } from "./pending-scans";
 import { QrCode } from "./qr-code";
@@ -105,6 +106,8 @@ export function PhoneScan() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const problem = link ? phoneLinkProblem(new URL(link.url).origin) : null;
+
   return (
     <>
       <Button variant="outline" onClick={show}>
@@ -161,6 +164,11 @@ export function PhoneScan() {
               >
                 {link.url}
               </a>
+              {problem && (
+                <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                  {t(problem === "local" ? "localWarning" : "insecureWarning")}
+                </p>
+              )}
             </div>
           )}
 

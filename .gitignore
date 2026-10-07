@@ -54,3 +54,4 @@ next-env.d.ts
 
 # fichiers de Tesseract.js copiés par `pnpm ocr:assets`
 /public/tesseract/
+/public/opencv/

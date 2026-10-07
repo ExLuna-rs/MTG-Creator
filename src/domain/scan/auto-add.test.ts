@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type AutoAddState, INITIAL_AUTO_ADD, nextAutoAdd } from "./auto-add";
+import {
+  type AutoAddState,
+  INITIAL_AUTO_ADD,
+  INSTANT_SIMILARITY,
+  nextAutoAdd,
+} from "./auto-add";
 
 /** Enchaîne des lectures et renvoie les cartes ajoutées. */
 function run(readings: (string | null)[]): string[] {
@@ -37,5 +42,24 @@ describe("ajout automatique", () => {
 
   it("ne rajoute pas la carte après une mauvaise lecture isolée", () => {
     expect(run(["a", "a", "b", "a", "a"])).toEqual(["a"]);
+  });
+});
+
+describe("ajout immédiat d'une carte sans aucun doute", () => {
+  it("ajoute dès la première lecture", () => {
+    expect(nextAutoAdd(INITIAL_AUTO_ADD, "a", INSTANT_SIMILARITY).add).toBe(
+      "a",
+    );
+  });
+
+  it("n'ajoute qu'une fois tant que la carte reste dans le cadre", () => {
+    const first = nextAutoAdd(INITIAL_AUTO_ADD, "a", 1);
+    expect(nextAutoAdd(first.state, "a", 1).add).toBeNull();
+  });
+
+  it("attend une deuxième lecture en dessous du seuil", () => {
+    expect(
+      nextAutoAdd(INITIAL_AUTO_ADD, "a", INSTANT_SIMILARITY - 0.01).add,
+    ).toBeNull();
   });
 });

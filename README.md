@@ -32,7 +32,13 @@ Pour tester les comptes, créez-en un sur <http://localhost:3000/fr/sign-up> : e
 
 Une fois connecté, « Mes decks » (<http://localhost:3000/fr/decks>) permet de créer un deck à partir d'un commandant puis de le construire dans l'éditeur.
 
-« Collection » (<http://localhost:3000/fr/collection>) liste les cartes possédées. Le bouton « Scanner avec mon téléphone » affiche un QR code qui ouvre la page de scan sur le téléphone, reliée au compte : les cartes scannées arrivent dans une liste de scan, modifiable sur les deux appareils, puis entrent dans la collection quand on la valide. Le navigateur du téléphone n'autorise la caméra qu'en HTTPS, et l'application de développement n'écoute que sur `localhost` : pour essayer le scan sur un vrai téléphone, exposez-la par un tunnel HTTPS (par exemple `cloudflared tunnel --url http://localhost:3000`), mettez l'adresse du tunnel dans `BETTER_AUTH_URL` (fichier `.env`) et ouvrez la collection depuis cette adresse. Sans caméra, la page de scan permet toujours d'ajouter les cartes par leur nom.
+« Collection » (<http://localhost:3000/fr/collection>) liste les cartes possédées. Le bouton « Scanner avec mon téléphone » affiche un QR code qui ouvre la page de scan sur le téléphone, reliée au compte : les cartes scannées arrivent dans une liste de scan, modifiable sur les deux appareils, puis entrent dans la collection quand on la valide. Le QR code reprend l'adresse ouverte sur l'ordinateur : ouverte sur `http://localhost:3000`, elle ne mène nulle part depuis le téléphone (la fenêtre du QR code le signale). De plus, l'application de développement n'écoute que sur `localhost`, et le navigateur du téléphone n'autorise la caméra qu'en HTTPS. Pour essayer le scan sur un vrai téléphone en local :
+
+1. Exposez l'application par un tunnel HTTPS, par exemple `cloudflared tunnel --url http://localhost:3000` (l'adresse `https://….trycloudflare.com` change à chaque lancement).
+2. Mettez cette adresse dans `BETTER_AUTH_URL` (fichier `.env`), puis relancez `make dev` : l'adresse est aussi autorisée par le serveur de développement.
+3. Sur l'ordinateur, ouvrez la collection depuis l'adresse du tunnel (et non `localhost`), connectez-vous, puis affichez le QR code.
+
+Sans caméra, la page de scan permet toujours d'ajouter les cartes par leur nom.
 
 ### Connexion avec Google (facultative)
 

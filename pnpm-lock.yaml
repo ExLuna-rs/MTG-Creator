@@ -14,6 +14,9 @@ importers:
       '@dnd-kit/core':
         specifier: 6.3.1
         version: 6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@techstark/opencv-js':
+        specifier: 4.12.0-release.1
+        version: 4.12.0-release.1
       better-auth:
         specifier: ^1.7.7
         version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@types/pg@8.23.1)(kysely@0.29.6)(pg@8.23.1))(next@16.3.8(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(pg@8.23.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@types/node@24.19.1)(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
@@ -1204,6 +1207,9 @@ packages:
 
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
+
+  '@techstark/opencv-js@4.12.0-release.1':
+    resolution: {integrity: sha512-LtTaph9v/HqLPXEg3m1xs2h7QJh10pUpuDT0nj8g77lelWnTwwQrehtd+fXElLOdrkqc4Fea6Z/sJBvEJLYPfw==}
 
   '@tesseract.js-data/eng@1.0.0':
     resolution: {integrity: sha512-mbTumm6KQPUHyzTPQaF3ObXYnx0SqqfV2nabqFVQBwD6Kl7PhGSLSzOlfFTWy0P3BjghaSKA2W9GB19Jk+ZcTg==}
@@ -2817,6 +2823,8 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       postcss: 8.5.28
       tailwindcss: 4.3.3
+
+  '@techstark/opencv-js@4.12.0-release.1': {}
 
   '@tesseract.js-data/eng@1.0.0': {}
 
