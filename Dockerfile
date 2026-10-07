@@ -65,7 +65,16 @@ RUN pnpm build && pnpm build:scripts
 FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runner
 # npm, npx, corepack et yarn ne servent pas à l'exécution : retirés pour
 # réduire la surface d'attaque et le bruit des analyses de vulnérabilités.
-RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
+# Les paquets Alpine sont mis à jour : une faille corrigée entre deux versions
+# de l'image Node.js (zlib, par exemple) n'attend pas Dependabot.
+RUN --mount=type=secret,id=extra_ca,required=false \
+    if [ -s /run/secrets/extra_ca ]; then \
+      cat /etc/ssl/certs/ca-certificates.crt /run/secrets/extra_ca > /tmp/ca.pem \
+      && export SSL_CERT_FILE=/tmp/ca.pem; \
+    fi \
+    && apk upgrade --no-cache \
+    && rm -f /tmp/ca.pem \
+    && rm -rf /usr/local/lib/node_modules /opt/yarn-* \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
     /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ENV NODE_ENV=production \
@@ -93,7 +102,16 @@ CMD ["node", "server.js"]
 FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS tools
 # npm, npx, corepack et yarn ne servent pas à l'exécution : retirés pour
 # réduire la surface d'attaque et le bruit des analyses de vulnérabilités.
-RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
+# Les paquets Alpine sont mis à jour : une faille corrigée entre deux versions
+# de l'image Node.js (zlib, par exemple) n'attend pas Dependabot.
+RUN --mount=type=secret,id=extra_ca,required=false \
+    if [ -s /run/secrets/extra_ca ]; then \
+      cat /etc/ssl/certs/ca-certificates.crt /run/secrets/extra_ca > /tmp/ca.pem \
+      && export SSL_CERT_FILE=/tmp/ca.pem; \
+    fi \
+    && apk upgrade --no-cache \
+    && rm -f /tmp/ca.pem \
+    && rm -rf /usr/local/lib/node_modules /opt/yarn-* \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
     /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ENV NODE_ENV=production
