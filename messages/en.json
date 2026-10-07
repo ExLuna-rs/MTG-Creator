@@ -553,7 +553,8 @@
     "openList": "Scan list ({count, plural, =0 {empty} one {# card} other {# cards}})",
     "closeList": "Close the scan list",
     "torchOn": "Turn the flashlight on",
-    "torchOff": "Turn the flashlight off"
+    "torchOff": "Turn the flashlight off",
+    "dismissChoices": "Dismiss"
   },
   "ScanList": {
     "title": "Scan list",
@@ -568,7 +569,10 @@
     "remove": "Remove {name} from the list",
     "commit": "{count, plural, one {Add # card to the collection} other {Add # cards to the collection}}",
     "committed": "{count, plural, one {# card added to the collection} other {# cards added to the collection}}",
-    "error": "The list could not be updated. Please try again."
+    "error": "The list could not be updated. Please try again.",
+    "confirmRemove": "Remove {name} from the list?",
+    "confirmRemoveYes": "Remove",
+    "keep": "Keep"
   },
   "CollectionSorts": {
     "name": "Name",

@@ -25,6 +25,9 @@ const TOAST_MS = 5000;
 /** Durée pendant laquelle le cadre reste vert après un ajout. */
 const FLASH_MS = 700;
 
+/** Glissement vers le bas (en pixels) au-delà duquel la liste se ferme. */
+const SWIPE_CLOSE_PX = 100;
+
 /** Réponse de /api/scan/match pour un texte lu. */
 interface MatchResult {
   candidates: ScanMatch[];
@@ -82,6 +85,13 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
   const [lastAdded, setLastAdded] = useState<ScanListItem | null>(null);
   const [flash, setFlash] = useState(false);
   const listDialog = useRef<HTMLDialogElement>(null);
+  // Propositions écartées : elles ne reviennent pas tant que la carte reste
+  // devant la caméra (le texte lu varie d'une image à l'autre).
+  const dismissed = useRef(false);
+  // Glissement de la liste vers le bas pour la fermer.
+  const swipe = useRef<{ startY: number; pointerId: number } | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
 
   const api = useCallback((path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
@@ -187,6 +197,7 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
     if (!name) {
       // Plus de carte lisible : l'ajout est réarmé.
       autoAdd.current = nextAutoAdd(autoAdd.current, null).state;
+      dismissed.current = false;
       return;
     }
     const result = await match(name);
@@ -197,14 +208,46 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
     const next = nextAutoAdd(autoAdd.current, result.match, best?.similarity);
     autoAdd.current = next.state;
     if (next.add) await addCard(next.add);
-    else if (!result.match && result.candidates.length > 0) {
+    else if (
+      !result.match &&
+      result.candidates.length > 0 &&
+      !dismissed.current
+    ) {
       setChoices(result.candidates);
     }
   }
 
+  function dismissChoices() {
+    dismissed.current = true;
+    setChoices([]);
+  }
+
   function openList() {
+    setDragY(0);
     setListOpen(true);
     listDialog.current?.showModal();
+  }
+
+  function onSwipeStart(event: React.PointerEvent<HTMLElement>) {
+    // Les boutons de l'en-tête gardent leur clic.
+    if ((event.target as HTMLElement).closest("button")) return;
+    swipe.current = { startY: event.clientY, pointerId: event.pointerId };
+    setDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onSwipeMove(event: React.PointerEvent<HTMLElement>) {
+    if (swipe.current?.pointerId !== event.pointerId) return;
+    setDragY(Math.max(0, event.clientY - swipe.current.startY));
+  }
+
+  function onSwipeEnd(event: React.PointerEvent<HTMLElement>) {
+    if (swipe.current?.pointerId !== event.pointerId) return;
+    const distance = event.clientY - swipe.current.startY;
+    swipe.current = null;
+    setDragging(false);
+    if (distance > SWIPE_CLOSE_PX) listDialog.current?.close();
+    else setDragY(0);
   }
 
   if (linkState === "none" || linkState === "expired") {
@@ -231,9 +274,19 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
 
   const choicesView = choices.length > 0 && (
     <section aria-labelledby="scan-choices" className="space-y-2">
-      <h2 id="scan-choices" className="font-medium text-sm">
-        {t("choose")}
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="scan-choices" className="font-medium text-sm">
+          {t("choose")}
+        </h2>
+        <Button
+          variant={cameraActive ? "secondary" : "outline"}
+          size="sm"
+          onClick={dismissChoices}
+        >
+          <X aria-hidden />
+          {t("dismissChoices")}
+        </Button>
+      </div>
       <ul className="grid grid-cols-3 gap-2">
         {choices.map((card) => (
           <li key={card.oracleId}>
@@ -371,14 +424,23 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
         ref={listDialog}
         aria-labelledby="scan-list-title"
         onClose={() => setListOpen(false)}
-        className="mx-auto mt-auto mb-0 max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60"
+        style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+        className={`mx-auto mt-auto mb-0 h-[90dvh] max-h-[90dvh] w-full max-w-lg overflow-hidden rounded-t-2xl bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60 ${dragging ? "" : "transition-transform duration-200"}`}
       >
         {listOpen && (
-          <div className="space-y-5 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <div className="relative flex justify-end">
+          <div className="flex h-full flex-col">
+            {/* En-tête à glisser vers le bas pour fermer la liste. */}
+            <div
+              data-testid="scan-list-handle"
+              onPointerDown={onSwipeStart}
+              onPointerMove={onSwipeMove}
+              onPointerUp={onSwipeEnd}
+              onPointerCancel={onSwipeEnd}
+              className="relative flex shrink-0 cursor-grab touch-none justify-end px-4 pt-3 pb-1"
+            >
               <span
                 aria-hidden
-                className="absolute top-0 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full bg-muted-foreground/30"
+                className="absolute top-2 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full bg-muted-foreground/30"
               />
               <Button
                 variant="ghost"
@@ -389,15 +451,17 @@ export function Scanner({ signedIn }: { signedIn: boolean }) {
                 <X aria-hidden />
               </Button>
             </div>
-            <ScanListView
-              list={list}
-              onCommitted={() => {
-                setMessage(null);
-                setChoices([]);
-                setLastAdded(null);
-              }}
-            />
-            <AddByName onSelect={addCard} />
+            <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <ScanListView
+                list={list}
+                onCommitted={() => {
+                  setMessage(null);
+                  setChoices([]);
+                  setLastAdded(null);
+                }}
+              />
+              <AddByName onSelect={addCard} />
+            </div>
           </div>
         )}
       </dialog>

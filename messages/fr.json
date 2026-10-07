@@ -553,7 +553,8 @@
     "openList": "Liste de scan ({count, plural, =0 {vide} one {# carte} other {# cartes}})",
     "closeList": "Fermer la liste de scan",
     "torchOn": "Allumer la lampe",
-    "torchOff": "Éteindre la lampe"
+    "torchOff": "Éteindre la lampe",
+    "dismissChoices": "Ignorer"
   },
   "ScanList": {
     "title": "Liste de scan",
@@ -568,7 +569,10 @@
     "remove": "Retirer {name} de la liste",
     "commit": "{count, plural, one {Ajouter # carte à la collection} other {Ajouter # cartes à la collection}}",
     "committed": "{count, plural, one {# carte ajoutée à la collection} other {# cartes ajoutées à la collection}}",
-    "error": "La liste n'a pas pu être modifiée. Réessayez."
+    "error": "La liste n'a pas pu être modifiée. Réessayez.",
+    "confirmRemove": "Retirer {name} de la liste ?",
+    "confirmRemoveYes": "Retirer",
+    "keep": "Garder"
   },
   "CollectionSorts": {
     "name": "Nom",

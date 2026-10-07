@@ -81,6 +81,8 @@ function ScanListRow({ item, list }: { item: ScanListItem; list: ScanList }) {
   const fieldId = useId();
   const [fixing, setFixing] = useState(false);
   const [search, setSearch] = useState("");
+  // À un exemplaire, « − » retire la carte : on demande confirmation.
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <li data-card={item.name} className="space-y-2 px-3 py-2">
@@ -102,7 +104,9 @@ function ScanListRow({ item, list }: { item: ScanListItem; list: ScanList }) {
             aria-label={t("decrease", { name: item.name })}
             disabled={list.busy}
             onClick={() =>
-              list.update(item.id, { quantity: item.quantity - 1 })
+              item.quantity > 1
+                ? list.update(item.id, { quantity: item.quantity - 1 })
+                : setConfirming(true)
             }
           >
             <Minus aria-hidden />
@@ -119,9 +123,10 @@ function ScanListRow({ item, list }: { item: ScanListItem; list: ScanList }) {
             className="size-8"
             aria-label={t("increase", { name: item.name })}
             disabled={list.busy}
-            onClick={() =>
-              list.update(item.id, { quantity: item.quantity + 1 })
-            }
+            onClick={() => {
+              setConfirming(false);
+              void list.update(item.id, { quantity: item.quantity + 1 });
+            }}
           >
             <Plus aria-hidden />
           </Button>
@@ -147,6 +152,32 @@ function ScanListRow({ item, list }: { item: ScanListItem; list: ScanList }) {
           </Button>
         </div>
       </div>
+      {confirming && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1">
+            {t("confirmRemove", { name: item.name })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirming(false)}
+          >
+            {t("keep")}
+          </Button>
+          <Button
+            size="sm"
+            className="bg-destructive text-white hover:bg-destructive/90"
+            disabled={list.busy}
+            onClick={async () => {
+              setConfirming(false);
+              await list.remove(item.id);
+            }}
+          >
+            <Trash2 aria-hidden />
+            {t("confirmRemoveYes")}
+          </Button>
+        </div>
+      )}
       {fixing && (
         <div className="space-y-1">
           <label htmlFor={fieldId} className="text-muted-foreground text-xs">
