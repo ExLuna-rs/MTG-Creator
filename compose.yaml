@@ -69,6 +69,11 @@ services:
 
   mailpit:
     image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    # Emails conservés dans un volume : ils survivent au redémarrage de Docker.
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_data:/data
     ports:
       - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
@@ -96,6 +101,7 @@ services:
 
 volumes:
   db_data:
+  mailpit_data:
   node_modules:
   next_cache:
   e2e_node_modules:

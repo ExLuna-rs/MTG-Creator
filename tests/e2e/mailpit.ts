@@ -7,6 +7,19 @@ type MailpitSearch = {
   messages: { ID: string; Subject: string }[];
 };
 
+/** Nombre d'emails de sujet `subject` envoyés à `to`. */
+export async function emailCount(
+  request: APIRequestContext,
+  to: string,
+  subject: string,
+): Promise<number> {
+  const response = await request.get(`${MAILPIT_URL}/api/v1/search`, {
+    params: { query: `to:"${to}" subject:"${subject}"` },
+  });
+  const { messages } = (await response.json()) as MailpitSearch;
+  return messages.length;
+}
+
 /**
  * Attend l'email de sujet `subject` envoyé à `to`, et renvoie le lien qu'il
  * contient (le plus récent si plusieurs emails correspondent).

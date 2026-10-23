@@ -28,6 +28,16 @@ describe("accountEmail", () => {
     expect(email.text).toContain("Hello Jace,");
   });
 
+  it("rédige le rappel de compte existant en français", () => {
+    const email = accountEmail("accountExists", {
+      locale: "fr",
+      name: "Jace",
+      url: "http://localhost:3000/fr/sign-in",
+    });
+    expect(email.subject).toBe("Vous avez déjà un compte MTG Creator");
+    expect(email.text).toContain("http://localhost:3000/fr/sign-in");
+  });
+
   it("échappe le pseudo dans la version HTML", () => {
     const email = accountEmail("verifyEmail", {
       locale: "fr",
