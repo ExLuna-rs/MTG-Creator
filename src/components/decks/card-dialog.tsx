@@ -10,6 +10,7 @@ import { maxCopies } from "@/domain/commander/singleton";
 import type { DeckIssueCode } from "@/domain/commander/validate";
 import type { DeckCard } from "@/domain/deck/deck";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
+import { CardCopies } from "./deck-assembly";
 import { CardOptions, type Dispatch, QuantityStepper } from "./deck-list";
 
 /**
@@ -135,6 +136,11 @@ export function CardDialog({
                 {t("remove", { name: entry.card.name })}
               </Button>
             </div>
+            {entry.zone !== "maybe" && (
+              <div className="border-t pt-4">
+                <CardCopies oracleId={entry.oracleId} />
+              </div>
+            )}
             <div className="space-y-3 border-t pt-4">
               <CardOptions
                 key={`${entry.zone}|${entry.oracleId}`}

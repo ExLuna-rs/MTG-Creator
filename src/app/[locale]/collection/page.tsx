@@ -8,18 +8,25 @@ import {
 } from "next-intl/server";
 import { z } from "zod";
 import { AddCollectionCard } from "@/components/collection/add-collection-card";
+import {
+  CollectionDetails,
+  type DeckInfo,
+} from "@/components/collection/collection-details";
 import { CollectionFilters } from "@/components/collection/collection-filters";
 import { CollectionGrid } from "@/components/collection/collection-grid";
 import { PendingScans } from "@/components/collection/pending-scans";
 import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
 import {
+  COLLECTION_SHOWS,
   COLLECTION_SORTS,
   selectCollection,
 } from "@/domain/collection/collection";
+import { cardUsage, deckStatus } from "@/domain/collection/ownership";
 import { Link } from "@/i18n/navigation";
 import { requireSession } from "@/server/auth/session";
 import { getCollection } from "@/server/collection/collection";
+import { getDeckHoldings } from "@/server/decks/copies";
 
 export async function generateMetadata({
   params,
@@ -35,6 +42,7 @@ export async function generateMetadata({
 const searchSchema = z.object({
   q: z.string().max(100).catch(""),
   sort: z.enum(COLLECTION_SORTS).catch("name"),
+  show: z.enum(COLLECTION_SHOWS).catch("all"),
 });
 
 export default async function CollectionPage({
@@ -46,17 +54,43 @@ export default async function CollectionPage({
   const { user } = await requireSession(locale as Locale, "/collection");
   const t = await getTranslations("CollectionPage");
   const format = await getFormatter();
-  const collection = await getCollection(user.id);
+  const [collection, holdings] = await Promise.all([
+    getCollection(user.id),
+    getDeckHoldings(user.id),
+  ]);
   const currency = locale === "en" ? "USD" : "EUR";
   const raw = await searchParams;
-  const { q, sort } = searchSchema.parse({
+  const { q, sort, show } = searchSchema.parse({
     q: typeof raw.q === "string" ? raw.q : "",
     sort: typeof raw.sort === "string" ? raw.sort : "name",
+    show: typeof raw.show === "string" ? raw.show : "all",
   });
+  // Où sont les exemplaires de chaque carte, et l'état de chaque deck.
+  const usage = Object.fromEntries(
+    collection.entries.map((entry) => [
+      entry.oracleId,
+      cardUsage(entry.oracleId, entry.quantity, holdings),
+    ]),
+  );
+  const decks: Record<string, DeckInfo> = Object.fromEntries(
+    holdings.map((holding) => [
+      holding.deckId,
+      {
+        name: holding.name,
+        status: deckStatus(holding.assembled, holding.needs, holding.copies),
+      },
+    ]),
+  );
   const shown = selectCollection(collection.entries, {
     query: q,
     sort,
     currency,
+  }).filter((entry) => {
+    const { used, free, missing } = usage[entry.oracleId];
+    if (show === "free") return free > 0;
+    if (show === "used") return used > 0;
+    if (show === "missing") return missing > 0;
+    return true;
   });
 
   return (
@@ -109,13 +143,16 @@ export default async function CollectionPage({
         </div>
       ) : (
         <div className="space-y-4">
-          <CollectionFilters query={q} sort={sort} />
+          <CollectionFilters query={q} sort={sort} show={show} />
           {shown.length === 0 ? (
             <p className="text-muted-foreground">
-              {t("noMatch", { query: q })}
+              {q ? t("noMatch", { query: q }) : t("noShown")}
             </p>
+          ) : q ? (
+            // Une recherche montre le détail : decks et exemplaires.
+            <CollectionDetails entries={shown} usage={usage} decks={decks} />
           ) : (
-            <CollectionGrid entries={shown} />
+            <CollectionGrid entries={shown} usage={usage} />
           )}
         </div>
       )}

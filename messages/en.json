@@ -287,7 +287,11 @@
     "cards": "{count} / {expected} cards",
     "valid": "valid",
     "invalid": "incomplete",
-    "updated": "updated {date}"
+    "updated": "updated {date}",
+    "filter": "Filter by status",
+    "filterAll": "All",
+    "missingCopies": "{count, plural, one {# card} other {# cards}} still to find",
+    "noMatch": "No deck with this status."
   },
   "NewDeck": {
     "title": "New deck",
@@ -504,7 +508,24 @@
     "search": "Search the collection",
     "searchPlaceholder": "Card name",
     "sort": "Sort by",
-    "noMatch": "No card in the collection matches “{query}”."
+    "noMatch": "No card in the collection matches “{query}”.",
+    "show": "Show",
+    "showOptions": {
+      "all": "All",
+      "free": "Free",
+      "used": "In a deck",
+      "missing": "Missing"
+    },
+    "usageUsed": "{count, plural, one {# in a deck} other {# in decks}}",
+    "usageFree": "{count} free",
+    "usageMissing": "{count} missing",
+    "usedIn": "Used in",
+    "wantedBy": "In a deck, not used",
+    "noUsedIn": "No copy stored in a deck.",
+    "noWantedBy": "No deck is waiting for this card.",
+    "showWhere": "See where {name} is",
+    "cardPage": "Card page",
+    "noShown": "No card of the collection in this category."
   },
   "PhoneScan": {
     "open": "Scan with my phone",
@@ -583,5 +604,27 @@
     "price": "Price",
     "quantity": "Quantity",
     "recent": "Most recently added"
+  },
+  "DeckStatus": {
+    "building": "In progress",
+    "built": "Built",
+    "playable": "Playable"
+  },
+  "DeckAssembly": {
+    "legend": "Deck state",
+    "building": "In progress",
+    "assembled": "Assembled",
+    "buildingHint": "No physical copy is stored in this deck. “Assembled” gives it the free copies from your collection.",
+    "playable": "Every card is physically there: the deck is playable.",
+    "missingTitle": "{count, plural, one {# card} other {# cards}} still to find",
+    "showAll": "Show the {count} others",
+    "takeFree": "Take a free copy",
+    "takeFrom": "Take from {deck}",
+    "notOwned": "not in your collection",
+    "error": "The copies could not be changed. Please try again.",
+    "copiesTitle": "Physical copy",
+    "inThisDeck": "{copies} of {need} in this deck",
+    "freeCopies": "{count, plural, =0 {no free copy} one {# free copy} other {# free copies}} in the collection",
+    "heldBy": "{count} in {deck}"
   }
 }

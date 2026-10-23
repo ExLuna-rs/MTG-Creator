@@ -38,3 +38,17 @@ export const scanTextSchema = z.object({ text: z.string().max(200) });
  * Jeton d'un téléphone relié par QR code : 32 octets aléatoires en base64url.
  */
 export const scanTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+
+/** Deck monté (ses cartes ont des exemplaires physiques) ou en construction. */
+export const deckAssemblySchema = z.object({ assembled: z.boolean() });
+
+/**
+ * Exemplaire physique à ranger dans un deck : pris parmi les exemplaires
+ * libres de la collection (`fromDeckId` nul) ou dans un autre deck.
+ */
+export const takeCopySchema = z.object({
+  oracleId: z.uuid(),
+  fromDeckId: z.uuid().nullable(),
+});
+
+export type TakeCopy = z.infer<typeof takeCopySchema>;
