@@ -3,6 +3,7 @@
 import { Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
+import { GameChangerBadge } from "@/components/cards/game-changer-badge";
 import { Button } from "@/components/ui/button";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import type { CardUsage } from "@/domain/collection/ownership";
@@ -48,6 +49,7 @@ export function CollectionGrid({
                 name={card.name}
                 sizes="(min-width: 1024px) 160px, (min-width: 640px) 30vw, 45vw"
               />
+              {card.gameChanger && <GameChangerBadge />}
               {card.quantity > 1 && (
                 <span
                   aria-hidden

@@ -132,6 +132,7 @@
   },
   "CardPage": {
     "back": "Retour à la recherche",
+    "backToCollection": "Retour à la collection",
     "legal": "Légale",
     "not_legal": "Non légale",
     "banned": "Bannie",
@@ -153,6 +154,8 @@
     "set": "{set} ({code}), n° {number}",
     "artist": "Illustration : {artist}",
     "viewOnScryfall": "Voir sur Scryfall",
+    "viewOnCardmarket": "Voir sur Cardmarket",
+    "viewOnTcgplayer": "Voir sur TCGplayer",
     "backFace": "{name} (verso)"
   },
   "Formats": {
@@ -361,7 +364,25 @@
     "newCategoryPlaceholder": "Rampe, Pioche…",
     "addCategory": "Ajouter",
     "categoriesHint": "Glissez la carte sur un groupe pour changer sa catégorie principale.",
-    "defaultCategories": "Rampe, Pioche, Interaction, Destruction de masse, Protection, Tuteurs, Synergie, Conditions de victoire"
+    "defaultCategories": "Rampe, Pioche, Interaction, Destruction de masse, Protection, Tuteurs, Synergie, Conditions de victoire",
+    "closeMessage": "Fermer le message",
+    "commanderRefused": {
+      "notACommander": {
+        "title": "{name} ne peut pas être commandant",
+        "detail": "Un commandant doit être une créature légendaire, un Véhicule ou un vaisseau légendaire avec force et endurance, ou une carte qui dit pouvoir être votre commandant. La carte reste à sa place.",
+        "short": "Ne peut pas être commandant"
+      },
+      "invalidPair": {
+        "title": "{name} ne peut pas accompagner {other}",
+        "detail": "Deux commandants ont besoin d'une capacité qui les associe : Partner, Partner with, Friends forever, Choose a Background avec un Background, ou Doctor's companion avec un Docteur. La carte reste à sa place.",
+        "short": "Ne peut pas accompagner {other}"
+      },
+      "tooManyCommanders": {
+        "title": "Ce deck a déjà deux commandants",
+        "detail": "Retirez-en un avant d'en ajouter un autre. La carte reste à sa place.",
+        "short": "Le deck a déjà deux commandants"
+      }
+    }
   },
   "CardSpotlight": {
     "open": "Rechercher une carte…",
@@ -409,7 +430,9 @@
     "replaceWarning": "Les cartes actuelles du deck seront remplacées ; vos commandants restent si la liste n'en indique pas. Vous pourrez annuler avec Ctrl+Z.",
     "back": "Modifier la liste",
     "confirm": "{count, plural, one {Importer # carte} other {Importer # cartes}}",
-    "done": "{count, plural, one {# carte importée} other {# cartes importées}}"
+    "done": "{count, plural, one {# carte importée} other {# cartes importées}}",
+    "illegalCommanderTitle": "Commandant illégal : {names}",
+    "illegalCommanderHelp": "La liste le place dans la zone Commandant et il y sera importé, mais il ne peut pas être commandant de ce deck. Le deck restera invalide tant qu'il n'est pas remplacé."
   },
   "DeckGroups": {
     "commander": "Commandant",

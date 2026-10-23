@@ -13,6 +13,7 @@ function entry(
     manaValue: 0,
     colorIdentity: 0,
     rarity: "common",
+    gameChanger: false,
     priceEur: null,
     priceUsd: null,
     imageUris: null,

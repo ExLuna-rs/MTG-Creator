@@ -106,21 +106,43 @@ export default async function DecksPage({
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {shown.map((deck) => {
-                const cover = deck.commanders[0];
+                const [cover, partner] = deck.commanders;
                 return (
-                  <li key={deck.id}>
+                  <li key={deck.id} className="min-w-0">
                     <Link
                       href={`/decks/${deck.id}/edit`}
                       className="group flex h-full gap-4 rounded-xl border bg-card p-4 text-card-foreground outline-none transition-colors hover:border-primary/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
-                      <div className="w-20 shrink-0">
-                        <CardImage
-                          imageUris={cover?.imageUris ?? null}
-                          name={cover?.name ?? deck.name}
-                          decorative
-                          sizes="80px"
-                        />
-                      </div>
+                      {partner ? (
+                        // Deux commandants : le second se pose sur le
+                        // premier, décalé vers le haut à droite, les deux
+                        // inclinés.
+                        <div className="relative w-28 shrink-0 pt-3.5">
+                          <CardImage
+                            imageUris={cover?.imageUris ?? null}
+                            name={cover?.name ?? deck.name}
+                            decorative
+                            sizes="76px"
+                            className="w-[4.75rem] origin-bottom-left -rotate-6"
+                          />
+                          <CardImage
+                            imageUris={partner.imageUris}
+                            name={partner.name}
+                            decorative
+                            sizes="76px"
+                            className="absolute top-0 left-8 w-[4.75rem] rotate-6 shadow-md"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-20 shrink-0">
+                          <CardImage
+                            imageUris={cover?.imageUris ?? null}
+                            name={cover?.name ?? deck.name}
+                            decorative
+                            sizes="80px"
+                          />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <h2 className="truncate font-semibold group-hover:underline">
                           {deck.name}

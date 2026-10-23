@@ -18,6 +18,7 @@ import {
   isLegality,
   type Legality,
 } from "@/domain/cards/card";
+import { marketLinks, parseBackLink } from "@/domain/cards/links";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { getCard } from "@/server/cards/search";
@@ -99,8 +100,10 @@ async function FaceDetails({
 
 export default async function CardPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/cards/[id]">) {
   const { locale, id } = await params;
+  const back = parseBackLink((await searchParams).from);
   setRequestLocale(locale as Locale);
   const card = await loadCard(id);
   if (!card) notFound();
@@ -124,6 +127,7 @@ export default async function CardPage({
   const scryfallUrl = card.scryfallUri.startsWith("https://scryfall.com/")
     ? card.scryfallUri
     : null;
+  const markets = marketLinks(card.name, locale);
   const price = (value: number | null, currency: "EUR" | "USD") =>
     value === null
       ? t("priceUnavailable")
@@ -132,14 +136,14 @@ export default async function CardPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
       <Link
-        href="/cards"
+        href={back.href}
         className={cn(
           buttonVariants({ variant: "ghost", size: "sm" }),
           "-ml-3",
         )}
       >
         <ArrowLeft aria-hidden />
-        {t("back")}
+        {back.page === "collection" ? t("backToCollection") : t("back")}
       </Link>
 
       <div className="grid gap-8 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
@@ -231,19 +235,45 @@ export default async function CardPage({
             <h2 id="prices" className="font-semibold text-lg">
               {t("prices")}
             </h2>
-            <dl className="grid grid-cols-2 gap-2 text-sm sm:max-w-md">
-              <div className="rounded-md border px-3 py-1.5">
-                <dt className="text-muted-foreground">{t("priceEur")}</dt>
-                <dd className="font-medium tabular-nums">
-                  {price(card.priceEur, "EUR")}
-                </dd>
-              </div>
-              <div className="rounded-md border px-3 py-1.5">
-                <dt className="text-muted-foreground">{t("priceUsd")}</dt>
-                <dd className="font-medium tabular-nums">
-                  {price(card.priceUsd, "USD")}
-                </dd>
-              </div>
+            <dl className="grid gap-2 text-sm sm:max-w-md">
+              {[
+                {
+                  label: t("priceEur"),
+                  value: price(card.priceEur, "EUR"),
+                  href: markets.cardmarket,
+                  link: t("viewOnCardmarket"),
+                },
+                {
+                  label: t("priceUsd"),
+                  value: price(card.priceUsd, "USD"),
+                  href: markets.tcgplayer,
+                  link: t("viewOnTcgplayer"),
+                },
+              ].map((market) => (
+                <div
+                  key={market.href}
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border px-3 py-1.5"
+                >
+                  <div>
+                    <dt className="text-muted-foreground">{market.label}</dt>
+                    <dd className="font-medium tabular-nums">{market.value}</dd>
+                  </div>
+                  <dd>
+                    <a
+                      href={market.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      {market.link}
+                      <ExternalLink aria-hidden />
+                    </a>
+                  </dd>
+                </div>
+              ))}
             </dl>
           </section>
 

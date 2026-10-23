@@ -17,6 +17,7 @@ import { CollectionGrid } from "@/components/collection/collection-grid";
 import { PendingScans } from "@/components/collection/pending-scans";
 import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
+import { pageWithQuery } from "@/domain/cards/links";
 import {
   COLLECTION_SHOWS,
   COLLECTION_SORTS,
@@ -150,7 +151,16 @@ export default async function CollectionPage({
             </p>
           ) : q ? (
             // Une recherche montre le détail : decks et exemplaires.
-            <CollectionDetails entries={shown} usage={usage} decks={decks} />
+            <CollectionDetails
+              entries={shown}
+              usage={usage}
+              decks={decks}
+              from={pageWithQuery("collection", {
+                q,
+                ...(sort !== "name" && { sort }),
+                ...(show !== "all" && { show }),
+              })}
+            />
           ) : (
             <CollectionGrid entries={shown} usage={usage} />
           )}

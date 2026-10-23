@@ -3,7 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { CardImage } from "@/components/cards/card-image";
+import { GameChangerBadge } from "@/components/cards/game-changer-badge";
 import { DeckStatusBadge } from "@/components/decks/deck-status";
+import { cardHref } from "@/domain/cards/links";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import type { CardUsage, DeckStatus } from "@/domain/collection/ownership";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -23,10 +25,13 @@ export function CollectionDetails({
   entries,
   usage,
   decks,
+  from,
 }: {
   entries: CollectionEntry[];
   usage: Record<string, CardUsage>;
   decks: Record<string, DeckInfo>;
+  /** Recherche en cours, où la fiche d'une carte ramènera. */
+  from: string;
 }) {
   const t = useTranslations("CollectionPage");
   const tAssembly = useTranslations("DeckAssembly");
@@ -76,19 +81,20 @@ export function CollectionDetails({
               className="grid grid-cols-[4rem_minmax(0,1fr)] gap-4 rounded-xl border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)]"
             >
               <Link
-                href={`/cards/${card.oracleId}`}
-                className="block self-start rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                href={cardHref(card.oracleId, from)}
+                className="relative block self-start rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <CardImage
                   imageUris={card.imageUris}
                   name={card.name}
                   sizes="96px"
                 />
+                {card.gameChanger && <GameChangerBadge />}
               </Link>
               <div className="min-w-0 space-y-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <Link
-                    href={`/cards/${card.oracleId}`}
+                    href={cardHref(card.oracleId, from)}
                     className="font-semibold hover:underline"
                   >
                     {card.name}

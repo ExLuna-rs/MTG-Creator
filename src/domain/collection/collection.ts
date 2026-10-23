@@ -10,6 +10,7 @@ export interface CollectionEntry {
   manaValue: number;
   colorIdentity: number;
   rarity: string;
+  gameChanger: boolean;
   priceEur: number | null;
   priceUsd: number | null;
   imageUris: CardImageUris | null;

@@ -1,4 +1,5 @@
 import { maxCopies } from "../commander/singleton";
+import { commanderRefusal } from "../commander/validate";
 import type { DeckCardData, DeckEntry, DeckZone } from "./deck";
 
 /** Contenu modifiable d'un deck : ce que la sauvegarde envoie au serveur. */
@@ -108,6 +109,23 @@ export function cleanCategories(categories: readonly string[]): string[] {
   return result.slice(0, MAX_CATEGORIES);
 }
 
+/**
+ * La carte est-elle refusée dans la zone Commandant ? Seul l'import peut y
+ * poser une carte inéligible : il garde la liste telle quelle et la
+ * validation signale l'erreur.
+ */
+function refusedAsCommander(
+  state: EditorState,
+  card: DeckCardData | undefined,
+): boolean {
+  if (!card) return false;
+  const commanders = state.present.entries.flatMap((entry) => {
+    const data = state.cards[entry.oracleId];
+    return entry.zone === "commander" && data ? [data] : [];
+  });
+  return commanderRefusal(card, commanders) !== null;
+}
+
 function updateEntries(state: EditorState, entries: DeckEntry[]): DeckSnapshot {
   return { ...state.present, entries };
 }
@@ -123,6 +141,12 @@ function applyEdit(
     case "add": {
       const added = Math.max(1, Math.floor(action.quantity ?? 1));
       if (!Number.isFinite(added)) return null;
+      if (
+        action.zone === "commander" &&
+        refusedAsCommander(state, action.card)
+      ) {
+        return null;
+      }
       const limit = zoneLimit(action.card, action.zone);
       const existing = entries.find(isEntry(action.card.oracleId, action.zone));
       if (existing) {
@@ -180,6 +204,12 @@ function applyEdit(
       if (action.from === action.to) return null;
       const source = entries.find(isEntry(action.oracleId, action.from));
       if (!source) return null;
+      if (
+        action.to === "commander" &&
+        refusedAsCommander(state, state.cards[action.oracleId])
+      ) {
+        return null;
+      }
       const target = entries.find(isEntry(action.oracleId, action.to));
       const limit = action.to === "commander" ? 1 : MAX_QUANTITY;
       const moved: DeckEntry = target

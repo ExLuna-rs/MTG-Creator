@@ -35,6 +35,7 @@ export async function getCollection(userId: string): Promise<Collection> {
       manaValue: cards.manaValue,
       colorIdentity: cards.colorIdentity,
       rarity: cards.rarity,
+      gameChanger: cards.gameChanger,
       priceEur: cards.priceEur,
       priceUsd: cards.priceUsd,
       imageUris: cards.imageUris,
