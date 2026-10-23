@@ -73,7 +73,7 @@ Docker Compose, sur un VPS
 
 | Couche | Choix | Rôle |
 |---|---|---|
-| Framework | Next.js 16 (16.3.8 au minimum, voir la section Sécurité), React 19.3, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
+| Framework | Next.js 16 (16.4.1 au minimum, voir la section Sécurité), React 19.3, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
 | Interface | Tailwind CSS 4, shadcn/ui, icônes lucide | Composants accessibles et personnalisables |
 | Symboles | mana-font ; icônes d'éditions SVG de Scryfall | Symboles de mana sans appel réseau |
 | Traductions | next-intl | URLs `/fr/…` et `/en/…`, textes traduits, formats de nombres et de dates |
@@ -391,7 +391,7 @@ Demandé le 7 octobre 2026 : savoir où se trouvent physiquement les cartes de s
 
 ### Versions
 
-- **Next.js 16.3.8 au minimum** (publiée le 30 septembre 2026) : c'est la dernière version, et elle corrige toutes les failles connues à ce jour. Parmi elles, une exécution de code à distance dans `next/og` (corrigée en 16.3.6), qui touchait justement les serveurs Node.js auto-hébergés comme le nôtre. **React 19.3.0**. Au 4 octobre 2026, `npm audit` ne signale aucune vulnérabilité connue pour ces versions.
+- **Next.js 16.4.1 au minimum** (16.4.2 installée le 23 octobre 2026 : deux failles critiques et une haute touchent les versions 16.0.0 à 16.4.0, dont un déni de service par les Server Actions). Auparavant, **16.3.8** (publiée le 30 septembre 2026) : c'est la dernière version, et elle corrige toutes les failles connues à ce jour. Parmi elles, une exécution de code à distance dans `next/og` (corrigée en 16.3.6), qui touchait justement les serveurs Node.js auto-hébergés comme le nôtre. **React 19.3.0**. Au 4 octobre 2026, `npm audit` ne signale aucune vulnérabilité connue pour ces versions.
 - Les versions exactes sont figées par le fichier de verrouillage `pnpm-lock.yaml`, et l'image Docker est construite à partir de ce fichier (`pnpm install --frozen-lockfile`).
 
 ### Mises à jour
