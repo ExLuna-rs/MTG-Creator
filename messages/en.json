@@ -72,8 +72,7 @@
     "reset": "Reset",
     "filters": "Filters",
     "activeFilters": "{count, plural, one {# active filter} other {# active filters}}",
-    "colorsLabel": "Color identity within",
-    "colorsHint": "Shows cards playable with these colors. “Colorless” alone: colorless cards only.",
+    "colorsLabel": "Colors",
     "typesLabel": "Types",
     "manaValueLabel": "Mana value",
     "manaValueMin": "Minimum",
@@ -93,7 +92,38 @@
     "pagination": "Pagination",
     "previous": "Previous page",
     "next": "Next page",
-    "pageOf": "Page {page} of {pageCount}"
+    "pageOf": "Page {page} of {pageCount}",
+    "colorModeLabel": "Mode",
+    "colorMode": {
+      "within": "Playable with",
+      "exact": "Exactly",
+      "all": "All these colors",
+      "any": "At least one"
+    },
+    "colorModeHint": {
+      "within": "Cards playable with these colors, colorless included.",
+      "exact": "Cards of exactly these colors, no more, no less.",
+      "all": "Cards with all these colors, with or without others.",
+      "any": "Cards with at least one of these colors."
+    },
+    "colorSourceLabel": "Based on",
+    "colorSource": {
+      "identity": "Color identity",
+      "card": "Card color"
+    },
+    "colorlessHint": "“Colorless” alone: colorless cards only.",
+    "subtypesLabel": "Subtypes",
+    "subtypesPlaceholder": "Dinosaur, Angel, Equipment…",
+    "subtypeSuggestions": "Suggested subtypes",
+    "subtypeCount": "{count, plural, one {# card} other {# cards}}",
+    "removeSubtype": "Remove {name}",
+    "typeModeLabel": "A card must have",
+    "typeMode": {
+      "or": "At least one (OR)",
+      "and": "All (AND)"
+    },
+    "selectPlaceholder": "Choose…",
+    "removeChoice": "Remove {name}"
   },
   "Colors": {
     "W": "White",
@@ -649,5 +679,27 @@
     "inThisDeck": "{copies} of {need} in this deck",
     "freeCopies": "{count, plural, =0 {no free copy} one {# free copy} other {# free copies}} in the collection",
     "heldBy": "{count} in {deck}"
+  },
+  "ActiveFilters": {
+    "label": "Active filters",
+    "colors": "Colors ({mode}): {colors}",
+    "cardColors": "Card color ({mode}): {colors}",
+    "colorless": "Colorless only",
+    "colorMode": {
+      "within": "playable with",
+      "exact": "exactly",
+      "all": "all",
+      "any": "at least one"
+    },
+    "types": "Types: {types}",
+    "and": " AND ",
+    "or": " OR ",
+    "manaValueRange": "Mana value: {min} to {max}",
+    "manaValueMin": "Mana value: at least {min}",
+    "manaValueMax": "Mana value: at most {max}",
+    "rarities": "Rarity: {rarities}",
+    "text": "Text: “{text}”",
+    "remove": "Remove filter: {label}",
+    "clearAll": "Clear all"
   }
 }

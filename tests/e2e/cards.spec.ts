@@ -142,6 +142,103 @@ test("filtre par type et garde les filtres ouverts", async ({ page }) => {
   await expect(cardLink(page, "Lightning Bolt")).toBeVisible();
 });
 
+test("compare les couleurs selon le mode choisi", async ({ page }) => {
+  await page.goto("/fr/cards?q=steam+vents");
+  const vents = cardLink(page, "Steam Vents");
+  await expect(vents).toBeVisible();
+
+  await openFilters(page);
+  await page.getByRole("checkbox", { name: "Bleu" }).check();
+  await page.getByRole("checkbox", { name: "Rouge" }).check();
+  await page.getByRole("radio", { name: "Exactement" }).check();
+  await page.getByRole("button", { name: "Rechercher" }).first().click();
+  await expect(page).toHaveURL(/[?&]cmode=exact/);
+  await expect(vents).toBeVisible();
+
+  // Steam Vents est incolore : il sort selon la couleur de la carte.
+  await page.getByRole("radio", { name: "Couleur de la carte" }).check();
+  await page.getByRole("button", { name: "Rechercher" }).first().click();
+  await expect(page).toHaveURL(/[?&]csrc=card/);
+  await expect(vents).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "Exactement" })).toBeChecked();
+});
+
+test("demande tous les types choisis en mode ET", async ({ page }) => {
+  await page.goto("/fr/cards?q=sol");
+  await expect(cardLink(page, "Sol Ring")).toBeVisible();
+
+  await openFilters(page);
+  await page.getByRole("checkbox", { name: "Artefact" }).check();
+  await page.getByRole("checkbox", { name: "Créature" }).check();
+  await page.getByRole("button", { name: "Rechercher" }).first().click();
+  await expect(page).toHaveURL(/[?&]type=Creature/);
+  await expect(cardLink(page, "Sol Ring")).toBeVisible();
+
+  await page.getByRole("radio", { name: "Tous (ET)" }).check();
+  await page.getByRole("button", { name: "Rechercher" }).first().click();
+  await expect(page).toHaveURL(/[?&]tmode=and/);
+  await expect(cardLink(page, "Solemn Simulacrum")).toBeVisible();
+  await expect(cardLink(page, "Sol Ring")).toHaveCount(0);
+});
+
+test("filtre par sous-type et retire les filtres actifs", async ({ page }) => {
+  // Un filtre actif : le panneau est déjà ouvert.
+  await page.goto("/fr/cards?q=bruna&legal=1");
+  const field = page.getByRole("combobox", { name: "Sous-types" });
+  await field.pressSequentially("ang");
+  await page
+    .getByRole("listbox", { name: "Sous-types suggérés" })
+    .getByRole("option", { name: /^Angel/ })
+    .click();
+  await expect(field).toHaveValue("");
+  await page.getByRole("button", { name: "Rechercher" }).first().click();
+  await expect(page).toHaveURL(/[?&]sub=Angel/);
+  await expect(cardLink(page, "Bruna, the Fading Light")).toBeVisible();
+
+  // Les filtres actifs restent visibles au-dessus des résultats.
+  const active = page.getByRole("list", { name: "Filtres actifs" });
+  await active
+    .getByRole("link", { name: "Retirer le filtre : Types : Angel" })
+    .click();
+  await expect(page).not.toHaveURL(/sub=/);
+  await expect(page).toHaveURL(/[?&]legal=1/);
+
+  await active.getByRole("link", { name: "Tout effacer" }).click();
+  await expect(page).toHaveURL(/\/fr\/cards\?q=bruna$/);
+  await expect(active).toHaveCount(0);
+  await expect(cardLink(page, "Bruna, the Fading Light")).toBeVisible();
+});
+
+test.describe("sur téléphone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("choisit les filtres dans des listes à choix multiple", async ({
+    page,
+  }) => {
+    await page.goto("/fr/cards?q=lightning+bolt");
+    await openFilters(page);
+    // Les pastilles laissent la place aux listes déroulantes.
+    await expect(page.getByRole("checkbox", { name: "Bleu" })).toBeHidden();
+
+    const colors = page.getByRole("button", { name: "Couleurs", exact: true });
+    await colors.click();
+    const list = page.getByRole("listbox", { name: "Couleurs" });
+    await list.getByRole("option", { name: "Bleu" }).click();
+    await list.getByRole("option", { name: "Rouge" }).click();
+    await expect(
+      list.getByRole("option", { name: "Rouge", selected: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(list).toBeHidden();
+
+    // Une pastille du bouton retire son choix.
+    await page.getByRole("button", { name: "Retirer Bleu" }).click();
+    await page.getByRole("button", { name: "Rechercher" }).first().click();
+    await expect(page).toHaveURL(/[?&]color=R$/);
+    await expect(cardLink(page, "Lightning Bolt")).toBeVisible();
+  });
+});
+
 test("relance la recherche dès que le tri change", async ({ page }) => {
   await page.goto("/fr/cards?q=bolt");
   const sort = page.getByLabel("Trier par");
@@ -259,4 +356,14 @@ test("suggère des noms via l'API", async ({ request }) => {
 
   const tooShort = await request.get("/api/cards/suggest?q=a");
   expect(await tooShort.json()).toEqual({ cards: [] });
+});
+
+test("suggère des sous-types via l'API", async ({ request }) => {
+  const response = await request.get("/api/cards/subtypes?q=angel");
+  expect(response.status()).toBe(200);
+  const { subtypes } = await response.json();
+  expect(subtypes[0]).toMatchObject({ name: "Angel" });
+
+  const empty = await request.get("/api/cards/subtypes?q=");
+  expect(await empty.json()).toEqual({ subtypes: [] });
 });

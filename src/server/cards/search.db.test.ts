@@ -6,6 +6,7 @@ import {
   resolveCardNames,
   searchCards,
   suggestCardNames,
+  suggestSubtypes,
 } from "./search";
 
 // Tests sur une vraie base PostgreSQL remplie du jeu de test (172 cartes).
@@ -88,6 +89,68 @@ describe("filtres", () => {
     for (const card of result.cards) {
       expect(card.typeLine, card.name).toMatch(/Instant|Sorcery/);
     }
+  });
+
+  it("compare les couleurs selon le mode choisi", async () => {
+    const identities = async (params: Params) =>
+      new Set(
+        (await search({ ...params, color: ["U", "R"] })).cards.map((card) =>
+          maskToColors(card.colorIdentity).join(""),
+        ),
+      );
+    expect([...(await identities({ cmode: "exact" }))]).toEqual(["UR"]);
+    const all = await identities({ cmode: "all" });
+    expect(all.has("UR")).toBe(true);
+    for (const identity of all) expect(identity).toMatch(/U.*R/);
+    const any = await identities({ cmode: "any" });
+    expect(any.has("U") && any.has("R") && any.has("UR")).toBe(true);
+    expect(any.has("")).toBe(false);
+  });
+
+  it("compare la couleur de la carte plutôt que son identité", async () => {
+    const byIdentity = await names({
+      color: ["U", "R"],
+      cmode: "exact",
+      legal: "1",
+    });
+    expect(byIdentity).toContain("Steam Vents");
+    const byCard = await names({
+      color: ["U", "R"],
+      cmode: "exact",
+      csrc: "card",
+    });
+    expect(byCard).toContain("Fire // Ice");
+    expect(byCard).not.toContain("Steam Vents");
+    // Un terrain est incolore : « Incolore » seul le garde.
+    expect(await names({ color: "C", csrc: "card", type: "Land" })).toContain(
+      "Steam Vents",
+    );
+  });
+
+  it("demande tous les types choisis en mode ET", async () => {
+    const or = await names({ type: ["Artifact", "Creature"] });
+    expect(or).toEqual(
+      expect.arrayContaining(["Sol Ring", "Solemn Simulacrum"]),
+    );
+    const and = await names({ type: ["Artifact", "Creature"], tmode: "and" });
+    expect(and).toContain("Solemn Simulacrum");
+    expect(and).not.toContain("Sol Ring");
+  });
+
+  it("filtre par sous-type, sans tenir compte de la casse", async () => {
+    const angels = await search({ sub: "angel" });
+    expect(angels.total).toBe(3);
+    for (const card of angels.cards) expect(card.typeLine).toContain("Angel");
+    const elfDruids = await search({ sub: ["Elf", "Druid"], tmode: "and" });
+    for (const card of elfDruids.cards) {
+      expect(card.typeLine).toMatch(/Elf.*Druid|Druid.*Elf/);
+    }
+    const either = await search({ sub: ["Elf", "Druid"] });
+    expect(either.total).toBeGreaterThanOrEqual(elfDruids.total);
+    // Les sous-types des deux faces comptent (Zilortha, au dos, est un Dinosaure).
+    expect(await names({ sub: "Dinosaur" })).toEqual([
+      "Invasion of Ikoria // Zilortha, Apex of Ikoria",
+    ]);
   });
 
   it("filtre par valeur de mana", async () => {
@@ -193,6 +256,19 @@ describe("suggestions et fiche carte", () => {
 
   it("renvoie null pour un identifiant inconnu", async () => {
     expect(await getCard("00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+describe("suggestions de sous-types", () => {
+  it("propose d'abord les sous-types qui commencent par la saisie", async () => {
+    const suggestions = await suggestSubtypes("an");
+    expect(suggestions[0]).toEqual({ name: "Angel", count: 3 });
+    expect(suggestions.map((item) => item.name)).toContain("Human");
+  });
+
+  it("résiste aux caractères spéciaux", async () => {
+    expect(await suggestSubtypes("%")).toEqual([]);
+    expect(await suggestSubtypes("  ")).toEqual([]);
   });
 });
 

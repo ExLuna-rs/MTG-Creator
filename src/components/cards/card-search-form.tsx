@@ -11,14 +11,25 @@ import {
 } from "react";
 import { CardNameInput } from "@/components/cards/card-name-input";
 import { ManaSymbol } from "@/components/cards/mana-text";
+import { SubtypeInput } from "@/components/cards/subtype-input";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  MultiSelect,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select";
 import { RARITIES } from "@/domain/cards/card";
 import {
   CARD_SORTS,
   type CardSearch,
+  COLOR_MODES,
+  COLOR_SOURCES,
+  type ColorMode,
+  type ColorSource,
   countActiveFilters,
   defaultCardSort,
   IDENTITY_FILTER_COLORS,
+  TYPE_MODES,
+  type TypeMode,
 } from "@/domain/cards/search-query";
 import { CARD_TYPES } from "@/domain/cards/type-line";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -29,7 +40,13 @@ interface Draft {
   q: string;
   text: string;
   color: string[];
+  cmode: ColorMode;
+  csrc: ColorSource;
   type: string[];
+  sub: string[];
+  /** Sous-type en cours de saisie, pas encore ajouté. */
+  subText: string;
+  tmode: TypeMode;
   rarity: string[];
   mvMin: string;
   mvMax: string;
@@ -44,7 +61,12 @@ const EMPTY_DRAFT: Draft = {
   q: "",
   text: "",
   color: [],
+  cmode: "within",
+  csrc: "identity",
   type: [],
+  sub: [],
+  subText: "",
+  tmode: "or",
   rarity: [],
   mvMin: "",
   mvMax: "",
@@ -59,7 +81,12 @@ function toDraft(search: CardSearch): Draft {
     q: search.name,
     text: search.text,
     color: search.colors,
+    cmode: search.colorMode,
+    csrc: search.colorSource,
     type: search.types,
+    sub: search.subtypes,
+    subText: "",
+    tmode: search.typeMode,
     rarity: search.rarities,
     mvMin: search.manaValueMin?.toString() ?? "",
     mvMax: search.manaValueMax?.toString() ?? "",
@@ -83,8 +110,20 @@ function toQuery(draft: Draft): Record<string, string | string[]> {
   for (const key of ["legal", "commander", "gc"] as const) {
     if (draft[key]) query[key] = "1";
   }
+  const subtypes = [...draft.sub, draft.subText.trim()].filter(Boolean);
+  if (subtypes.length > 0) query.sub = subtypes;
+  if (draft.cmode !== "within") query.cmode = draft.cmode;
+  if (draft.csrc !== "identity") query.csrc = draft.csrc;
+  if (draft.tmode !== "or") query.tmode = draft.tmode;
   return query;
 }
+
+/** Cases « Options » : paramètre d'URL et libellé. */
+const FLAG_OPTIONS = [
+  ["legal", "commanderLegal"],
+  ["commander", "canBeCommander"],
+  ["gc", "gameChanger"],
+] as const;
 
 function toggle(values: string[], value: string, checked: boolean): string[] {
   return checked ? [...values, value] : values.filter((item) => item !== value);
@@ -127,15 +166,64 @@ function Chip({
   );
 }
 
+/** Choix exclusif affiché comme des boutons accolés (boutons radio). */
+function Segmented<T extends string>({
+  legend,
+  name,
+  options,
+  value,
+  onValueChange,
+  label,
+}: {
+  legend: string;
+  name: string;
+  options: readonly T[];
+  value: T;
+  onValueChange: (value: T) => void;
+  label: (option: T) => string;
+}) {
+  return (
+    <fieldset className="min-w-0 space-y-1.5">
+      <legend className="text-muted-foreground text-sm">{legend}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((option) => (
+          <label
+            key={option}
+            className="relative cursor-pointer select-none rounded-md border px-3 py-1 font-medium text-sm transition-colors hover:bg-accent has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={value === option}
+              onChange={() => onValueChange(option)}
+              className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+            />
+            {label(option)}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 function Group({
   legend,
   hint,
+  select,
   children,
 }: {
   legend: string;
   hint?: string;
+  /** Sur téléphone, liste déroulante à choix multiple à la place des pastilles. */
+  select?: {
+    options: readonly MultiSelectOption[];
+    values: string[];
+    onValuesChange: (values: string[]) => void;
+  };
   children: ReactNode;
 }) {
+  const t = useTranslations("CardSearch");
   const hintId = useId();
   return (
     <fieldset
@@ -148,7 +236,25 @@ function Group({
           {hint}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">{children}</div>
+      {select && (
+        <MultiSelect
+          label={legend}
+          placeholder={t("selectPlaceholder")}
+          removeLabel={(option) => t("removeChoice", { name: option })}
+          {...select}
+          className="md:hidden [@media(scripting:none)]:hidden"
+        />
+      )}
+      {/* Les pastilles portent les champs du formulaire : masquées, elles sont
+          quand même envoyées (et affichées sans JavaScript). */}
+      <div
+        className={cn(
+          "flex flex-wrap gap-2",
+          select && "max-md:hidden [@media(scripting:none)]:flex",
+        )}
+      >
+        {children}
+      </div>
     </fieldset>
   );
 }
@@ -270,41 +376,110 @@ export function CardSearchForm({
           </summary>
 
           <div className="grid gap-6 border-t p-4 md:grid-cols-2">
-            <Group legend={t("colorsLabel")} hint={t("colorsHint")}>
-              {IDENTITY_FILTER_COLORS.map((color) => (
-                <Chip
-                  key={color}
-                  name="color"
-                  value={color}
-                  checked={draft.color.includes(color)}
-                  onCheckedChange={(checked) =>
-                    update("color", toggle(draft.color, color, checked))
-                  }
+            <div className="min-w-0 space-y-3">
+              <Group
+                legend={t("colorsLabel")}
+                select={{
+                  options: IDENTITY_FILTER_COLORS.map((color) => ({
+                    value: color,
+                    label: tColors(color),
+                    icon: (
+                      <span aria-hidden>
+                        <ManaSymbol symbol={`{${color}}`} />
+                      </span>
+                    ),
+                  })),
+                  values: draft.color,
+                  onValuesChange: (values) => update("color", values),
+                }}
+              >
+                {IDENTITY_FILTER_COLORS.map((color) => (
+                  <Chip
+                    key={color}
+                    name="color"
+                    value={color}
+                    checked={draft.color.includes(color)}
+                    onCheckedChange={(checked) =>
+                      update("color", toggle(draft.color, color, checked))
+                    }
+                  >
+                    <span aria-hidden>
+                      <ManaSymbol symbol={`{${color}}`} />
+                    </span>
+                    {tColors(color)}
+                  </Chip>
+                ))}
+              </Group>
+              <Segmented
+                legend={t("colorModeLabel")}
+                name="cmode"
+                options={COLOR_MODES}
+                value={draft.cmode}
+                onValueChange={(value) => update("cmode", value)}
+                label={(mode) => t(`colorMode.${mode}`)}
+              />
+              <Segmented
+                legend={t("colorSourceLabel")}
+                name="csrc"
+                options={COLOR_SOURCES}
+                value={draft.csrc}
+                onValueChange={(value) => update("csrc", value)}
+                label={(source) => t(`colorSource.${source}`)}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t(`colorModeHint.${draft.cmode}`)} {t("colorlessHint")}
+              </p>
+            </div>
+            <div className="min-w-0 space-y-3">
+              <Group
+                legend={t("typesLabel")}
+                select={{
+                  options: CARD_TYPES.map((type) => ({
+                    value: type,
+                    label: tTypes(type),
+                  })),
+                  values: draft.type,
+                  onValuesChange: (values) => update("type", values),
+                }}
+              >
+                {CARD_TYPES.map((type) => (
+                  <Chip
+                    key={type}
+                    name="type"
+                    value={type}
+                    checked={draft.type.includes(type)}
+                    onCheckedChange={(checked) =>
+                      update("type", toggle(draft.type, type, checked))
+                    }
+                  >
+                    {tTypes(type)}
+                  </Chip>
+                ))}
+              </Group>
+              <div className="space-y-2">
+                <label
+                  htmlFor={`${id}-sub`}
+                  className="block font-medium text-sm"
                 >
-                  <span aria-hidden>
-                    <ManaSymbol symbol={`{${color}}`} />
-                  </span>
-                  {tColors(color)}
-                </Chip>
-              ))}
-            </Group>
-
-            <Group legend={t("typesLabel")}>
-              {CARD_TYPES.map((type) => (
-                <Chip
-                  key={type}
-                  name="type"
-                  value={type}
-                  checked={draft.type.includes(type)}
-                  onCheckedChange={(checked) =>
-                    update("type", toggle(draft.type, type, checked))
-                  }
-                >
-                  {tTypes(type)}
-                </Chip>
-              ))}
-            </Group>
-
+                  {t("subtypesLabel")}
+                </label>
+                <SubtypeInput
+                  id={`${id}-sub`}
+                  values={draft.sub}
+                  onValuesChange={(values) => update("sub", values)}
+                  text={draft.subText}
+                  onTextChange={(text) => update("subText", text)}
+                />
+              </div>
+              <Segmented
+                legend={t("typeModeLabel")}
+                name="tmode"
+                options={TYPE_MODES}
+                value={draft.tmode}
+                onValueChange={(value) => update("tmode", value)}
+                label={(mode) => t(`typeMode.${mode}`)}
+              />
+            </div>
             <Group legend={t("manaValueLabel")}>
               {(["mvMin", "mvMax"] as const).map((key) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
@@ -323,8 +498,17 @@ export function CardSearchForm({
                 </label>
               ))}
             </Group>
-
-            <Group legend={t("rarityLabel")}>
+            <Group
+              legend={t("rarityLabel")}
+              select={{
+                options: RARITIES.map((rarity) => ({
+                  value: rarity,
+                  label: tRarities(rarity),
+                })),
+                values: draft.rarity,
+                onValuesChange: (values) => update("rarity", values),
+              }}
+            >
               {RARITIES.map((rarity) => (
                 <Chip
                   key={rarity}
@@ -339,7 +523,6 @@ export function CardSearchForm({
                 </Chip>
               ))}
             </Group>
-
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor={`${id}-text`}
@@ -358,15 +541,26 @@ export function CardSearchForm({
                 className={inputClassName}
               />
             </div>
-
-            <Group legend={t("optionsLabel")}>
-              {(
-                [
-                  ["legal", "commanderLegal"],
-                  ["commander", "canBeCommander"],
-                  ["gc", "gameChanger"],
-                ] as const
-              ).map(([key, label]) => (
+            <Group
+              legend={t("optionsLabel")}
+              select={{
+                options: FLAG_OPTIONS.map(([key, label]) => ({
+                  value: key,
+                  label: t(label),
+                })),
+                values: FLAG_OPTIONS.map(([key]) => key).filter(
+                  (key) => draft[key],
+                ),
+                onValuesChange: (values) =>
+                  setDraft((current) => ({
+                    ...current,
+                    ...Object.fromEntries(
+                      FLAG_OPTIONS.map(([key]) => [key, values.includes(key)]),
+                    ),
+                  })),
+              }}
+            >
+              {FLAG_OPTIONS.map(([key, label]) => (
                 <Chip
                   key={key}
                   name={key}

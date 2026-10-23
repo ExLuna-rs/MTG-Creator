@@ -325,6 +325,15 @@ Un premier testeur a fait ses retours ; ils sont rangés en six lots (plan valid
 - « Mes decks » : avec deux commandants, le second se pose sur le premier, décalé vers le haut à droite.
 - Zone Commandant : une carte qui ne peut pas être commandant, ou qui ne forme pas une paire avec le commandant en place, est refusée (zone en rouge au survol, message après le dépôt, option grisée avec la raison dans la fenêtre de la carte ; `commanderRefusal` dans `src/domain/commander/validate.ts`). L'import d'une liste reste libre mais prévient : « Commandant illégal ».
 
+**Lot 2 (filtres de recherche)** : fait.
+
+- Couleurs : quatre modes (`cmode`) : « Jouable avec » (par défaut, l'identité tient dans les couleurs choisies, incolores comprises), « Exactement », « Toutes ces couleurs », « Au moins une » ; et le choix entre identité couleur et couleur de la carte (`csrc`). « Incolore » seul garde les cartes incolores quel que soit le mode (`colorFilter` dans `src/domain/cards/search-query.ts`).
+- Types : interrupteur OU / ET (`tmode`, OU par défaut), qui vaut aussi pour les sous-types.
+- Sous-types (`sub`, dix au plus) : champ avec suggestions (`/api/cards/subtypes`, avec le nombre de cartes), en anglais en attendant les cartes en français ; la comparaison ignore la casse et porte sur les deux faces.
+- Filtres actifs en pastilles au-dessus des résultats : chacune est un lien vers la même recherche sans elle ; « Tout effacer » garde le nom et le tri.
+- Sur téléphone, les couleurs, types, raretés et options se choisissent dans des listes déroulantes à choix multiple, façon shadcn/ui (`src/components/ui/multi-select.tsx`) ; sans JavaScript, les pastilles restent affichées.
+- Le filtre par extension attend le lot 5.
+
 ### Phase 6 et suivantes
 
 Selon les priorités, dans la liste « Plus tard ».

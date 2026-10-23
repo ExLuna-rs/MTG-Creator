@@ -72,8 +72,7 @@
     "reset": "Réinitialiser",
     "filters": "Filtres",
     "activeFilters": "{count, plural, one {# filtre actif} other {# filtres actifs}}",
-    "colorsLabel": "Identité couleur comprise dans",
-    "colorsHint": "Affiche les cartes jouables avec ces couleurs. « Incolore » seul : uniquement les cartes incolores.",
+    "colorsLabel": "Couleurs",
     "typesLabel": "Types",
     "manaValueLabel": "Valeur de mana",
     "manaValueMin": "Minimum",
@@ -93,7 +92,38 @@
     "pagination": "Pagination",
     "previous": "Page précédente",
     "next": "Page suivante",
-    "pageOf": "Page {page} sur {pageCount}"
+    "pageOf": "Page {page} sur {pageCount}",
+    "colorModeLabel": "Mode",
+    "colorMode": {
+      "within": "Jouable avec",
+      "exact": "Exactement",
+      "all": "Toutes ces couleurs",
+      "any": "Au moins une"
+    },
+    "colorModeHint": {
+      "within": "Cartes jouables avec ces couleurs, incolores comprises.",
+      "exact": "Cartes de ces couleurs exactement, ni plus ni moins.",
+      "all": "Cartes qui ont toutes ces couleurs, avec ou sans autres.",
+      "any": "Cartes qui ont au moins une de ces couleurs."
+    },
+    "colorSourceLabel": "Selon",
+    "colorSource": {
+      "identity": "Identité couleur",
+      "card": "Couleur de la carte"
+    },
+    "colorlessHint": "« Incolore » seul : uniquement les cartes incolores.",
+    "subtypesLabel": "Sous-types",
+    "subtypesPlaceholder": "Dinosaur, Angel, Equipment…",
+    "subtypeSuggestions": "Sous-types suggérés",
+    "subtypeCount": "{count, plural, one {# carte} other {# cartes}}",
+    "removeSubtype": "Retirer {name}",
+    "typeModeLabel": "Une carte doit avoir",
+    "typeMode": {
+      "or": "Au moins un (OU)",
+      "and": "Tous (ET)"
+    },
+    "selectPlaceholder": "Choisir…",
+    "removeChoice": "Retirer {name}"
   },
   "Colors": {
     "W": "Blanc",
@@ -649,5 +679,27 @@
     "inThisDeck": "{copies} sur {need} dans ce deck",
     "freeCopies": "{count, plural, =0 {aucun exemplaire libre} one {# exemplaire libre} other {# exemplaires libres}} dans la collection",
     "heldBy": "{count} dans {deck}"
+  },
+  "ActiveFilters": {
+    "label": "Filtres actifs",
+    "colors": "Couleurs ({mode}) : {colors}",
+    "cardColors": "Couleur de la carte ({mode}) : {colors}",
+    "colorless": "Incolores uniquement",
+    "colorMode": {
+      "within": "jouable avec",
+      "exact": "exactement",
+      "all": "toutes",
+      "any": "au moins une"
+    },
+    "types": "Types : {types}",
+    "and": " ET ",
+    "or": " OU ",
+    "manaValueRange": "Valeur de mana : {min} à {max}",
+    "manaValueMin": "Valeur de mana : au moins {min}",
+    "manaValueMax": "Valeur de mana : au plus {max}",
+    "rarities": "Rareté : {rarities}",
+    "text": "Texte : « {text} »",
+    "remove": "Retirer le filtre : {label}",
+    "clearAll": "Tout effacer"
   }
 }

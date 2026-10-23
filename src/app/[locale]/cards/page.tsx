@@ -2,6 +2,7 @@ import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import type { Locale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ActiveFilters } from "@/components/cards/active-filters";
 import { CardGrid, type PriceCurrency } from "@/components/cards/card-grid";
 import { CardPagination } from "@/components/cards/card-pagination";
 import { CardSearchForm } from "@/components/cards/card-search-form";
@@ -57,6 +58,7 @@ export default async function CardsPage({
       />
 
       <section aria-labelledby="card-results" className="space-y-6">
+        <ActiveFilters search={search} />
         <h2
           id="card-results"
           aria-live="polite"
