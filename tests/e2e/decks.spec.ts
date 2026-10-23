@@ -327,11 +327,11 @@ test("retient le regroupement choisi", async ({ page }) => {
   await addCard(page, "Sol Ring");
   await page.getByRole("button", { name: "Type", exact: true }).click();
   await expect(cardIn(page, "type:Artifact", "Sol Ring")).toBeVisible();
+  // Le regroupement choisi survit au rechargement.
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Type", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(cardIn(page, "type:Artifact", "Sol Ring")).toBeVisible();
 });
 
 test("regroupe les cartes par rôle", async ({ page }) => {

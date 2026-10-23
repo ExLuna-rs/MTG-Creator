@@ -21,6 +21,13 @@ import { cn } from "@/lib/utils";
 import { deleteDeckAction } from "@/server/decks/actions";
 import { CardPreview } from "./card-preview";
 import { CardSpotlight } from "./card-spotlight";
+import {
+  DeckAssemblyNotice,
+  DeckAssemblyToggle,
+  type DeckOwnershipData,
+  OwnershipProvider,
+  useDeckOwnership,
+} from "./deck-assembly";
 import { DECK_VIEWS, DeckBoard, type DeckView } from "./deck-board";
 import { DeckImport } from "./deck-import";
 import { DeckStats } from "./deck-stats";
@@ -71,12 +78,14 @@ export function DeckEditor({
   name,
   entries,
   cards,
+  ownership,
   defaultCategories,
 }: {
   deckId: string;
   name: string;
   entries: DeckEntry[];
   cards: DeckCardData[];
+  ownership: DeckOwnershipData;
   defaultCategories: string[];
 }) {
   const t = useTranslations("DeckEditor");
@@ -109,6 +118,13 @@ export function DeckEditor({
     }
     return result;
   }, [deck]);
+
+  const owning = useDeckOwnership({
+    deckId,
+    ownership,
+    needs: quantities,
+    saved: status === "saved",
+  });
 
   const categories = useMemo(
     () => [
@@ -158,131 +174,138 @@ export function DeckEditor({
   const previewCard = preview ?? commanders[0]?.card ?? null;
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center gap-3">
-        <DeckName
-          key={state.present.name}
-          name={state.present.name}
-          onRename={(value) => dispatch({ type: "rename", name: value })}
-        />
-        <SaveIndicator status={status} onRetry={retry} />
-        <div className="ml-auto flex flex-wrap items-center gap-1">
-          <DeckImport
-            onImport={(imported, importedCards, replace) =>
-              dispatch({
-                type: "import",
-                entries: mergeImport(
-                  state.present.entries,
-                  imported,
-                  {
-                    ...state.cards,
-                    ...Object.fromEntries(
-                      importedCards.map((card) => [card.oracleId, card]),
-                    ),
-                  },
-                  { replace },
-                ),
-                cards: importedCards,
-              })
-            }
+    <OwnershipProvider value={owning.context}>
+      <div className="space-y-4">
+        <header className="flex flex-wrap items-center gap-3">
+          <DeckName
+            key={state.present.name}
+            name={state.present.name}
+            onRename={(value) => dispatch({ type: "rename", name: value })}
           />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => dispatch({ type: "undo" })}
-            disabled={state.past.length === 0}
-            aria-label={t("undo")}
-            title={t("undoShortcut")}
-          >
-            <Undo2 aria-hidden />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => dispatch({ type: "redo" })}
-            disabled={state.future.length === 0}
-            aria-label={t("redo")}
-            title={t("redoShortcut")}
-          >
-            <Redo2 aria-hidden />
-          </Button>
-          <form
-            action={deleteDeckAction}
-            onSubmit={(event) => {
-              if (!window.confirm(t("deleteConfirm"))) event.preventDefault();
-            }}
-          >
-            <input type="hidden" name="deckId" value={deckId} />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              aria-label={t("delete")}
-              title={t("delete")}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 aria-hidden />
-            </Button>
-          </form>
-        </div>
-      </header>
-
-      <div className="grid gap-6 rounded-xl border p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-        <ValidationPanel validation={validation} />
-        <DeckStats stats={stats} />
-      </div>
-
-      <div
-        className={cn(
-          "grid items-start gap-6",
-          view === "list" && "lg:grid-cols-[minmax(0,1fr)_18rem]",
-        )}
-      >
-        <section aria-labelledby="deck-title" className="min-w-0 space-y-4">
-          <h2 id="deck-title" className="sr-only">
-            {t("deckTitle", { count: validation.size })}
-          </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <CardSpotlight
-              identity={commanders.length > 0 ? validation.colorIdentity : null}
-              quantities={quantities}
-              onAdd={(card, zone, quantity) =>
-                dispatch({ type: "add", card, zone, quantity })
+          <SaveIndicator status={status} onRetry={retry} />
+          <DeckAssemblyToggle state={owning} />
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            <DeckImport
+              onImport={(imported, importedCards, replace) =>
+                dispatch({
+                  type: "import",
+                  entries: mergeImport(
+                    state.present.entries,
+                    imported,
+                    {
+                      ...state.cards,
+                      ...Object.fromEntries(
+                        importedCards.map((card) => [card.oracleId, card]),
+                      ),
+                    },
+                    { replace },
+                  ),
+                  cards: importedCards,
+                })
               }
             />
-            <Toggle
-              legend={t("display")}
-              values={DECK_VIEWS}
-              value={view}
-              label={(value) => t(`views.${value}`)}
-              onChange={changeView}
-            />
-            <Toggle
-              legend={t("groupBy")}
-              values={GROUP_MODES}
-              value={mode}
-              label={(value) => t(`groupModes.${value}`)}
-              onChange={changeMode}
-            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => dispatch({ type: "undo" })}
+              disabled={state.past.length === 0}
+              aria-label={t("undo")}
+              title={t("undoShortcut")}
+            >
+              <Undo2 aria-hidden />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => dispatch({ type: "redo" })}
+              disabled={state.future.length === 0}
+              aria-label={t("redo")}
+              title={t("redoShortcut")}
+            >
+              <Redo2 aria-hidden />
+            </Button>
+            <form
+              action={deleteDeckAction}
+              onSubmit={(event) => {
+                if (!window.confirm(t("deleteConfirm"))) event.preventDefault();
+              }}
+            >
+              <input type="hidden" name="deckId" value={deckId} />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                aria-label={t("delete")}
+                title={t("delete")}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 aria-hidden />
+              </Button>
+            </form>
           </div>
-          <DeckBoard
-            deck={deck}
-            view={view}
-            mode={mode}
-            cardIssues={validation.cardIssues}
-            categories={categories}
-            dispatch={dispatch}
-            onPreview={setPreview}
-          />
-        </section>
+        </header>
 
-        {view === "list" && previewCard && (
-          <aside className="hidden lg:sticky lg:top-4 lg:block">
-            <CardPreview card={previewCard} />
-          </aside>
-        )}
+        <DeckAssemblyNotice state={owning} cards={state.cards} />
+
+        <div className="grid gap-6 rounded-xl border p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+          <ValidationPanel validation={validation} />
+          <DeckStats stats={stats} />
+        </div>
+
+        <div
+          className={cn(
+            "grid items-start gap-6",
+            view === "list" && "lg:grid-cols-[minmax(0,1fr)_18rem]",
+          )}
+        >
+          <section aria-labelledby="deck-title" className="min-w-0 space-y-4">
+            <h2 id="deck-title" className="sr-only">
+              {t("deckTitle", { count: validation.size })}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardSpotlight
+                identity={
+                  commanders.length > 0 ? validation.colorIdentity : null
+                }
+                quantities={quantities}
+                onAdd={(card, zone, quantity) =>
+                  dispatch({ type: "add", card, zone, quantity })
+                }
+              />
+              <Toggle
+                legend={t("display")}
+                values={DECK_VIEWS}
+                value={view}
+                label={(value) => t(`views.${value}`)}
+                onChange={changeView}
+              />
+              <Toggle
+                legend={t("groupBy")}
+                values={GROUP_MODES}
+                value={mode}
+                label={(value) => t(`groupModes.${value}`)}
+                onChange={changeMode}
+              />
+            </div>
+            <DeckBoard
+              deck={deck}
+              view={view}
+              mode={mode}
+              cardIssues={validation.cardIssues}
+              categories={categories}
+              dispatch={dispatch}
+              onPreview={setPreview}
+            />
+          </section>
+
+          {view === "list" && previewCard && (
+            <aside className="hidden lg:sticky lg:top-4 lg:block">
+              <CardPreview card={previewCard} />
+            </aside>
+          )}
+        </div>
       </div>
-    </div>
+    </OwnershipProvider>
   );
 }
 

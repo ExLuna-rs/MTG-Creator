@@ -210,6 +210,9 @@ export const decks = pgTable(
       .default("private"),
     // Carte dont l'illustration sert de couverture (par défaut, le commandant).
     coverOracleId: uuid("cover_oracle_id"),
+    // Deck monté : ses cartes reçoivent des exemplaires physiques de la
+    // collection (table `deck_card_copy`). Sinon, il est en construction.
+    assembled: boolean("assembled").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -239,6 +242,26 @@ export const deckCards = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.zone, table.oracleId] }),
+  ],
+);
+
+/**
+ * Exemplaires physiques de la collection rangés dans un deck monté, par carte
+ * (toutes zones jouées confondues). Jamais plus que ce que le deck demande, ni,
+ * tous decks confondus, que ce que la collection possède.
+ */
+export const deckCardCopies = pgTable(
+  "deck_card_copy",
+  {
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    oracleId: uuid("oracle_id").notNull(),
+    quantity: smallint("quantity").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deckId, table.oracleId] }),
+    index("deck_card_copy_oracle_id_idx").on(table.oracleId),
   ],
 );
 

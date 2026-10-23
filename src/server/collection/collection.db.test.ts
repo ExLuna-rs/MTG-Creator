@@ -104,7 +104,11 @@ describe("liens de scan", () => {
       userName: "Test",
       scanSessionId: id,
     });
-    expect(await findScanSession(`${token.slice(0, -1)}A`, now)).toBeNull();
+    // Un autre dernier caractère (le jeton finit par « A » une fois sur 16).
+    const otherLast = token.endsWith("A") ? "E" : "A";
+    expect(
+      await findScanSession(`${token.slice(0, -1)}${otherLast}`, now),
+    ).toBeNull();
 
     // Chaque utilisation repousse l'expiration, sans dépasser la durée maximale.
     const later = new Date(now.getTime() + SCAN_SESSION_IDLE_MS - 1000);

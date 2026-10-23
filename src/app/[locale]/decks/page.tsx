@@ -6,13 +6,19 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server";
+import { z } from "zod";
 import { CardImage } from "@/components/cards/card-image";
 import { ColorIdentity } from "@/components/decks/color-identity";
+import { DeckStatusBadge } from "@/components/decks/deck-status";
 import { buttonVariants } from "@/components/ui/button";
+import { DECK_STATUSES } from "@/domain/collection/ownership";
 import { COMMANDER_DECK_SIZE } from "@/domain/deck/deck";
 import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 import { requireSession } from "@/server/auth/session";
 import { listDecks } from "@/server/decks/decks";
+
+const statusFilter = z.enum(DECK_STATUSES).optional().catch(undefined);
 
 export async function generateMetadata({
   params,
@@ -27,14 +33,26 @@ export async function generateMetadata({
 
 export default async function DecksPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/decks">) {
   const { locale } = await params;
   setRequestLocale(locale as Locale);
   const { user } = await requireSession(locale as Locale, "/decks");
   const t = await getTranslations("DecksPage");
+  const tStatus = await getTranslations("DeckStatus");
   const format = await getFormatter();
   const decks = await listDecks(user.id);
   const currency = locale === "en" ? "USD" : "EUR";
+  const raw = (await searchParams).status;
+  const status = statusFilter.parse(typeof raw === "string" ? raw : undefined);
+  const shown = status ? decks.filter((deck) => deck.status === status) : decks;
+  const filters = [undefined, ...DECK_STATUSES].map((value) => ({
+    value,
+    label: value ? tStatus(value) : t("filterAll"),
+    count: value
+      ? decks.filter((deck) => deck.status === value).length
+      : decks.length,
+  }));
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
@@ -59,93 +77,132 @@ export default async function DecksPage({
           <p className="mt-1 text-muted-foreground text-sm">{t("emptyHint")}</p>
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {decks.map((deck) => {
-            const [cover, partner] = deck.commanders;
-            return (
-              <li key={deck.id} className="min-w-0">
-                <Link
-                  href={`/decks/${deck.id}/edit`}
-                  className="group flex h-full gap-4 rounded-xl border bg-card p-4 text-card-foreground outline-none transition-colors hover:border-primary/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                >
-                  {partner ? (
-                    // Deux commandants : le second se pose sur le premier,
-                    // décalé vers le haut à droite, les deux inclinés.
-                    <div className="relative w-28 shrink-0 pt-3.5">
-                      <CardImage
-                        imageUris={cover?.imageUris ?? null}
-                        name={cover?.name ?? deck.name}
-                        decorative
-                        sizes="76px"
-                        className="w-[4.75rem] origin-bottom-left -rotate-6"
-                      />
-                      <CardImage
-                        imageUris={partner.imageUris}
-                        name={partner.name}
-                        decorative
-                        sizes="76px"
-                        className="absolute top-0 left-8 w-[4.75rem] rotate-6 shadow-md"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-20 shrink-0">
-                      <CardImage
-                        imageUris={cover?.imageUris ?? null}
-                        name={cover?.name ?? deck.name}
-                        decorative
-                        sizes="80px"
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <h2 className="truncate font-semibold group-hover:underline">
-                      {deck.name}
-                    </h2>
-                    <p className="truncate text-muted-foreground text-sm">
-                      {deck.commanders.map((card) => card.name).join(" & ") ||
-                        t("noCommander")}
-                    </p>
-                    <ColorIdentity mask={deck.colorIdentity} />
-                    <p className="flex items-center gap-1.5 text-sm">
-                      {deck.valid ? (
-                        <CircleCheck
-                          className="size-4 text-primary"
-                          aria-hidden
-                        />
+        <div className="space-y-4">
+          <nav aria-label={t("filter")} className="flex flex-wrap gap-2">
+            {filters.map((filter) => (
+              <Link
+                key={filter.value ?? "all"}
+                href={
+                  filter.value
+                    ? { pathname: "/decks", query: { status: filter.value } }
+                    : "/decks"
+                }
+                aria-current={filter.value === status ? "page" : undefined}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  filter.value === status &&
+                    "border-foreground bg-foreground text-background hover:bg-foreground",
+                )}
+              >
+                {filter.label}
+                <span className="ml-1.5 tabular-nums opacity-70">
+                  {filter.count}
+                </span>
+              </Link>
+            ))}
+          </nav>
+          {shown.length === 0 ? (
+            <p className="text-muted-foreground">{t("noMatch")}</p>
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {shown.map((deck) => {
+                const [cover, partner] = deck.commanders;
+                return (
+                  <li key={deck.id} className="min-w-0">
+                    <Link
+                      href={`/decks/${deck.id}/edit`}
+                      className="group flex h-full gap-4 rounded-xl border bg-card p-4 text-card-foreground outline-none transition-colors hover:border-primary/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                      {partner ? (
+                        // Deux commandants : le second se pose sur le
+                        // premier, décalé vers le haut à droite, les deux
+                        // inclinés.
+                        <div className="relative w-28 shrink-0 pt-3.5">
+                          <CardImage
+                            imageUris={cover?.imageUris ?? null}
+                            name={cover?.name ?? deck.name}
+                            decorative
+                            sizes="76px"
+                            className="w-[4.75rem] origin-bottom-left -rotate-6"
+                          />
+                          <CardImage
+                            imageUris={partner.imageUris}
+                            name={partner.name}
+                            decorative
+                            sizes="76px"
+                            className="absolute top-0 left-8 w-[4.75rem] rotate-6 shadow-md"
+                          />
+                        </div>
                       ) : (
-                        <CircleAlert
-                          className="size-4 text-destructive"
-                          aria-hidden
-                        />
+                        <div className="w-20 shrink-0">
+                          <CardImage
+                            imageUris={cover?.imageUris ?? null}
+                            name={cover?.name ?? deck.name}
+                            decorative
+                            sizes="80px"
+                          />
+                        </div>
                       )}
-                      <span className="tabular-nums">
-                        {t("cards", {
-                          count: deck.cardCount,
-                          expected: COMMANDER_DECK_SIZE,
-                        })}
-                      </span>
-                      <span className="text-muted-foreground">
-                        · {deck.valid ? t("valid") : t("invalid")}
-                      </span>
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {format.number(
-                        currency === "EUR" ? deck.priceEur : deck.priceUsd,
-                        { style: "currency", currency },
-                      )}
-                      {" · "}
-                      {t("updated", {
-                        date: format.dateTime(deck.updatedAt, {
-                          dateStyle: "medium",
-                        }),
-                      })}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <h2 className="truncate font-semibold group-hover:underline">
+                          {deck.name}
+                        </h2>
+                        <p className="truncate text-muted-foreground text-sm">
+                          {deck.commanders
+                            .map((card) => card.name)
+                            .join(" & ") || t("noCommander")}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <DeckStatusBadge status={deck.status} />
+                          <ColorIdentity mask={deck.colorIdentity} />
+                        </div>
+                        {deck.missingCopies > 0 && (
+                          <p className="font-medium text-destructive text-xs">
+                            {t("missingCopies", { count: deck.missingCopies })}
+                          </p>
+                        )}
+                        <p className="flex items-center gap-1.5 text-sm">
+                          {deck.valid ? (
+                            <CircleCheck
+                              className="size-4 text-primary"
+                              aria-hidden
+                            />
+                          ) : (
+                            <CircleAlert
+                              className="size-4 text-destructive"
+                              aria-hidden
+                            />
+                          )}
+                          <span className="tabular-nums">
+                            {t("cards", {
+                              count: deck.cardCount,
+                              expected: COMMANDER_DECK_SIZE,
+                            })}
+                          </span>
+                          <span className="text-muted-foreground">
+                            · {deck.valid ? t("valid") : t("invalid")}
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {format.number(
+                            currency === "EUR" ? deck.priceEur : deck.priceUsd,
+                            { style: "currency", currency },
+                          )}
+                          {" · "}
+                          {t("updated", {
+                            date: format.dateTime(deck.updatedAt, {
+                              dateStyle: "medium",
+                            }),
+                          })}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

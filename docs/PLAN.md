@@ -43,7 +43,7 @@ Application web de création de decks *Magic: The Gathering* centrée sur le for
 ### Plus tard
 
 - Cartes en français : avancées dans le chantier parallèle « Cartes en français et scan » (voir la feuille de route).
-- Gestion de collection : la collection et son scan sont commencés dans le chantier parallèle « Cartes en français et scan » ; restent les cartes manquantes d'un deck et leur coût.
+- Gestion de collection : la collection et son scan sont commencés dans le chantier parallèle « Cartes en français et scan », ainsi que le suivi des exemplaires physiques dans les decks (voir « Statuts des decks » dans la feuille de route) ; reste le coût des cartes manquantes d'un deck.
 - Historique des versions d'un deck.
 - Détection de combos (API de Commander Spellbook).
 - Profils publics, likes, commentaires.
@@ -73,7 +73,7 @@ Docker Compose, sur un VPS
 
 | Couche | Choix | Rôle |
 |---|---|---|
-| Framework | Next.js 16 (16.3.8 au minimum, voir la section Sécurité), React 19.3, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
+| Framework | Next.js 16 (16.4.1 au minimum, voir la section Sécurité), React 19.3, TypeScript strict | Front et back dans le même projet ; rendu serveur des pages publiques |
 | Interface | Tailwind CSS 4, shadcn/ui, icônes lucide | Composants accessibles et personnalisables |
 | Symboles | mana-font ; icônes d'éditions SVG de Scryfall | Symboles de mana sans appel réseau |
 | Traductions | next-intl | URLs `/fr/…` et `/en/…`, textes traduits, formats de nombres et de dates |
@@ -141,9 +141,10 @@ La recherche par nom compare la saisie à une version normalisée du nom (minusc
 | `user`, `session`, `account`, `verification` | Tables gérées par Better Auth |
 | `card` | Une ligne par carte : `oracle_id`, nom (et sa version normalisée, sans accents, pour la recherche), coût, valeur de mana, types, textes, couleurs, identité couleur (masque de bits WUBRG), mots-clés, légalités, faces, mana produit, rang EDHREC, Game Changer, éligibilité comme commandant, édition par défaut |
 | `printing` (phase 5) | Une ligne par édition : identifiant Scryfall, `oracle_id`, édition, numéro, rareté, images, prix, date de sortie |
-| `deck` | Propriétaire, nom, description, format, visibilité (privé / non listé / public), illustration de couverture, dates |
+| `deck` | Propriétaire, nom, description, format, visibilité (privé / non listé / public), illustration de couverture, deck monté ou en construction, dates |
 | `deck_card` | Deck, carte (`oracle_id`), quantité, zone (commandant / deck / à considérer), catégories ; édition choisie (facultative) en phase 5 |
 | `collection_card` | Utilisateur, carte (`oracle_id`), quantité |
+| `deck_card_copy` | Exemplaires physiques de la collection rangés dans un deck monté : deck, carte (`oracle_id`), quantité |
 | `scan_session` | Téléphone relié par QR code : utilisateur, empreinte du jeton, expiration, dernière activité |
 | `scanned_card` | Liste de scan : cartes scannées en attente (utilisateur, carte, quantité), avant validation vers la collection |
 
@@ -195,13 +196,13 @@ Makefile                   raccourcis (make dev, make test…)
 | Accueil | `/fr` | Présentation, decks publics récents, bouton « Créer un deck » |
 | Recherche de cartes | `/fr/cards` | Barre de recherche, filtres, grille d'images |
 | Fiche carte | `/fr/cards/[id]` | Image (recto verso), texte Oracle, légalités, prix |
-| Mes decks | `/fr/decks` | Liste avec commandant, couleurs, nombre de cartes, prix, statut de validation |
+| Mes decks | `/fr/decks` | Liste avec commandant, couleurs, nombre de cartes, prix, statut de validation, statut du deck (en construction, construit, jouable) et filtre par statut |
 | Nouveau deck | `/fr/decks/new` | Choix du commandant (et du partenaire) |
 | Éditeur | `/fr/decks/[id]/edit` | Sur ordinateur : recherche à gauche, deck au centre, statistiques et validation à droite. Sur mobile : onglets |
 | Deck (lecture) | `/fr/decks/[id]` | Liste, statistiques, export, « Copier ce deck » |
 | Explorer | `/fr/explore` | Decks publics, filtrables par commandant et par couleurs |
 | Compte | `/fr/settings` | Pseudo, langue, connexions, suppression du compte |
-| Ma collection | `/fr/collection` | Cartes possédées et leurs quantités, recherche et tris, ajout par le nom, liste de scan à valider, QR code pour relier son téléphone |
+| Ma collection | `/fr/collection` | Cartes possédées et leurs quantités, exemplaires rangés dans des decks, libres ou manquants, recherche (avec le détail des decks de chaque carte), tris et filtres, ajout par le nom, liste de scan à valider, QR code pour relier son téléphone |
 | Scan | `/fr/scan` | Sur le téléphone : caméra, reconnaissance du nom, liste de scan modifiable, validation vers la collection |
 
 Toutes les pages existent aussi en anglais sous `/en/…`.
@@ -385,6 +386,14 @@ Avant l'étape F1, le scan ne reconnaît que les cartes en anglais ; ensuite, le
 - **Téléphone relié par QR code** : sur l'ordinateur, « Scanner avec mon téléphone » crée un lien de scan (`scan_session`) et l'affiche en QR code. Le jeton (32 octets aléatoires) est dans le fragment de l'adresse (`/fr/scan#…`) : il n'est jamais envoyé au serveur avec la page ni gardé dans ses journaux ; la page le garde pour l'onglet, l'efface de l'adresse et l'envoie en `Authorization: Bearer`. La base n'en garde que l'empreinte SHA-256. Le lien expire après une heure sans activité, douze heures au plus, et l'ordinateur peut le révoquer. L'ordinateur voit le téléphone se connecter et la liste de scan se remplir en direct.
 - **Reste à faire** : export texte de la liste scannée (S2), cartes françaises (après F1, avec le modèle `fra`), édition exacte (S4).
 
+### Statuts des decks et exemplaires physiques
+
+Demandé le 7 octobre 2026 : savoir où se trouvent physiquement les cartes de sa collection. Maquette validée le même jour.
+
+- **Statuts** : un deck est « en construction » (préparé dans l'application, aucun exemplaire physique rangé dedans) ou « monté ». Un deck monté est « construit » s'il lui manque des cartes physiquement, « jouable » s'il les a toutes ; l'application le déduit seule des exemplaires rangés. Les cartes « à considérer » ne comptent jamais ; toutes les autres sont suivies, terrains de base compris.
+- **Exemplaires** (table `deck_card_copy`, migration `0005_deck_assembly`) : monter un deck lui donne les exemplaires libres de la collection ; le remettre en construction les libère. Un exemplaire peut être pris parmi les libres ou dans un autre deck (« Prendre dans… »), depuis l'éditeur, la fenêtre d'une carte ou la collection. Retirer une carte d'un deck ou des exemplaires de la collection libère ou retire les exemplaires concernés. Logique dans `src/domain/collection/ownership.ts`, accès aux données dans `src/server/decks/copies.ts`.
+- **Collection** : sous chaque carte, une jauge des exemplaires rangés dans un deck, libres et manquants (aux decks montés) ; un clic sur une carte, ou une recherche, affiche les decks qui l'utilisent et ceux qui la contiennent sans exemplaire physique. Filtres : toutes, libres, dans un deck, manquantes.
+
 ## 6. Tests et qualité
 
 - **Tests unitaires** (Vitest) sur tout le dossier `domain/` : règles Commander, statistiques, import / export. C'est là que les bugs coûtent le plus cher.
@@ -396,7 +405,7 @@ Avant l'étape F1, le scan ne reconnaît que les cartes en anglais ; ensuite, le
 
 ### Versions
 
-- **Next.js 16.3.8 au minimum** (publiée le 30 septembre 2026) : c'est la dernière version, et elle corrige toutes les failles connues à ce jour. Parmi elles, une exécution de code à distance dans `next/og` (corrigée en 16.3.6), qui touchait justement les serveurs Node.js auto-hébergés comme le nôtre. **React 19.3.0**. Au 4 octobre 2026, `npm audit` ne signale aucune vulnérabilité connue pour ces versions.
+- **Next.js 16.4.1 au minimum** (16.4.2 installée le 23 octobre 2026 : deux failles critiques et une haute touchent les versions 16.0.0 à 16.4.0, dont un déni de service par les Server Actions). Auparavant, **16.3.8** (publiée le 30 septembre 2026) : c'est la dernière version, et elle corrige toutes les failles connues à ce jour. Parmi elles, une exécution de code à distance dans `next/og` (corrigée en 16.3.6), qui touchait justement les serveurs Node.js auto-hébergés comme le nôtre. **React 19.3.0**. Au 4 octobre 2026, `npm audit` ne signale aucune vulnérabilité connue pour ces versions.
 - Les versions exactes sont figées par le fichier de verrouillage `pnpm-lock.yaml`, et l'image Docker est construite à partir de ce fichier (`pnpm install --frozen-lockfile`).
 
 ### Mises à jour

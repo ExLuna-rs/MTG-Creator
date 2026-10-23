@@ -5,19 +5,22 @@ import { useTranslations } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
 import { GameChangerBadge } from "@/components/cards/game-changer-badge";
 import { Button } from "@/components/ui/button";
-import { cardHref } from "@/domain/cards/links";
 import type { CollectionEntry } from "@/domain/collection/collection";
+import type { CardUsage } from "@/domain/collection/ownership";
 import { Link } from "@/i18n/navigation";
+import { UsageGauge } from "./usage-gauge";
 import { useCollectionChange } from "./use-collection-change";
 
-/** Cartes de la collection, avec leur nombre d'exemplaires. */
+/**
+ * Cartes de la collection, avec leur nombre d'exemplaires et où ils sont.
+ * Un clic sur une carte affiche le détail de ses exemplaires.
+ */
 export function CollectionGrid({
   entries,
-  from,
+  usage,
 }: {
   entries: CollectionEntry[];
-  /** Recherche en cours, où la fiche d'une carte ramènera. */
-  from: string;
+  usage: Record<string, CardUsage>;
 }) {
   const t = useTranslations("CollectionPage");
   const { change, pending, error } = useCollectionChange();
@@ -36,7 +39,9 @@ export function CollectionGrid({
         {entries.map((card) => (
           <li key={card.oracleId} data-card={card.name} className="space-y-2">
             <Link
-              href={cardHref(card.oracleId, from)}
+              href={{ pathname: "/collection", query: { q: card.name } }}
+              scroll={false}
+              aria-label={t("showWhere", { name: card.name })}
               className="relative block rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <CardImage
@@ -54,6 +59,9 @@ export function CollectionGrid({
                 </span>
               )}
             </Link>
+            {usage[card.oracleId] && (
+              <UsageGauge owned={card.quantity} usage={usage[card.oracleId]} />
+            )}
             <div className="flex items-center justify-between gap-1">
               <Button
                 variant="outline"

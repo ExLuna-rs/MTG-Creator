@@ -42,7 +42,7 @@ Sessions cloud : le hook `.claude/hooks/session-start.sh` démarre Docker et rè
 - Aucun secret dans les variables `NEXT_PUBLIC_*` ni dans le dépôt (`.env` n'est jamais commité).
 - Pas d'optimiseur d'images Next.js ni de `next/og` : les images des cartes viennent du CDN Scryfall.
 - Images Docker épinglées par empreinte, actions GitHub par SHA de commit : Dependabot les met à jour.
-- Next.js 16.3.8 au minimum ; `make audit` doit rester sans faille haute ou critique.
+- Next.js 16.4.1 au minimum ; `make audit` doit rester sans faille haute ou critique.
 
 ## Façon de travailler
 

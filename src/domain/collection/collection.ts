@@ -33,6 +33,15 @@ export const COLLECTION_SORTS = [
 
 export type CollectionSort = (typeof COLLECTION_SORTS)[number];
 
+/**
+ * Filtres de la collection d'après les exemplaires physiques : toutes les
+ * cartes, celles qui ont des exemplaires libres, celles rangées dans un deck,
+ * celles qui manquent à un deck monté.
+ */
+export const COLLECTION_SHOWS = ["all", "free", "used", "missing"] as const;
+
+export type CollectionShow = (typeof COLLECTION_SHOWS)[number];
+
 /** Ordre des types : le premier type d'une carte dans cette liste la classe. */
 const TYPE_ORDER = [
   "Creature",
