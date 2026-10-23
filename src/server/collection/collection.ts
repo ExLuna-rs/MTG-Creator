@@ -5,6 +5,7 @@ import { MAX_COLLECTION_QUANTITY } from "@/domain/collection/schema";
 import { getDeckCardData } from "@/server/cards/search";
 import { type Database, getDb } from "@/server/db";
 import { cards, collectionCards } from "@/server/db/schema";
+import { trimCopiesToOwned } from "@/server/decks/copies";
 
 /** Base de données, ou transaction en cours. */
 export type DbExecutor =
@@ -89,6 +90,13 @@ export async function changeCollectionCard(
         ),
       )
       .returning({ quantity: collectionCards.quantity });
+    // Les exemplaires retirés de la collection quittent aussi les decks.
+    await trimCopiesToOwned(
+      db,
+      userId,
+      oracleId,
+      Math.max(0, row?.quantity ?? 0),
+    );
     if (!row || row.quantity > 0)
       return { ok: true, quantity: row?.quantity ?? 0 };
     await db

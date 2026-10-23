@@ -1,5 +1,11 @@
 import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import {
+  type DeckStatus,
+  deckNeeds,
+  deckStatus,
+  missingCopies,
+} from "@/domain/collection/ownership";
 import { canPair } from "@/domain/commander/partners";
 import { validateCommanderDeck } from "@/domain/commander/validate";
 import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
@@ -7,7 +13,8 @@ import type { DeckSave, NewDeck } from "@/domain/deck/schema";
 import { computeDeckStats } from "@/domain/deck/stats";
 import { getDeckCardData } from "@/server/cards/search";
 import { getDb } from "@/server/db";
-import { deckCards, decks } from "@/server/db/schema";
+import { deckCardCopies, deckCards, decks } from "@/server/db/schema";
+import { clampDeckCopies } from "./copies";
 
 // Accès aux decks. Chaque fonction reçoit l'identifiant de l'utilisateur
 // connecté et ne lit ou n'écrit que ses propres decks : l'appartenance est
@@ -144,6 +151,8 @@ export async function saveDeck(
         .insert(deckCards)
         .values(entries.map((entry) => ({ ...entry, deckId: deck.id })));
     }
+    // Une carte retirée du deck rend ses exemplaires physiques à la collection.
+    await clampDeckCopies(tx, deck.id, deckNeeds(entries));
     return { ok: true, updatedAt: deck.updatedAt } as const;
   });
 }
@@ -171,17 +180,38 @@ export interface DeckSummary {
   valid: boolean;
   priceEur: number;
   priceUsd: number;
+  status: DeckStatus;
+  /** Exemplaires physiques qui manquent à un deck monté. */
+  missingCopies: number;
 }
 
 /** Decks de l'utilisateur, du plus récemment modifié au plus ancien. */
 export async function listDecks(userId: string): Promise<DeckSummary[]> {
   const db = getDb();
   const owned = await db
-    .select({ id: decks.id, name: decks.name, updatedAt: decks.updatedAt })
+    .select({
+      id: decks.id,
+      name: decks.name,
+      updatedAt: decks.updatedAt,
+      assembled: decks.assembled,
+    })
     .from(decks)
     .where(eq(decks.userId, userId))
     .orderBy(desc(decks.updatedAt));
   if (owned.length === 0) return [];
+  const copies = await db
+    .select({
+      deckId: deckCardCopies.deckId,
+      oracleId: deckCardCopies.oracleId,
+      quantity: deckCardCopies.quantity,
+    })
+    .from(deckCardCopies)
+    .where(
+      inArray(
+        deckCardCopies.deckId,
+        owned.map((deck) => deck.id),
+      ),
+    );
 
   const rows = await db
     .select({
@@ -205,13 +235,19 @@ export async function listDecks(userId: string): Promise<DeckSummary[]> {
     ]),
   );
 
-  return owned.map((deck) => {
+  return owned.map(({ assembled, ...deck }) => {
     const entries: DeckCard[] = rows.flatMap(({ deckId, ...row }) => {
       const card = cards.get(row.oracleId);
       return deckId === deck.id && card ? [{ ...row, card }] : [];
     });
     const validation = validateCommanderDeck(entries);
     const stats = computeDeckStats(entries);
+    const needs = deckNeeds(entries);
+    const deckCopies = Object.fromEntries(
+      copies
+        .filter((copy) => copy.deckId === deck.id)
+        .map((copy) => [copy.oracleId, copy.quantity]),
+    );
     return {
       ...deck,
       commanders: entries
@@ -226,6 +262,13 @@ export async function listDecks(userId: string): Promise<DeckSummary[]> {
       valid: validation.valid,
       priceEur: stats.price.eur,
       priceUsd: stats.price.usd,
+      status: deckStatus(assembled, needs, deckCopies),
+      missingCopies: assembled
+        ? missingCopies(needs, deckCopies).reduce(
+            (total, card) => total + card.missing,
+            0,
+          )
+        : 0,
     };
   });
 }

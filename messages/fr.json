@@ -287,7 +287,11 @@
     "cards": "{count} / {expected} cartes",
     "valid": "valide",
     "invalid": "à compléter",
-    "updated": "modifié le {date}"
+    "updated": "modifié le {date}",
+    "filter": "Filtrer par statut",
+    "filterAll": "Tous",
+    "missingCopies": "{count, plural, one {# carte} other {# cartes}} à trouver physiquement",
+    "noMatch": "Aucun deck avec ce statut."
   },
   "NewDeck": {
     "title": "Nouveau deck",
@@ -504,7 +508,24 @@
     "search": "Rechercher dans la collection",
     "searchPlaceholder": "Nom de la carte",
     "sort": "Trier par",
-    "noMatch": "Aucune carte de la collection ne correspond à « {query} »."
+    "noMatch": "Aucune carte de la collection ne correspond à « {query} ».",
+    "show": "Afficher",
+    "showOptions": {
+      "all": "Toutes",
+      "free": "Libres",
+      "used": "Dans un deck",
+      "missing": "Manquantes"
+    },
+    "usageUsed": "{count, plural, one {# dans un deck} other {# dans des decks}}",
+    "usageFree": "{count, plural, =0 {0 libre} one {# libre} other {# libres}}",
+    "usageMissing": "manque {count}",
+    "usedIn": "Utilisée dans",
+    "wantedBy": "Présente, pas utilisée",
+    "noUsedIn": "Aucun exemplaire rangé dans un deck.",
+    "noWantedBy": "Aucun deck n'attend cette carte.",
+    "showWhere": "Voir où se trouve {name}",
+    "cardPage": "Fiche de la carte",
+    "noShown": "Aucune carte de la collection dans cette catégorie."
   },
   "PhoneScan": {
     "open": "Scanner avec mon téléphone",
@@ -583,5 +604,27 @@
     "price": "Prix",
     "quantity": "Quantité",
     "recent": "Ajout le plus récent"
+  },
+  "DeckStatus": {
+    "building": "En construction",
+    "built": "Construit",
+    "playable": "Jouable"
+  },
+  "DeckAssembly": {
+    "legend": "État du deck",
+    "building": "En construction",
+    "assembled": "Monté",
+    "buildingHint": "Aucun exemplaire physique n'est rangé dans ce deck. « Monté » lui donne les exemplaires libres de votre collection.",
+    "playable": "Toutes les cartes sont là physiquement : le deck est jouable.",
+    "missingTitle": "{count, plural, one {# carte} other {# cartes}} à trouver physiquement",
+    "showAll": "Voir les {count} autres",
+    "takeFree": "Prendre un exemplaire libre",
+    "takeFrom": "Prendre dans {deck}",
+    "notOwned": "pas dans votre collection",
+    "error": "Les exemplaires n'ont pas pu être modifiés. Réessayez.",
+    "copiesTitle": "Exemplaire physique",
+    "inThisDeck": "{copies} sur {need} dans ce deck",
+    "freeCopies": "{count, plural, =0 {aucun exemplaire libre} one {# exemplaire libre} other {# exemplaires libres}} dans la collection",
+    "heldBy": "{count} dans {deck}"
   }
 }

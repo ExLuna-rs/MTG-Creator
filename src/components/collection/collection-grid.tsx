@@ -5,11 +5,22 @@ import { useTranslations } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
 import { Button } from "@/components/ui/button";
 import type { CollectionEntry } from "@/domain/collection/collection";
+import type { CardUsage } from "@/domain/collection/ownership";
 import { Link } from "@/i18n/navigation";
+import { UsageGauge } from "./usage-gauge";
 import { useCollectionChange } from "./use-collection-change";
 
-/** Cartes de la collection, avec leur nombre d'exemplaires. */
-export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
+/**
+ * Cartes de la collection, avec leur nombre d'exemplaires et où ils sont.
+ * Un clic sur une carte affiche le détail de ses exemplaires.
+ */
+export function CollectionGrid({
+  entries,
+  usage,
+}: {
+  entries: CollectionEntry[];
+  usage: Record<string, CardUsage>;
+}) {
   const t = useTranslations("CollectionPage");
   const { change, pending, error } = useCollectionChange();
 
@@ -27,7 +38,9 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
         {entries.map((card) => (
           <li key={card.oracleId} data-card={card.name} className="space-y-2">
             <Link
-              href={`/cards/${card.oracleId}`}
+              href={{ pathname: "/collection", query: { q: card.name } }}
+              scroll={false}
+              aria-label={t("showWhere", { name: card.name })}
               className="relative block rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <CardImage
@@ -44,6 +57,9 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
                 </span>
               )}
             </Link>
+            {usage[card.oracleId] && (
+              <UsageGauge owned={card.quantity} usage={usage[card.oracleId]} />
+            )}
             <div className="flex items-center justify-between gap-1">
               <Button
                 variant="outline"

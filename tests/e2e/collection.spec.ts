@@ -79,8 +79,10 @@ test("cherche et trie les cartes de la collection", async ({ page }) => {
 
   await page.getByLabel("Rechercher dans la collection").fill("bolt");
   await expect(page).toHaveURL(/[?&]q=bolt/);
-  await expect(grid).toHaveCount(1);
-  await expect(collectionCard(page, "Lightning Bolt")).toBeVisible();
+  // Une recherche affiche le détail des cartes trouvées.
+  const details = page.getByTestId("collection-details").getByRole("listitem");
+  await expect(details).toHaveCount(1);
+  await expect(details).toHaveAttribute("data-card", "Lightning Bolt");
   await page.getByLabel("Rechercher dans la collection").fill("");
   await expect(grid).toHaveCount(3);
 

@@ -3,7 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 import {
+  COLLECTION_SHOWS,
   COLLECTION_SORTS,
+  type CollectionShow,
   type CollectionSort,
 } from "@/domain/collection/collection";
 import { useRouter } from "@/i18n/navigation";
@@ -14,9 +16,11 @@ const DEBOUNCE_MS = 250;
 export function CollectionFilters({
   query,
   sort,
+  show,
 }: {
   query: string;
   sort: CollectionSort;
+  show: CollectionShow;
 }) {
   const t = useTranslations("CollectionPage");
   const tSort = useTranslations("CollectionSorts");
@@ -24,11 +28,30 @@ export function CollectionFilters({
   const searchId = useId();
   const sortId = useId();
   const [value, setValue] = useState(query);
+  // Recherche changée hors du champ (clic sur une carte de la grille) :
+  // le champ la reprend. Celle envoyée par le champ lui-même ne l'écrase pas,
+  // pour ne pas effacer ce qui a été tapé entre-temps.
+  const [shownQuery, setShownQuery] = useState(query);
+  const [sentQuery, setSentQuery] = useState(query);
+  if (query !== shownQuery) {
+    setShownQuery(query);
+    if (query !== sentQuery) {
+      setSentQuery(query);
+      setValue(query);
+    }
+  }
 
-  function go(next: { q: string; sort: CollectionSort }) {
+  function go(next: {
+    q: string;
+    sort: CollectionSort;
+    show?: CollectionShow;
+  }) {
     const params: Record<string, string> = {};
+    const nextShow = next.show ?? show;
     if (next.q.trim()) params.q = next.q.trim();
+    setSentQuery(next.q.trim());
     if (next.sort !== "name") params.sort = next.sort;
+    if (nextShow !== "all") params.show = nextShow;
     router.replace(
       { pathname: "/collection", query: params },
       { scroll: false },
@@ -37,7 +60,8 @@ export function CollectionFilters({
 
   // Recherche après une courte pause de frappe.
   useEffect(() => {
-    if (value.trim() === query) return;
+    // Rien à envoyer si cette recherche est déjà partie (ou affichée).
+    if (value.trim() === sentQuery) return;
     const timer = setTimeout(() => go({ q: value, sort }), DEBOUNCE_MS);
     return () => clearTimeout(timer);
   });
@@ -77,6 +101,22 @@ export function CollectionFilters({
           ))}
         </select>
       </div>
+      <fieldset className="space-y-1">
+        <legend className="mb-1 font-medium text-sm">{t("show")}</legend>
+        <div className="flex h-10 flex-wrap items-center gap-1.5">
+          {COLLECTION_SHOWS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={show === option}
+              onClick={() => go({ q: value, sort, show: option })}
+              className="rounded-full border px-3 py-1 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:text-background"
+            >
+              {t(`showOptions.${option}`)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
     </div>
   );
 }

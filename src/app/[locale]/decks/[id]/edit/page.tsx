@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import { DeckEditor } from "@/components/decks/deck-editor";
 import { requireSession } from "@/server/auth/session";
+import { getDeckOwnership } from "@/server/decks/copies";
 import { getOwnedDeck } from "@/server/decks/decks";
 
 export async function generateMetadata({
@@ -28,6 +29,8 @@ export default async function DeckEditorPage({
   // Deck inexistant ou d'un autre utilisateur : même réponse, introuvable.
   const deck = deckId.success ? await getOwnedDeck(user.id, deckId.data) : null;
   if (!deck) notFound();
+  const ownership = await getDeckOwnership(user.id, deck.id);
+  if (!ownership) notFound();
   const t = await getTranslations("DeckEditor");
 
   return (
@@ -37,6 +40,7 @@ export default async function DeckEditorPage({
         name={deck.name}
         entries={deck.entries}
         cards={deck.cards}
+        ownership={ownership}
         defaultCategories={t("defaultCategories")
           .split(",")
           .map((category) => category.trim())}
