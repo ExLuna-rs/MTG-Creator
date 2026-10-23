@@ -544,7 +544,9 @@ test("importe une liste de cartes", async ({ page }) => {
   await expect(dialog.getByText("40 cartes reconnues.")).toBeVisible();
   await dialog.getByRole("button", { name: "Importer 40 cartes" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("40 cartes importées")).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "40 cartes importées" }),
+  ).toBeVisible();
 
   // Le commandant n'est pas ajouté une seconde fois au deck.
   await showView(page, "Liste");
@@ -589,4 +591,75 @@ test("importe un commandant illégal en prévenant", async ({ page }) => {
   await dialog.getByRole("button", { name: "Importer 2 cartes" }).click();
   await expect(dialog).toBeHidden();
   await expect(cardIn(page, "zone:commander", "Sol Ring")).toBeVisible();
+});
+
+test("exporte le deck dans plusieurs formats", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await signUpViaApi(page);
+  await createDeck(page, "Atraxa, Praetors' Voice");
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  const importDialog = page.getByRole("dialog", {
+    name: "Importer une liste de cartes",
+  });
+  await importDialog
+    .getByLabel("Liste de cartes")
+    .fill(
+      [
+        "1 Sol Ring [Ramp]",
+        "10 Island",
+        "",
+        "Sideboard",
+        "1 Lightning Bolt",
+      ].join("\n"),
+    );
+  await importDialog.getByRole("button", { name: "Analyser la liste" }).click();
+  await importDialog
+    .getByRole("button", { name: "Importer 12 cartes" })
+    .click();
+  await expect(importDialog).toBeHidden();
+
+  await page.getByRole("button", { name: "Exporter" }).click();
+  const dialog = page.getByRole("dialog", { name: "Exporter le deck" });
+  const text = dialog.getByRole("textbox", { name: "Liste exportée" });
+  await expect(text).toHaveValue(
+    "Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n10 Island\n1 Sol Ring",
+  );
+
+  await dialog
+    .getByRole("radio", { name: "Archidekt (avec catégories)" })
+    .check();
+  await expect(text).toHaveValue(
+    /^1x Atraxa, Praetors' Voice \[Commander\{top\}\]/,
+  );
+  await expect(text).toHaveValue(/1x Sol Ring \[Ramp\]/);
+
+  // Cardmarket : sans les terrains de base, cartes à considérer au choix.
+  await dialog.getByRole("radio", { name: "Cardmarket" }).check();
+  await expect(text).toHaveValue("1 Atraxa, Praetors' Voice\n1 Sol Ring");
+  await dialog.getByLabel("Inclure les cartes à considérer").check();
+  await expect(text).toHaveValue(
+    "1 Atraxa, Praetors' Voice\n1 Lightning Bolt\n1 Sol Ring",
+  );
+
+  await dialog.getByRole("button", { name: "Copier" }).click();
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Liste copiée dans le presse-papiers.",
+  );
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "1 Atraxa, Praetors' Voice\n1 Lightning Bolt\n1 Sol Ring",
+  );
+
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Télécharger" }).click();
+  expect((await download).suggestedFilename()).toMatch(
+    /^[a-z0-9-]+-cardmarket\.txt$/,
+  );
+
+  // Sur téléphone, le format se choisit dans une liste déroulante.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog.getByRole("radio", { name: "Cardmarket" })).toBeHidden();
+  await dialog.getByRole("combobox", { name: "Format" }).selectOption("plain");
+  await expect(text).toHaveValue(
+    "1 Atraxa, Praetors' Voice\n10 Island\n1 Sol Ring\n1 Lightning Bolt",
+  );
 });

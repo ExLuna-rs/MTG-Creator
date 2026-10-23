@@ -9,7 +9,7 @@ import type { DeckListLine } from "./deck-list";
 export const MAX_IMPORT_NAMES = 300;
 
 /** Noms à faire reconnaître par le serveur, sans doublons (après normalisation). */
-export function uniqueNames(lines: readonly DeckListLine[]): string[] {
+export function uniqueNames(lines: readonly { name: string }[]): string[] {
   const names = new Map<string, string>();
   for (const { name } of lines) {
     const key = normalizeCardName(name);

@@ -52,3 +52,19 @@ export const takeCopySchema = z.object({
 });
 
 export type TakeCopy = z.infer<typeof takeCopySchema>;
+
+/** Nombre maximal de cartes différentes ajoutées par un import de liste. */
+export const MAX_COLLECTION_IMPORT_CARDS = 5000;
+
+/** Cartes reconnues d'une liste importée, à ajouter à la collection. */
+export const collectionImportSchema = z.object({
+  cards: z
+    .array(
+      z.object({
+        oracleId: z.uuid(),
+        quantity: z.number().int().min(1).max(MAX_COLLECTION_QUANTITY),
+      }),
+    )
+    .min(1)
+    .max(MAX_COLLECTION_IMPORT_CARDS),
+});

@@ -334,6 +334,13 @@ Un premier testeur a fait ses retours ; ils sont rangés en six lots (plan valid
 - Sur téléphone, les couleurs, types, raretés et options se choisissent dans des listes déroulantes à choix multiple, façon shadcn/ui (`src/components/ui/multi-select.tsx`) ; sans JavaScript, les pastilles restent affichées.
 - Le filtre par extension attend le lot 5.
 
+**Lot 3 (export de deck, import et export de la collection)** : fait.
+
+- Export du deck (bouton « Exporter » de l'éditeur, `src/domain/import-export/export.ts`) : quatre formats, MTG Arena et Moxfield (sections Commander, Deck, Sideboard), Archidekt avec les catégories (`[Commander{top}]`, maybeboard en `{noDeck}{noPrice}`), texte simple, et Cardmarket pour « Ajouter une liste » d'une liste de souhaits (noms fusionnés, terrains de base retirés par défaut). Les cartes à considérer s'ajoutent au choix. Copie dans le presse-papiers ou téléchargement d'un fichier `.txt`. L'édition choisie viendra avec le lot 5.
+- Import dans la collection (bouton « Importer une liste » de la collection) : liste collée ou fichier `.txt` / `.csv` exporté d'EDHREC, Moxfield, ManaBox ou Archidekt (`src/domain/import-export/collection-list.ts` : séparateur et colonnes du CSV détectés depuis l'en-tête, 5 000 lignes au maximum). Les noms sont reconnus par lots de 300, les lignes non reconnues ont des suggestions, puis les exemplaires s'ajoutent à ceux déjà possédés (`POST /api/collection/import`, pas de remplacement, 9 999 exemplaires par carte au plus).
+- Export de la collection en texte ou en CSV (`"Count","Name"`). L'option « exemplaires libres seulement » a été écartée par Corentin.
+- Choix du format : boutons sur ordinateur, liste déroulante sur téléphone. Les confirmations d'import (« 23 cartes importées », « 7 exemplaires ajoutés ») s'affichent dans une notification en haut à droite (`src/components/ui/toast.tsx`), comme le refus d'un commandant.
+
 ### Phase 6 et suivantes
 
 Selon les priorités, dans la liste « Plus tard ».

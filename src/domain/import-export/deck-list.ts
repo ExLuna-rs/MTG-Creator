@@ -148,13 +148,16 @@ function readCategories(raw: string[]): {
  * vont dans les cartes à considérer ; les lignes vides et les commentaires
  * (« // … », « # … ») sont ignorés.
  */
-export function parseDeckList(text: string): ParsedDeckList {
+export function parseDeckList(
+  text: string,
+  { maxLength = MAX_IMPORT_LENGTH }: { maxLength?: number } = {},
+): ParsedDeckList {
   const cards: DeckListLine[] = [];
   const invalid: ParsedDeckList["invalid"] = [];
   let section: DeckZone | null = "main";
 
   text
-    .slice(0, MAX_IMPORT_LENGTH)
+    .slice(0, maxLength)
     .split(/\r?\n/)
     .forEach((raw, index) => {
       const line = index + 1;

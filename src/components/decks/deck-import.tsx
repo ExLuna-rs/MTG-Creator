@@ -2,8 +2,9 @@
 
 import { ClipboardPaste, LoaderCircle, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Toast } from "@/components/ui/toast";
 import { normalizeCardName } from "@/domain/cards/normalize";
 import { commanderIssues } from "@/domain/commander/validate";
 import type { DeckCardData, DeckEntry } from "@/domain/deck/deck";
@@ -68,6 +69,7 @@ export function DeckImport({
   /** Suggestion choisie pour une ligne non reconnue, par numéro de ligne. */
   const [choices, setChoices] = useState<Record<number, DeckCardData>>({});
   const [imported, setImported] = useState<number | null>(null);
+  const hideImported = useCallback(() => setImported(null), []);
 
   function close() {
     dialog.current?.close();
@@ -176,11 +178,13 @@ export function DeckImport({
         <ClipboardPaste aria-hidden />
         {t("open")}
       </Button>
-      {imported !== null && (
-        <span role="status" className="text-muted-foreground text-sm">
-          {t("done", { count: imported })}
-        </span>
-      )}
+      <Toast
+        message={
+          imported === null ? null : { title: t("done", { count: imported }) }
+        }
+        onClose={hideImported}
+        closeLabel={t("close")}
+      />
 
       <dialog
         ref={dialog}
@@ -355,7 +359,7 @@ export function DeckImport({
   );
 }
 
-function LineText({ line, text }: { line: number; text: string }) {
+export function LineText({ line, text }: { line: number; text: string }) {
   const t = useTranslations("DeckImport");
   return (
     <p>
@@ -366,13 +370,13 @@ function LineText({ line, text }: { line: number; text: string }) {
 }
 
 /** Ligne non reconnue, avec les cartes au nom proche à choisir. */
-function UnknownLine({
+export function UnknownLine({
   line,
   suggestions,
   chosen,
   onChoose,
 }: {
-  line: DeckListLine;
+  line: { line: number; text: string };
   suggestions: DeckCardData[];
   chosen: DeckCardData | null;
   onChoose: (card: DeckCardData | null) => void;

@@ -29,6 +29,7 @@ import {
   useDeckOwnership,
 } from "./deck-assembly";
 import { DECK_VIEWS, DeckBoard, type DeckView } from "./deck-board";
+import { DeckExport } from "./deck-export";
 import { DeckImport } from "./deck-import";
 import { DeckStats } from "./deck-stats";
 import { type SaveStatus, useAutosave } from "./use-autosave";
@@ -204,6 +205,7 @@ export function DeckEditor({
                 })
               }
             />
+            <DeckExport name={state.present.name} cards={deck} />
             <Button
               variant="outline"
               size="icon"

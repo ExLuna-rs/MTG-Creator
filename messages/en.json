@@ -701,5 +701,59 @@
     "text": "Text: “{text}”",
     "remove": "Remove filter: {label}",
     "clearAll": "Clear all"
+  },
+  "ExportDialog": {
+    "open": "Export",
+    "close": "Close",
+    "format": "Format",
+    "result": "Exported list",
+    "copy": "Copy",
+    "copied": "List copied to the clipboard.",
+    "download": "Download"
+  },
+  "DeckExport": {
+    "title": "Export the deck",
+    "formats": {
+      "arena": "MTG Arena · Moxfield",
+      "archidekt": "Archidekt (with categories)",
+      "plain": "Plain text",
+      "cardmarket": "Cardmarket"
+    },
+    "hints": {
+      "arena": "“Commander” and “Deck” sections: understood by MTG Arena, Moxfield, Archidekt and MTG Creator.",
+      "archidekt": "The deck's categories in brackets: Archidekt keeps them as they are.",
+      "plain": "One card per line, commander first: for a forum or a message.",
+      "cardmarket": "Paste into “Add a list” of a Cardmarket wants list. Every printing of each card is offered: picking the printing will come with card versions."
+    },
+    "includeMaybe": "Include the cards being considered",
+    "skipBasicLands": "Without basic lands"
+  },
+  "CollectionImport": {
+    "open": "Import a list",
+    "title": "Import into the collection",
+    "fileLabel": "File exported from another app",
+    "chooseFile": "Choose a file (.txt, .csv)",
+    "label": "Or paste the list",
+    "help": "One card per line (“4 Lightning Bolt”), or a CSV export from Moxfield, ManaBox, Archidekt or Deckbox. Copies are added to those in your collection. The printing is ignored for now. {max, number} lines at most.",
+    "errors": {
+      "empty": "No card found in this text.",
+      "network": "The import failed. Try again.",
+      "file": "This file can't be read (1 MB at most)."
+    },
+    "recognized": "{copies, plural, =0 {No copy recognized} one {# copy recognized} other {# copies recognized}}, {cards, plural, one {# distinct card} other {# distinct cards}}.",
+    "truncated": "The list has more than {max, number} lines: the rest is ignored.",
+    "confirm": "{count, plural, one {Add # copy} other {Add # copies}}",
+    "done": "{count, plural, one {# copy added} other {# copies added}}"
+  },
+  "CollectionExport": {
+    "title": "Export the collection",
+    "formats": {
+      "text": "Text",
+      "csv": "CSV"
+    },
+    "hints": {
+      "text": "One card per line (“4 Lightning Bolt”): understood by Moxfield, Archidekt, ManaBox and MTG Creator.",
+      "csv": "“Count” and “Name” columns, for a spreadsheet or a Moxfield import."
+    }
   }
 }
