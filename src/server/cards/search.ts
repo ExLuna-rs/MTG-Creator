@@ -1,6 +1,8 @@
 import "server-only";
 import {
   and,
+  arrayContained,
+  arrayContains,
   arrayOverlaps,
   asc,
   count,
@@ -16,7 +18,12 @@ import {
 import type { CardImageUris } from "@/domain/cards/card";
 import { colorsToMask } from "@/domain/cards/colors";
 import { normalizeCardName } from "@/domain/cards/normalize";
-import { CARD_PAGE_SIZE, type CardSearch } from "@/domain/cards/search-query";
+import {
+  CARD_PAGE_SIZE,
+  type CardSearch,
+  type ColorFilter,
+  colorFilter,
+} from "@/domain/cards/search-query";
 import { type DeckCardData, frontName } from "@/domain/deck/deck";
 import { getDb } from "@/server/db";
 import { cards } from "@/server/db/schema";
@@ -111,6 +118,46 @@ function nameRank(normalized: string): SQL {
   end`;
 }
 
+/**
+ * Condition de couleurs. L'identité couleur est un masque de bits
+ * (W=1, U=2, B=4, R=8, G=16) ; la couleur de la carte, une liste de lettres.
+ */
+function colorCondition(filter: ColorFilter): SQL {
+  if (filter.source === "card") {
+    const column = cards.colors;
+    if (filter.mode === "colorless") return sql`cardinality(${column}) = 0`;
+    const wanted = filter.colors;
+    switch (filter.mode) {
+      case "within":
+        return arrayContained(column, wanted);
+      case "exact":
+        return sql`(${arrayContained(column, wanted)} and ${arrayContains(column, wanted)})`;
+      case "all":
+        return arrayContains(column, wanted);
+      case "any":
+        return arrayOverlaps(column, wanted);
+    }
+  }
+  const identity = cards.colorIdentity;
+  if (filter.mode === "colorless") return sql`${identity} = 0`;
+  const mask = colorsToMask(filter.colors);
+  switch (filter.mode) {
+    case "within":
+      return sql`(${identity} & ${31 & ~mask}) = 0`;
+    case "exact":
+      return sql`${identity} = ${mask}`;
+    case "all":
+      return sql`(${identity} & ${mask}) = ${mask}`;
+    case "any":
+      return sql`(${identity} & ${mask}) <> 0`;
+  }
+}
+
+/** La carte a ce sous-type, sans tenir compte de la casse. */
+function subtypeCondition(subtype: string): SQL {
+  return sql`exists (select 1 from unnest(${cards.subtypes}) as subtype(name) where lower(subtype.name) = ${subtype.toLowerCase()})`;
+}
+
 function buildConditions(search: CardSearch, normalizedName: string): SQL[] {
   const conditions: SQL[] = [];
   if (normalizedName) conditions.push(nameCondition(normalizedName));
@@ -119,13 +166,15 @@ function buildConditions(search: CardSearch, normalizedName: string): SQL[] {
       sql`${cards.oracleText} ilike ${`%${escapeLike(search.text)}%`}`,
     );
   }
-  if (search.colors.length > 0) {
-    // Identité incluse dans les couleurs choisies (« C » seul : incolores).
-    const outside = 31 & ~colorsToMask(search.colors);
-    conditions.push(sql`(${cards.colorIdentity} & ${outside}) = 0`);
-  }
-  if (search.types.length > 0) {
-    conditions.push(arrayOverlaps(cards.types, search.types));
+  const colors = colorFilter(search);
+  if (colors) conditions.push(colorCondition(colors));
+  const types = [
+    ...search.types.map((type) => arrayContains(cards.types, [type])),
+    ...search.subtypes.map(subtypeCondition),
+  ];
+  if (types.length > 0) {
+    const combined = search.typeMode === "and" ? and(...types) : or(...types);
+    if (combined) conditions.push(combined);
   }
   if (search.rarities.length > 0) {
     conditions.push(inArray(cards.rarity, search.rarities));
@@ -390,6 +439,34 @@ export async function suggestCardNames(
       asc(cards.name),
     )
     .limit(limit);
+}
+
+/** Sous-type proposé pendant la saisie, avec son nombre de cartes. */
+export interface SubtypeSuggestion {
+  name: string;
+  count: number;
+}
+
+/**
+ * Sous-types dont le nom contient la saisie : ceux qui commencent par elle
+ * d'abord, puis les plus fréquents.
+ */
+export async function suggestSubtypes(
+  query: string,
+  limit = 8,
+): Promise<SubtypeSuggestion[]> {
+  const wanted = query.trim().toLowerCase();
+  if (!wanted) return [];
+  const pattern = `%${escapeLike(wanted)}%`;
+  const { rows } = await getDb().execute<{ name: string; count: number }>(
+    sql`select subtype.name, count(*)::int as count
+      from ${cards}, unnest(${cards.subtypes}) as subtype(name)
+      where lower(subtype.name) like ${pattern}
+      group by subtype.name
+      order by lower(subtype.name) like ${`${escapeLike(wanted)}%`} desc, count desc, subtype.name
+      limit ${limit}`,
+  );
+  return rows;
 }
 
 /** Fiche complète d'une carte, ou null si l'identifiant est inconnu. */
