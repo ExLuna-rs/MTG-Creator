@@ -67,7 +67,8 @@ function isEligibleCommander(card: DeckCardData): boolean {
   return card.canBeCommander || pairingAbilities(card).background;
 }
 
-function commanderIssues(commanders: DeckCardData[]): DeckIssue[] {
+/** Erreurs sur le ou les commandants d'un deck (aucun, trop, inéligible, paire). */
+export function commanderIssues(commanders: DeckCardData[]): DeckIssue[] {
   if (commanders.length === 0) {
     return [{ code: "noCommander", severity: "error" }];
   }
@@ -112,6 +113,35 @@ function commanderIssues(commanders: DeckCardData[]): DeckIssue[] {
           cards: commanders.map(toIssueCard),
         },
       ];
+}
+
+/** Raison pour laquelle une carte ne peut pas rejoindre les commandants. */
+export type CommanderRefusal =
+  | { code: "notACommander" }
+  | { code: "invalidPair"; other: IssueCard }
+  | { code: "tooManyCommanders" };
+
+/**
+ * Une carte peut-elle devenir commandant, à côté des commandants actuels ?
+ * Renvoie la raison du refus, ou null. Un commandant déjà en place mais
+ * inéligible (venu d'un import) ne bloque pas l'arrivée d'un vrai
+ * commandant : la validation le signale, et l'utilisateur doit pouvoir le
+ * remplacer.
+ */
+export function commanderRefusal(
+  card: DeckCardData,
+  commanders: readonly DeckCardData[],
+): CommanderRefusal | null {
+  const others = commanders.filter(
+    (commander) => commander.oracleId !== card.oracleId,
+  );
+  if (others.length >= 2) return { code: "tooManyCommanders" };
+  if (!isEligibleCommander(card)) return { code: "notACommander" };
+  const [other] = others;
+  if (other && isEligibleCommander(other) && !canPair(other, card)) {
+    return { code: "invalidPair", other: toIssueCard(other) };
+  }
+  return null;
 }
 
 /** Regroupe les quantités par carte (une carte peut figurer dans deux zones). */

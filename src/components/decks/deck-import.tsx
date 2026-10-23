@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useId, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { normalizeCardName } from "@/domain/cards/normalize";
+import { commanderIssues } from "@/domain/commander/validate";
 import type { DeckCardData, DeckEntry } from "@/domain/deck/deck";
 import {
   type DeckListLine,
@@ -127,9 +128,27 @@ export function DeckImport({
     const unknown = analysis.parsed.cards.filter(
       (line) => !analysis.results.get(normalizeCardName(line.name))?.card,
     );
+    // Commandants de la liste qui ne peuvent pas l'être : importés quand
+    // même, mais signalés avant la confirmation.
+    const commanders = recognized.flatMap((line) => {
+      const card =
+        line.zone === "commander"
+          ? (analysis.results.get(normalizeCardName(line.name))?.card ??
+            choices[line.line])
+          : null;
+      return card ? [card] : [];
+    });
+    const illegalCommanders = [
+      ...new Set(
+        commanderIssues(commanders).flatMap((issue) =>
+          "cards" in issue ? issue.cards.map((card) => card.name) : [],
+        ),
+      ),
+    ];
     return {
       cardCount: recognized.reduce((sum, line) => sum + line.quantity, 0),
       unknown,
+      illegalCommanders,
     };
   }, [analysis, choices]);
 
@@ -253,6 +272,22 @@ export function DeckImport({
           ) : (
             <div className="space-y-4">
               <p>{t("recognized", { count: report.cardCount })}</p>
+
+              {report.illegalCommanders.length > 0 && (
+                <div
+                  role="alert"
+                  className="space-y-1 rounded-md border border-l-4 border-l-destructive bg-destructive/5 px-3 py-2 text-sm"
+                >
+                  <p className="font-medium">
+                    {t("illegalCommanderTitle", {
+                      names: report.illegalCommanders.join(", "),
+                    })}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t("illegalCommanderHelp")}
+                  </p>
+                </div>
+              )}
 
               {(report.unknown.length > 0 ||
                 analysis.parsed.invalid.length > 0) && (

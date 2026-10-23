@@ -27,15 +27,27 @@ import { DeckStats } from "./deck-stats";
 import { type SaveStatus, useAutosave } from "./use-autosave";
 import { ValidationPanel } from "./validation-panel";
 
-/** Affichage choisi, gardé dans le navigateur (simple confort). */
+/** Affichage et regroupement choisis, gardés dans le navigateur (simple confort). */
 const VIEW_STORAGE_KEY = "deck-editor-view";
+const MODE_STORAGE_KEY = "deck-editor-group-mode";
 
-function storedView(): DeckView | null {
+function stored<T extends string>(
+  key: string,
+  allowed: readonly T[],
+): T | null {
   try {
-    const value = window.localStorage.getItem(VIEW_STORAGE_KEY);
-    return DECK_VIEWS.find((view) => view === value) ?? null;
+    const value = window.localStorage.getItem(key);
+    return allowed.find((item) => item === value) ?? null;
   } catch {
     return null;
+  }
+}
+
+function store(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Stockage indisponible (navigation privée) : le choix vaut pour la page.
   }
 }
 
@@ -108,19 +120,22 @@ export function DeckEditor({
     [deck, defaultCategories],
   );
 
-  // Affichage choisi lors d'une visite précédente.
+  // Affichage et regroupement choisis lors d'une visite précédente.
   useEffect(() => {
-    const stored = storedView();
-    if (stored) setView(stored);
+    const storedView = stored(VIEW_STORAGE_KEY, DECK_VIEWS);
+    if (storedView) setView(storedView);
+    const storedMode = stored(MODE_STORAGE_KEY, GROUP_MODES);
+    if (storedMode) setMode(storedMode);
   }, []);
 
   function changeView(value: DeckView) {
     setView(value);
-    try {
-      window.localStorage.setItem(VIEW_STORAGE_KEY, value);
-    } catch {
-      // Stockage indisponible (navigation privée) : le choix vaut pour la page.
-    }
+    store(VIEW_STORAGE_KEY, value);
+  }
+
+  function changeMode(value: GroupMode) {
+    setMode(value);
+    store(MODE_STORAGE_KEY, value);
   }
 
   // Raccourcis Annuler / Rétablir, hors des champs de saisie.
@@ -247,7 +262,7 @@ export function DeckEditor({
               values={GROUP_MODES}
               value={mode}
               label={(value) => t(`groupModes.${value}`)}
-              onChange={setMode}
+              onChange={changeMode}
             />
           </div>
           <DeckBoard

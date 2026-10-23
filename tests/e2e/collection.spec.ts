@@ -81,6 +81,13 @@ test("cherche et trie les cartes de la collection", async ({ page }) => {
   await expect(page).toHaveURL(/[?&]q=bolt/);
   await expect(grid).toHaveCount(1);
   await expect(collectionCard(page, "Lightning Bolt")).toBeVisible();
+
+  // La fiche d'une carte ramène à la collection, recherche comprise.
+  await collectionCard(page, "Lightning Bolt").getByRole("link").click();
+  await page.getByRole("link", { name: "Retour à la collection" }).click();
+  await expect(page).toHaveURL(/\/fr\/collection\?q=bolt$/);
+  await expect(grid).toHaveCount(1);
+
   await page.getByLabel("Rechercher dans la collection").fill("");
   await expect(grid).toHaveCount(3);
 

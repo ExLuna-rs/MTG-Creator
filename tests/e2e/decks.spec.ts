@@ -230,6 +230,15 @@ test("crée un deck avec deux commandants partenaires", async ({ page }) => {
   await expect(commanders.locator("[data-card]")).toHaveCount(2);
   await expect(page.getByText("Choisissez un commandant")).toHaveCount(0);
   await expect(page.getByText("Ces commandants ne peuvent pas")).toHaveCount(0);
+
+  // « Mes decks » montre les deux commandants superposés.
+  await page.goto("/fr/decks");
+  await expect(
+    page
+      .getByRole("link", { name: /Thrasios, Triton Hero & Tymna the Weaver/ })
+      .first()
+      .locator("img"),
+  ).toHaveCount(2);
 });
 
 test("range les cartes par catégorie et par glisser-déposer", async ({
@@ -287,6 +296,42 @@ test("relie les cartes aux instructions de glisser-déposer dès le rendu serveu
     "Pour déplacer une carte",
   );
   expect(hydrationErrors).toEqual([]);
+});
+
+test("refuse un commandant qui ne peut pas l'être", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Atraxa, Praetors' Voice");
+  await addCard(page, "Sol Ring");
+
+  // Dans la fenêtre de la carte : l'option est grisée, avec la raison.
+  await deckRow(page, "Sol Ring").click();
+  const card = page.getByRole("dialog", { name: "Sol Ring" });
+  await expect(
+    card.getByRole("button", { name: "Déplacer vers : Commandant" }),
+  ).toBeDisabled();
+  await expect(card.getByText("Ne peut pas être commandant")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Glissée sur la zone Commandant, la carte reste à sa place.
+  await dragTo(page, "Sol Ring", "zone:commander");
+  await expect(
+    page.getByText("Sol Ring ne peut pas être commandant"),
+  ).toBeVisible();
+  await expect(cardIn(page, "role:ramp", "Sol Ring")).toBeVisible();
+  await expect(cardIn(page, "zone:commander", "Sol Ring")).toHaveCount(0);
+});
+
+test("retient le regroupement choisi", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Edgar Markov");
+  await addCard(page, "Sol Ring");
+  await page.getByRole("button", { name: "Type", exact: true }).click();
+  await expect(cardIn(page, "type:Artifact", "Sol Ring")).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Type", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(cardIn(page, "type:Artifact", "Sol Ring")).toBeVisible();
 });
 
 test("regroupe les cartes par rôle", async ({ page }) => {
@@ -525,4 +570,23 @@ test("importe une liste de cartes", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Deck (39 cartes)" }),
   ).toBeVisible();
+});
+
+test("importe un commandant illégal en prévenant", async ({ page }) => {
+  await signUpViaApi(page);
+  await createDeck(page, "Atraxa, Praetors' Voice");
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Importer une liste de cartes",
+  });
+  await dialog
+    .getByLabel("Liste de cartes")
+    .fill(["Commander", "1 Sol Ring", "", "Deck", "1 Counterspell"].join("\n"));
+  await dialog.getByRole("radio", { name: /Remplacer/ }).check();
+  await dialog.getByRole("button", { name: "Analyser la liste" }).click();
+  await expect(dialog.getByText("Commandant illégal : Sol Ring")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Importer 2 cartes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(cardIn(page, "zone:commander", "Sol Ring")).toBeVisible();
 });

@@ -1,5 +1,7 @@
 import { useFormatter } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
+import { GameChangerBadge } from "@/components/cards/game-changer-badge";
+import { cardHref } from "@/domain/cards/links";
 import { Link } from "@/i18n/navigation";
 import type { CardSummary } from "@/server/cards/search";
 
@@ -9,9 +11,12 @@ export type PriceCurrency = "EUR" | "USD";
 export function CardGrid({
   cards,
   currency,
+  from,
 }: {
   cards: CardSummary[];
   currency: PriceCurrency;
+  /** Recherche en cours, où la fiche d'une carte ramènera. */
+  from: string;
 }) {
   const format = useFormatter();
 
@@ -22,8 +27,8 @@ export function CardGrid({
         return (
           <li key={card.oracleId}>
             <Link
-              href={`/cards/${card.oracleId}`}
-              className="group block rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              href={cardHref(card.oracleId, from)}
+              className="group relative block rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <CardImage
                 imageUris={card.imageUris}
@@ -37,6 +42,9 @@ export function CardGrid({
                 <span className="truncate font-medium group-hover:underline">
                   {card.name}
                 </span>
+                {card.gameChanger && (
+                  <GameChangerBadge className="transition-transform group-hover:-translate-y-0.5" />
+                )}
                 {price !== null && (
                   <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
                     {format.number(price, { style: "currency", currency })}

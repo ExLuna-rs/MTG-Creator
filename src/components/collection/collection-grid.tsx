@@ -3,13 +3,22 @@
 import { Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CardImage } from "@/components/cards/card-image";
+import { GameChangerBadge } from "@/components/cards/game-changer-badge";
 import { Button } from "@/components/ui/button";
+import { cardHref } from "@/domain/cards/links";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import { Link } from "@/i18n/navigation";
 import { useCollectionChange } from "./use-collection-change";
 
 /** Cartes de la collection, avec leur nombre d'exemplaires. */
-export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
+export function CollectionGrid({
+  entries,
+  from,
+}: {
+  entries: CollectionEntry[];
+  /** Recherche en cours, où la fiche d'une carte ramènera. */
+  from: string;
+}) {
   const t = useTranslations("CollectionPage");
   const { change, pending, error } = useCollectionChange();
 
@@ -27,7 +36,7 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
         {entries.map((card) => (
           <li key={card.oracleId} data-card={card.name} className="space-y-2">
             <Link
-              href={`/cards/${card.oracleId}`}
+              href={cardHref(card.oracleId, from)}
               className="relative block rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <CardImage
@@ -35,6 +44,7 @@ export function CollectionGrid({ entries }: { entries: CollectionEntry[] }) {
                 name={card.name}
                 sizes="(min-width: 1024px) 160px, (min-width: 640px) 30vw, 45vw"
               />
+              {card.gameChanger && <GameChangerBadge />}
               {card.quantity > 1 && (
                 <span
                   aria-hidden

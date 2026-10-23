@@ -95,7 +95,7 @@ describe("éditeur de deck", () => {
   });
 
   it("déplace une carte vers les cartes à considérer et fusionne les quantités", () => {
-    let state = run(
+    const state = run(
       initial(),
       { type: "add", card: island, zone: "main" },
       { type: "add", card: island, zone: "maybe" },
@@ -103,14 +103,48 @@ describe("éditeur de deck", () => {
     );
     expect(entry(state, island.oracleId)).toBeUndefined();
     expect(entry(state, island.oracleId, "maybe")?.quantity).toBe(2);
+  });
 
-    state = run(state, {
-      type: "move",
-      oracleId: island.oracleId,
-      from: "maybe",
-      to: "commander",
+  it("refuse un commandant inéligible ou incompatible, sauf à l'import", () => {
+    const thrasios = cardData("Thrasios, Triton Hero");
+    const tymna = cardData("Tymna the Weaver");
+    const withCards = run(
+      initial(),
+      { type: "add", card: island, zone: "main" },
+      { type: "add", card: thrasios, zone: "main" },
+    );
+    const toCommander = (oracleId: string) =>
+      ({ type: "move", oracleId, from: "main", to: "commander" }) as const;
+    expect(run(withCards, toCommander(island.oracleId))).toBe(withCards);
+    // Atraxa n'a pas de capacité de paire.
+    expect(run(withCards, toCommander(thrasios.oracleId))).toBe(withCards);
+    expect(
+      run(initial(), { type: "add", card: solRing, zone: "commander" }),
+    ).toEqual(initial());
+
+    // Sans Atraxa, deux Partner vont ensemble.
+    const partners = run(
+      withCards,
+      { type: "remove", oracleId: atraxa.oracleId, zone: "commander" },
+      toCommander(thrasios.oracleId),
+      { type: "add", card: tymna, zone: "commander" },
+    );
+    expect(entry(partners, thrasios.oracleId, "commander")?.quantity).toBe(1);
+    expect(entry(partners, tymna.oracleId, "commander")?.quantity).toBe(1);
+
+    const imported = run(initial(), {
+      type: "import",
+      entries: [
+        {
+          oracleId: solRing.oracleId,
+          zone: "commander",
+          quantity: 1,
+          categories: [],
+        },
+      ],
+      cards: [solRing],
     });
-    expect(entry(state, island.oracleId, "commander")?.quantity).toBe(1);
+    expect(entry(imported, solRing.oracleId, "commander")?.quantity).toBe(1);
   });
 
   it("gère les catégories et la catégorie principale", () => {

@@ -132,6 +132,7 @@
   },
   "CardPage": {
     "back": "Back to search",
+    "backToCollection": "Back to collection",
     "legal": "Legal",
     "not_legal": "Not legal",
     "banned": "Banned",
@@ -153,6 +154,8 @@
     "set": "{set} ({code}), #{number}",
     "artist": "Illustrated by {artist}",
     "viewOnScryfall": "View on Scryfall",
+    "viewOnCardmarket": "View on Cardmarket",
+    "viewOnTcgplayer": "View on TCGplayer",
     "backFace": "{name} (back face)"
   },
   "Formats": {
@@ -357,7 +360,25 @@
     "newCategoryPlaceholder": "Ramp, Draw…",
     "addCategory": "Add",
     "categoriesHint": "Drag the card onto a group to change its main category.",
-    "defaultCategories": "Ramp, Card draw, Interaction, Board wipes, Protection, Tutors, Synergy, Win conditions"
+    "defaultCategories": "Ramp, Card draw, Interaction, Board wipes, Protection, Tutors, Synergy, Win conditions",
+    "closeMessage": "Close message",
+    "commanderRefused": {
+      "notACommander": {
+        "title": "{name} can't be a commander",
+        "detail": "A commander must be a legendary creature, a legendary Vehicle or Spacecraft with power and toughness, or a card that says it can be your commander. The card stays where it was.",
+        "short": "Can't be a commander"
+      },
+      "invalidPair": {
+        "title": "{name} can't be paired with {other}",
+        "detail": "Two commanders need an ability that pairs them: Partner, Partner with, Friends forever, Choose a Background with a Background, or Doctor's companion with a Doctor. The card stays where it was.",
+        "short": "Can't be paired with {other}"
+      },
+      "tooManyCommanders": {
+        "title": "This deck already has two commanders",
+        "detail": "Remove one before adding another. The card stays where it was.",
+        "short": "The deck already has two commanders"
+      }
+    }
   },
   "CardSpotlight": {
     "open": "Search for a card…",
@@ -405,7 +426,9 @@
     "replaceWarning": "The deck's current cards will be replaced; your commanders stay if the list names none. You can undo with Ctrl+Z.",
     "back": "Edit the list",
     "confirm": "{count, plural, one {Import # card} other {Import # cards}}",
-    "done": "{count, plural, one {# card imported} other {# cards imported}}"
+    "done": "{count, plural, one {# card imported} other {# cards imported}}",
+    "illegalCommanderTitle": "Illegal commander: {names}",
+    "illegalCommanderHelp": "The list puts it in the command zone and it will be imported there, but it can't be this deck's commander. The deck stays invalid until you replace it."
   },
   "DeckGroups": {
     "commander": "Commander",

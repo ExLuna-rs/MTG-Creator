@@ -5,8 +5,10 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CardGrid, type PriceCurrency } from "@/components/cards/card-grid";
 import { CardPagination } from "@/components/cards/card-pagination";
 import { CardSearchForm } from "@/components/cards/card-search-form";
+import { pageWithQuery } from "@/domain/cards/links";
 import {
   type CardSearch,
+  cardSearchToQuery,
   countActiveFilters,
   parseCardSearch,
 } from "@/domain/cards/search-query";
@@ -67,6 +69,7 @@ export default async function CardsPage({
           <CardGrid
             cards={result.cards}
             currency={priceCurrency(search, locale as Locale)}
+            from={pageWithQuery("cards", cardSearchToQuery(search))}
           />
         ) : (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-12 text-center">

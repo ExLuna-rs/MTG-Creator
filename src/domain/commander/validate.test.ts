@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DeckCard } from "../deck/deck";
-import { deckCard } from "../deck/test-helpers";
-import { validateCommanderDeck } from "./validate";
+import { cardData, deckCard } from "../deck/test-helpers";
+import { commanderRefusal, validateCommanderDeck } from "./validate";
 
 /** Complète le deck avec un terrain de base jusqu'à `size` cartes. */
 function fillWith(cards: DeckCard[], basic: string, size = 100): DeckCard[] {
@@ -252,5 +252,50 @@ describe("validation d'un deck Commander", () => {
         minimumBracket: 4,
       }),
     ]);
+  });
+});
+
+describe("commanderRefusal", () => {
+  const atraxa = cardData("Atraxa, Praetors' Voice");
+  const thrasios = cardData("Thrasios, Triton Hero");
+  const tymna = cardData("Tymna the Weaver");
+  const wilson = cardData("Wilson, Refined Grizzly");
+  const artisan = cardData("Guild Artisan");
+  const solRing = cardData("Sol Ring");
+
+  it("accepte un commandant seul, ou une paire compatible", () => {
+    expect(commanderRefusal(atraxa, [])).toBeNull();
+    expect(commanderRefusal(tymna, [thrasios])).toBeNull();
+    expect(commanderRefusal(artisan, [wilson])).toBeNull();
+    // Le Background peut arriver avant sa créature.
+    expect(commanderRefusal(artisan, [])).toBeNull();
+    expect(commanderRefusal(wilson, [artisan])).toBeNull();
+    // Déjà commandant : la carte ne se compte pas deux fois.
+    expect(commanderRefusal(thrasios, [thrasios, tymna])).toBeNull();
+  });
+
+  it("refuse une carte qui ne peut pas être commandant", () => {
+    expect(commanderRefusal(solRing, [])).toEqual({ code: "notACommander" });
+    expect(commanderRefusal(solRing, [thrasios])).toEqual({
+      code: "notACommander",
+    });
+  });
+
+  it("refuse une paire incompatible, en nommant l'autre commandant", () => {
+    expect(commanderRefusal(thrasios, [atraxa])).toEqual({
+      code: "invalidPair",
+      other: { oracleId: atraxa.oracleId, name: atraxa.name },
+    });
+    expect(commanderRefusal(artisan, [thrasios])?.code).toBe("invalidPair");
+  });
+
+  it("refuse un troisième commandant", () => {
+    expect(commanderRefusal(atraxa, [thrasios, tymna])).toEqual({
+      code: "tooManyCommanders",
+    });
+  });
+
+  it("laisse remplacer un commandant inéligible venu d'un import", () => {
+    expect(commanderRefusal(atraxa, [solRing])).toBeNull();
   });
 });

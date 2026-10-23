@@ -13,6 +13,7 @@ import { CollectionGrid } from "@/components/collection/collection-grid";
 import { PendingScans } from "@/components/collection/pending-scans";
 import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
+import { pageWithQuery } from "@/domain/cards/links";
 import {
   COLLECTION_SORTS,
   selectCollection,
@@ -115,7 +116,13 @@ export default async function CollectionPage({
               {t("noMatch", { query: q })}
             </p>
           ) : (
-            <CollectionGrid entries={shown} />
+            <CollectionGrid
+              entries={shown}
+              from={pageWithQuery("collection", {
+                ...(q && { q }),
+                ...(sort !== "name" && { sort }),
+              })}
+            />
           )}
         </div>
       )}

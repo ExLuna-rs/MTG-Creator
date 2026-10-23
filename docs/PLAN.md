@@ -310,6 +310,20 @@ Estimation du bracket, objectifs par catégorie, test de main, choix de l'éditi
 - Validation et statistiques (chiffres clés, courbe de mana, types, couleurs) en bandeau au-dessus du deck.
 - Recherche façon Spotlight (`card-spotlight.tsx`) : Ctrl+K, ⌘K ou « / » ; flèches pour choisir, Entrée ajoute au deck, Maj+Entrée aux cartes à considérer, la fenêtre reste ouverte pour enchaîner. « 12 island » ajoute 12 exemplaires (`src/domain/deck/quick-add.ts`). Limitée par défaut à l'identité couleur des commandants.
 
+### Retours du test du 17 octobre 2026
+
+Un premier testeur a fait ses retours ; ils sont rangés en six lots (plan validé par Corentin le 23 octobre 2026) : 1. corrections rapides, 2. filtres de recherche (modes de couleur, types ET / OU, sous-types, extensions), 3. export de deck et import de collection, 4. rangement des decks et de la collection (dossiers, favoris, filtres ; classeurs dans une seule collection), 5. versions des cartes (phase 5), 6. scan des cartes à cadre spécial.
+
+**Lot 1 (corrections rapides)** : fait.
+
+- « Retour à la recherche » ramène à la recherche d'origine, filtres compris, et « Retour à la collection » à la collection quand la fiche a été ouverte depuis elle (paramètre `from`, limité à ces deux pages, `src/domain/cards/links.ts`).
+- Le regroupement de l'éditeur (Rôle, Type, Catégorie) est retenu par le navigateur, comme l'affichage.
+- Pastille « GC » sur les images des Game Changers (recherche, éditeur, collection), à cheval sur le coin supérieur gauche pour rester visible en piles sans cacher le nom ; puce « GC » en vue Liste.
+- Fiche carte : boutons « Voir sur Cardmarket » et « Voir sur TCGplayer », qui cherchent la carte par son nom (toutes les éditions) ; un lien par édition viendra avec la table `printing`.
+- Vue Grille : cartes d'au moins 11,5 rem, soit 7 à 8 colonnes sur grand écran.
+- « Mes decks » : avec deux commandants, le second se pose sur le premier, décalé vers le haut à droite.
+- Zone Commandant : une carte qui ne peut pas être commandant, ou qui ne forme pas une paire avec le commandant en place, est refusée (zone en rouge au survol, message après le dépôt, option grisée avec la raison dans la fenêtre de la carte ; `commanderRefusal` dans `src/domain/commander/validate.ts`). L'import d'une liste reste libre mais prévient : « Commandant illégal ».
+
 ### Phase 6 et suivantes
 
 Selon les priorités, dans la liste « Plus tard ».

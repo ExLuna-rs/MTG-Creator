@@ -3,7 +3,8 @@ import { expect, type Page, test } from "@playwright/test";
 // Ces tests passent aussi bien sur le jeu de test (172 cartes, en CI) que
 // sur la base complète : ils ne supposent rien du nombre de résultats.
 
-const CARD_URL = /\/fr\/cards\/[0-9a-f-]{36}$/;
+// Fiche carte, avec ou sans la page où revenir (`?from=`).
+const CARD_URL = /\/fr\/cards\/[0-9a-f-]{36}(\?from=[^&]+)?$/;
 
 test.use({ locale: "fr-FR" });
 
@@ -201,8 +202,21 @@ test("affiche la fiche d'une carte recto verso", async ({ page }) => {
     page.getByRole("link", { name: "Voir sur Scryfall" }),
   ).toHaveAttribute("href", /^https:\/\/scryfall\.com\//);
 
+  // Liens vers les marchés, par le nom de la face avant.
+  await expect(
+    page.getByRole("link", { name: "Voir sur Cardmarket" }),
+  ).toHaveAttribute(
+    "href",
+    "https://www.cardmarket.com/fr/Magic/Products/Search?searchString=Delver+of+Secrets",
+  );
+  await expect(
+    page.getByRole("link", { name: "Voir sur TCGplayer" }),
+  ).toHaveAttribute("href", /^https:\/\/www\.tcgplayer\.com\/search\/magic\//);
+
   await page.getByRole("link", { name: "Retour à la recherche" }).click();
-  await expect(page).toHaveURL(/\/fr\/cards$/);
+  // La recherche d'origine est retrouvée.
+  await expect(page).toHaveURL(/\/fr\/cards\?q=delver\+of\+secrets$/);
+  await expect(nameField(page)).toHaveValue("delver of secrets");
 });
 
 test("signale les commandants et les Game Changers", async ({ page }) => {
@@ -211,6 +225,8 @@ test("signale les commandants et les Game Changers", async ({ page }) => {
   await expect(page.getByText("Peut être commandant")).toBeVisible();
 
   await page.goto("/fr/cards?q=rhystic+study");
+  // Pastille sur l'image dans les résultats.
+  await expect(cardLink(page, "Rhystic Study")).toContainText("Game Changer");
   await cardLink(page, "Rhystic Study").click();
   await expect(page.getByText("Game Changer", { exact: true })).toBeVisible();
 });

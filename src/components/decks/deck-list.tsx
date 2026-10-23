@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useContext, useId, useState } from "react";
 import { ManaText, OracleText } from "@/components/cards/mana-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,12 @@ import { MAX_QUANTITY } from "@/domain/deck/editor";
 import type { GroupedDeck } from "@/domain/deck/groups";
 import { CARD_ROLES, type CardRole } from "@/domain/deck/roles";
 import { cn } from "@/lib/utils";
+import {
+  CommanderCheck,
+  DropRefusal,
+  useDropRefusal,
+  useRefusalText,
+} from "./commander-check";
 
 export type Dispatch = (action: EditorAction) => void;
 
@@ -158,7 +164,8 @@ function Group({
   muted?: boolean;
   children: ReactNode;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id });
+  const { isOver, setNodeRef, active } = useDroppable({ id });
+  const refused = useDropRefusal(id, isOver, active);
   const headingId = useId();
   return (
     <section
@@ -169,6 +176,7 @@ function Group({
         "rounded-lg border p-2 transition-colors",
         muted && "border-dashed",
         isOver && "border-primary bg-primary/5",
+        refused && "border-destructive bg-destructive/10",
       )}
     >
       <h3
@@ -178,6 +186,7 @@ function Group({
         <span>{title}</span>
         <span className="text-muted-foreground tabular-nums">{count}</span>
       </h3>
+      <DropRefusal refused={refused} />
       <ul className="divide-y">{children}</ul>
     </section>
   );
@@ -198,6 +207,7 @@ function CardRow({
 }) {
   const t = useTranslations("DeckEditor");
   const tIssues = useTranslations("DeckValidation.short");
+  const tCard = useTranslations("CardPage");
   const [open, setOpen] = useState(false);
   const detailsId = useId();
   const { card, zone, oracleId, quantity } = entry;
@@ -255,6 +265,15 @@ function CardRow({
         >
           {card.name}
         </button>
+        {card.gameChanger && (
+          <span
+            title={tCard("gameChanger")}
+            className="shrink-0 rounded-full bg-game-changer px-1.5 font-semibold text-[0.625rem] text-game-changer-foreground leading-4"
+          >
+            <span aria-hidden>GC</span>
+            <span className="sr-only">{tCard("gameChanger")}</span>
+          </span>
+        )}
         {issues.length > 0 && (
           <span
             className="shrink-0 text-destructive"
@@ -334,6 +353,10 @@ export function CardOptions({
   const tGroups = useTranslations("DeckGroups");
   const [newCategory, setNewCategory] = useState("");
   const { card, zone, oracleId } = entry;
+  const checkCommander = useContext(CommanderCheck);
+  const refusalText = useRefusalText();
+  const refused = zone === "commander" ? null : checkCommander(oracleId);
+  const refusalId = useId();
 
   function addCategory() {
     if (!newCategory.trim()) return;
@@ -354,6 +377,10 @@ export function CardOptions({
             key={target}
             variant="outline"
             size="sm"
+            disabled={target === "commander" && refused !== null}
+            aria-describedby={
+              target === "commander" && refused ? refusalId : undefined
+            }
             onClick={() =>
               dispatch({ type: "move", oracleId, from: zone, to: target })
             }
@@ -362,6 +389,11 @@ export function CardOptions({
           </Button>
         ))}
       </div>
+      {refused && (
+        <p id={refusalId} className="text-destructive text-xs">
+          {refusalText(refused).short}
+        </p>
+      )}
       {zone === "main" && (
         <div className="space-y-2">
           <p className="font-medium text-xs">{t("categories")}</p>

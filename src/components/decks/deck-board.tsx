@@ -15,13 +15,19 @@ import { useTranslations } from "next-intl";
 import {
   type CSSProperties,
   type ReactNode,
+  useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { CardImage } from "@/components/cards/card-image";
-import type { DeckIssueCode } from "@/domain/commander/validate";
+import { GameChangerBadge } from "@/components/cards/game-changer-badge";
+import {
+  commanderRefusal,
+  type DeckIssueCode,
+} from "@/domain/commander/validate";
 import {
   countCards,
   DECK_ZONES,
@@ -33,6 +39,13 @@ import { type GroupMode, groupDeck } from "@/domain/deck/groups";
 import { masonry } from "@/lib/masonry";
 import { cn } from "@/lib/utils";
 import { CardDialog } from "./card-dialog";
+import {
+  CommanderCheck,
+  DropRefusal,
+  type RefusedCommander,
+  RefusedToast,
+  useDropRefusal,
+} from "./commander-check";
 import { DeckList, type Dispatch, dropTarget, entryId } from "./deck-list";
 
 /** Affichages du deck : piles d'images, grille d'images, liste de texte. */
@@ -95,6 +108,18 @@ export function DeckBoard({
   // l'hydratation (aria-describedby="DndDescribedBy-0" puis "-1").
   const dndId = useId();
   const [opened, setOpened] = useState<string | null>(null);
+  const [refused, setRefused] = useState<RefusedCommander | null>(null);
+  const closeRefused = useCallback(() => setRefused(null), []);
+  const checkCommander = useMemo(() => {
+    const commanders = deck
+      .filter((entry) => entry.zone === "commander")
+      .map((entry) => entry.card);
+    return (oracleId: string): RefusedCommander | null => {
+      const card = deck.find((entry) => entry.oracleId === oracleId)?.card;
+      const refusal = card ? commanderRefusal(card, commanders) : null;
+      return card && refusal ? { name: card.name, refusal } : null;
+    };
+  }, [deck]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     // Espace seulement : Entrée garde son rôle de clic (ouvrir les options).
@@ -112,6 +137,10 @@ export function DeckBoard({
     const [from, oracleId] = String(active.id).split("|") as [DeckZone, string];
     const target = dropTarget(String(over.id), (role) => tRoles(role));
     if (!target || !DECK_ZONES.includes(from)) return;
+    if (target.zone === "commander" && from !== "commander") {
+      const refusal = checkCommander(oracleId);
+      if (refusal) return setRefused(refusal);
+    }
     dispatch({
       type: "drop",
       oracleId,
@@ -164,45 +193,48 @@ export function DeckBoard({
   };
 
   return (
-    <DndContext
-      id={dndId}
-      sensors={sensors}
-      onDragEnd={onDragEnd}
-      accessibility={{
-        screenReaderInstructions: { draggable: t("dragInstructions") },
-      }}
-    >
-      <datalist id={datalistId}>
-        {categories.map((category) => (
-          <option key={category} value={category} />
-        ))}
-      </datalist>
-      {view === "list" && (
-        <DeckList
-          grouped={grouped}
-          groupTitle={groupTitle}
+    <CommanderCheck.Provider value={checkCommander}>
+      <DndContext
+        id={dndId}
+        sensors={sensors}
+        onDragEnd={onDragEnd}
+        accessibility={{
+          screenReaderInstructions: { draggable: t("dragInstructions") },
+        }}
+      >
+        <datalist id={datalistId}>
+          {categories.map((category) => (
+            <option key={category} value={category} />
+          ))}
+        </datalist>
+        {view === "list" && (
+          <DeckList
+            grouped={grouped}
+            groupTitle={groupTitle}
+            cardIssues={cardIssues}
+            datalistId={datalistId}
+            dispatch={dispatch}
+            onPreview={onPreview}
+          />
+        )}
+        {view === "piles" && <PilesView groups={boardGroups} {...tileProps} />}
+        {view === "grid" && <GridView groups={boardGroups} {...tileProps} />}
+        <CardDialog
+          entry={openedEntry}
           cardIssues={cardIssues}
           datalistId={datalistId}
-          dispatch={dispatch}
-          onPreview={onPreview}
+          dispatch={(action) => {
+            // La fenêtre suit la carte déplacée vers une autre zone.
+            if (action.type === "move") {
+              setOpened(`${action.to}|${action.oracleId}`);
+            }
+            dispatch(action);
+          }}
+          onClose={() => setOpened(null)}
         />
-      )}
-      {view === "piles" && <PilesView groups={boardGroups} {...tileProps} />}
-      {view === "grid" && <GridView groups={boardGroups} {...tileProps} />}
-      <CardDialog
-        entry={openedEntry}
-        cardIssues={cardIssues}
-        datalistId={datalistId}
-        dispatch={(action) => {
-          // La fenêtre suit la carte déplacée vers une autre zone.
-          if (action.type === "move") {
-            setOpened(`${action.to}|${action.oracleId}`);
-          }
-          dispatch(action);
-        }}
-        onClose={() => setOpened(null)}
-      />
-    </DndContext>
+        <RefusedToast refused={refused} onClose={closeRefused} />
+      </DndContext>
+    </CommanderCheck.Provider>
   );
 }
 
@@ -299,7 +331,7 @@ function GridView({
       {groups.map((group) => (
         <BoardGroupSection key={group.id} group={group}>
           {group.cards.length > 0 ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(11.5rem,40%),1fr))] gap-3">
               {group.cards.map((entry) => (
                 <CardTile
                   key={entryId(entry)}
@@ -326,7 +358,8 @@ function BoardGroupSection({
   group: BoardGroup;
   children: ReactNode;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: group.id });
+  const { isOver, setNodeRef, active } = useDroppable({ id: group.id });
+  const refused = useDropRefusal(group.id, isOver, active);
   const headingId = useId();
   return (
     <section
@@ -337,6 +370,7 @@ function BoardGroupSection({
         "@container min-w-0 rounded-lg transition-colors",
         group.muted && "opacity-90",
         isOver && "bg-primary/10 outline-2 outline-primary outline-dashed",
+        refused && "bg-destructive/10 outline-destructive",
       )}
     >
       <h3
@@ -348,6 +382,7 @@ function BoardGroupSection({
           {countCards(group.cards)}
         </span>
       </h3>
+      <DropRefusal refused={refused} />
       {children}
     </section>
   );
@@ -414,6 +449,7 @@ function CardTile({
           issues.length > 0 && "ring-2 ring-destructive",
         )}
       />
+      {card.gameChanger && <GameChangerBadge />}
       {quantity > 1 && (
         <span className="absolute right-1.5 bottom-1.5 rounded-full bg-foreground px-1.5 font-medium text-background text-xs tabular-nums">
           ×{quantity}
