@@ -47,9 +47,9 @@ test("ajoute et retire des cartes de la collection", async ({ page }) => {
   await expect(page.getByText("Votre collection est vide.")).toBeVisible();
 
   await pickCard(page, "Ajouter une carte", "Sol Ring");
-  await expect(page.getByRole("status")).toContainText(
-    "Sol Ring ajoutée à la collection",
-  );
+  await expect(
+    page.getByRole("status").filter({ hasText: "Sol Ring ajoutée" }),
+  ).toContainText("Sol Ring ajoutée à la collection");
   await expect(collectionCard(page, "Sol Ring")).toContainText("1 exemplaire");
 
   await page
@@ -189,4 +189,61 @@ test("demande un lien ou une connexion pour scanner", async ({ page }) => {
   await expect(page.getByText(/connectez-vous sur ce téléphone/)).toBeVisible();
   await page.getByRole("link", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/fr\/sign-in\?next=%2Fscan$/);
+});
+
+test("importe une liste et un fichier dans la collection, puis l'exporte", async ({
+  page,
+}) => {
+  await signUpViaApi(page);
+  await page.goto("/fr/collection");
+
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Importer dans la collection",
+  });
+  await dialog
+    .getByLabel("Ou collez la liste")
+    .fill("4 Lightning Bolt\n1 Sol Rign\n2x Counterspell (MH2) 267");
+  await dialog.getByRole("button", { name: "Analyser la liste" }).click();
+  await expect(
+    dialog.getByText("6 exemplaires reconnus, 2 cartes différentes."),
+  ).toBeVisible();
+  await expect(dialog.getByText("1 ligne non reconnue")).toBeVisible();
+  await dialog.getByRole("button", { name: "Sol Ring", exact: true }).click();
+  await dialog.getByRole("button", { name: "Ajouter 7 exemplaires" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("7 exemplaires ajoutés")).toBeVisible();
+  await expect(page.getByTestId("collection-count")).toContainText("7 cartes");
+
+  // Un export CSV de ManaBox : les exemplaires s'ajoutent.
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "manabox.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      'Name,Set code,Quantity\nSol Ring,CMM,2\n"Fire // Ice",MH2,1\n',
+    ),
+  });
+  await expect(dialog.getByText("manabox.csv")).toBeVisible();
+  await dialog.getByRole("button", { name: "Analyser la liste" }).click();
+  await dialog.getByRole("button", { name: "Ajouter 3 exemplaires" }).click();
+  await expect(collectionCard(page, "Sol Ring")).toContainText("3 exemplaires");
+  await expect(page.getByTestId("collection-count")).toContainText("10 cartes");
+
+  await page.getByRole("button", { name: "Exporter" }).click();
+  const exported = page
+    .getByRole("dialog", { name: "Exporter la collection" })
+    .getByRole("textbox", { name: "Liste exportée" });
+  await expect(exported).toHaveValue(
+    "2 Counterspell\n1 Fire // Ice\n4 Lightning Bolt\n3 Sol Ring",
+  );
+  await page.getByRole("radio", { name: "CSV" }).check();
+  await expect(exported).toHaveValue(/^"Count","Name"\n"2","Counterspell"/);
+});
+
+test("refuse l'import dans la collection sans session", async ({ request }) => {
+  const response = await request.post("/api/collection/import", {
+    data: { cards: [{ oracleId: crypto.randomUUID(), quantity: 1 }] },
+  });
+  expect(response.status()).toBe(401);
 });

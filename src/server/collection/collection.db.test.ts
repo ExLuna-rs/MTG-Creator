@@ -3,7 +3,11 @@ import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getDb } from "@/server/db";
 import { cards, users } from "@/server/db/schema";
-import { changeCollectionCard, getCollection } from "./collection";
+import {
+  addCollectionCards,
+  changeCollectionCard,
+  getCollection,
+} from "./collection";
 import {
   addToScanList,
   commitScanList,
@@ -236,5 +240,42 @@ describe("reconnaissance du nom lu", () => {
 
   it("ne propose rien pour une lecture vide", async () => {
     expect(await matchScannedName("| @ .")).toEqual([]);
+  });
+});
+
+describe("import d'une liste dans la collection", () => {
+  it("ajoute les exemplaires à ceux déjà possédés, sans toucher aux autres", async () => {
+    const user = await newUser();
+    const bolt = await oracleId("Lightning Bolt");
+    const ring = await oracleId("Sol Ring");
+    await changeCollectionCard(user, bolt, 2);
+
+    expect(
+      await addCollectionCards(user, [
+        { oracleId: bolt, quantity: 4 },
+        { oracleId: ring, quantity: 1 },
+        { oracleId: ring, quantity: 1 },
+        // Carte inconnue : ignorée.
+        { oracleId: randomUUID(), quantity: 3 },
+      ]),
+    ).toEqual({ cards: 2, copies: 6 });
+
+    const quantities = Object.fromEntries(
+      (await getCollection(user)).entries.map((entry) => [
+        entry.name,
+        entry.quantity,
+      ]),
+    );
+    expect(quantities).toEqual({ "Lightning Bolt": 6, "Sol Ring": 2 });
+    expect((await getCollection(stranger)).entries).toEqual([]);
+  });
+
+  it("plafonne les quantités", async () => {
+    const user = await newUser();
+    const island = await oracleId("Island");
+    await addCollectionCards(user, [{ oracleId: island, quantity: 9000 }]);
+    await addCollectionCards(user, [{ oracleId: island, quantity: 9000 }]);
+    expect((await getCollection(user)).entries[0].quantity).toBe(9999);
+    expect(await addCollectionCards(user, [])).toEqual({ cards: 0, copies: 0 });
   });
 });

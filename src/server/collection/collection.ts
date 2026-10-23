@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import { MAX_COLLECTION_QUANTITY } from "@/domain/collection/schema";
 import { getDeckCardData } from "@/server/cards/search";
@@ -124,4 +124,51 @@ export async function changeCollectionCard(
     })
     .returning({ quantity: collectionCards.quantity });
   return { ok: true, quantity: row.quantity };
+}
+
+/**
+ * Ajoute des exemplaires de plusieurs cartes (import d'une liste), en une
+ * transaction. Les cartes inconnues sont ignorées ; une même carte listée
+ * deux fois compte deux fois. Renvoie le nombre de cartes et d'exemplaires
+ * ajoutés.
+ */
+export async function addCollectionCards(
+  userId: string,
+  entries: readonly { oracleId: string; quantity: number }[],
+): Promise<{ cards: number; copies: number }> {
+  const totals = new Map<string, number>();
+  for (const { oracleId, quantity } of entries) {
+    totals.set(
+      oracleId,
+      Math.min((totals.get(oracleId) ?? 0) + quantity, MAX_COLLECTION_QUANTITY),
+    );
+  }
+  if (totals.size === 0) return { cards: 0, copies: 0 };
+
+  const db = getDb();
+  const known = await db
+    .select({ oracleId: cards.oracleId })
+    .from(cards)
+    .where(inArray(cards.oracleId, [...totals.keys()]));
+  const rows = known.map(({ oracleId }) => ({
+    userId,
+    oracleId,
+    quantity: totals.get(oracleId) ?? 0,
+  }));
+  if (rows.length === 0) return { cards: 0, copies: 0 };
+
+  await db
+    .insert(collectionCards)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [collectionCards.userId, collectionCards.oracleId],
+      set: {
+        quantity: sql`least(${collectionCards.quantity} + excluded.quantity, ${MAX_COLLECTION_QUANTITY})`,
+        updatedAt: new Date(),
+      },
+    });
+  return {
+    cards: rows.length,
+    copies: rows.reduce((sum, row) => sum + row.quantity, 0),
+  };
 }

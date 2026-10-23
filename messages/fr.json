@@ -701,5 +701,59 @@
     "text": "Texte : « {text} »",
     "remove": "Retirer le filtre : {label}",
     "clearAll": "Tout effacer"
+  },
+  "ExportDialog": {
+    "open": "Exporter",
+    "close": "Fermer",
+    "format": "Format",
+    "result": "Liste exportée",
+    "copy": "Copier",
+    "copied": "Liste copiée dans le presse-papiers.",
+    "download": "Télécharger"
+  },
+  "DeckExport": {
+    "title": "Exporter le deck",
+    "formats": {
+      "arena": "MTG Arena · Moxfield",
+      "archidekt": "Archidekt (avec catégories)",
+      "plain": "Texte simple",
+      "cardmarket": "Cardmarket"
+    },
+    "hints": {
+      "arena": "Sections « Commander » et « Deck » : reconnu par MTG Arena, Moxfield, Archidekt et MTG Creator.",
+      "archidekt": "Les catégories du deck entre crochets : Archidekt les reprend telles quelles.",
+      "plain": "Une carte par ligne, commandant en premier : pour un forum ou un message.",
+      "cardmarket": "À coller dans « Ajouter une liste » d'une liste de souhaits Cardmarket. Toutes les éditions de chaque carte sont proposées : le choix de l'édition viendra avec les versions des cartes."
+    },
+    "includeMaybe": "Inclure les cartes à considérer",
+    "skipBasicLands": "Sans les terrains de base"
+  },
+  "CollectionImport": {
+    "open": "Importer une liste",
+    "title": "Importer dans la collection",
+    "fileLabel": "Fichier exporté d'une autre application",
+    "chooseFile": "Choisir un fichier (.txt, .csv)",
+    "label": "Ou collez la liste",
+    "help": "Une carte par ligne (« 4 Lightning Bolt »), ou un export CSV de Moxfield, ManaBox, Archidekt ou Deckbox. Les exemplaires s'ajoutent à ceux de votre collection. L'édition indiquée est ignorée pour l'instant. {max, number} lignes au maximum.",
+    "errors": {
+      "empty": "Aucune carte trouvée dans ce texte.",
+      "network": "L'import a échoué. Réessayez.",
+      "file": "Ce fichier ne peut pas être lu (1 Mo au maximum)."
+    },
+    "recognized": "{copies, plural, =0 {Aucun exemplaire reconnu} one {# exemplaire reconnu} other {# exemplaires reconnus}}, {cards, plural, one {# carte différente} other {# cartes différentes}}.",
+    "truncated": "La liste dépasse {max, number} lignes : la suite est ignorée.",
+    "confirm": "{count, plural, one {Ajouter # exemplaire} other {Ajouter # exemplaires}}",
+    "done": "{count, plural, one {# exemplaire ajouté} other {# exemplaires ajoutés}}"
+  },
+  "CollectionExport": {
+    "title": "Exporter la collection",
+    "formats": {
+      "text": "Texte",
+      "csv": "CSV"
+    },
+    "hints": {
+      "text": "Une carte par ligne (« 4 Lightning Bolt ») : reconnu par Moxfield, Archidekt, ManaBox et MTG Creator.",
+      "csv": "Colonnes « Count » et « Name », pour un tableur ou un import dans Moxfield."
+    }
   }
 }

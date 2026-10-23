@@ -1,9 +1,10 @@
 "use client";
 
 import type { Active } from "@dnd-kit/core";
-import { CircleAlert, X } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext } from "react";
+import { Toast } from "@/components/ui/toast";
 import type { CommanderRefusal } from "@/domain/commander/validate";
 
 /** Carte refusée dans la zone Commandant, et la raison. */
@@ -54,9 +55,6 @@ export function useRefusalText() {
   };
 }
 
-/** Durée d'affichage du message après un dépôt refusé (ms). */
-const TOAST_DURATION = 6000;
-
 /** Message affiché après un dépôt refusé ; il disparaît seul. */
 export function RefusedToast({
   refused,
@@ -67,39 +65,13 @@ export function RefusedToast({
 }) {
   const t = useTranslations("DeckEditor");
   const text = useRefusalText();
-  useEffect(() => {
-    if (!refused) return;
-    const timer = setTimeout(onClose, TOAST_DURATION);
-    return () => clearTimeout(timer);
-  }, [refused, onClose]);
-
-  const message = refused ? text(refused) : null;
   return (
-    <div
-      role="status"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
-    >
-      {message && (
-        <div className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-lg border border-l-4 border-l-destructive bg-background p-3 text-sm shadow-lg">
-          <CircleAlert
-            className="mt-0.5 size-4 shrink-0 text-destructive"
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <p className="font-medium">{message.title}</p>
-            <p className="text-muted-foreground">{message.detail}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("closeMessage")}
-            className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" aria-hidden />
-          </button>
-        </div>
-      )}
-    </div>
+    <Toast
+      message={refused ? text(refused) : null}
+      tone="error"
+      onClose={onClose}
+      closeLabel={t("closeMessage")}
+    />
   );
 }
 

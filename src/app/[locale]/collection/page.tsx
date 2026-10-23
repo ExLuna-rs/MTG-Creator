@@ -12,8 +12,10 @@ import {
   CollectionDetails,
   type DeckInfo,
 } from "@/components/collection/collection-details";
+import { CollectionExport } from "@/components/collection/collection-export";
 import { CollectionFilters } from "@/components/collection/collection-filters";
 import { CollectionGrid } from "@/components/collection/collection-grid";
+import { CollectionImport } from "@/components/collection/collection-import";
 import { PendingScans } from "@/components/collection/pending-scans";
 import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
@@ -121,6 +123,15 @@ export default async function CollectionPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <CollectionImport />
+          {collection.entries.length > 0 && (
+            <CollectionExport
+              entries={collection.entries.map(({ name, quantity }) => ({
+                name,
+                quantity,
+              }))}
+            />
+          )}
           {/* Sur téléphone, le scan se fait directement sur l'appareil. */}
           <Link
             href="/scan"

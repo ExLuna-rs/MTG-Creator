@@ -15,9 +15,9 @@ async function addToCollection(page: Page, name: string, copies = 1) {
   for (let i = 0; i < copies; i++) {
     await page.getByRole("combobox", { name: "Ajouter une carte" }).fill(name);
     await page.getByRole("option", { name, exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
-      `${name} ajoutée à la collection`,
-    );
+    await expect(
+      page.getByRole("status").filter({ hasText: "ajoutée à la collection" }),
+    ).toContainText(`${name} ajoutée à la collection`);
   }
 }
 
