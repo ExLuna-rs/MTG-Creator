@@ -14,6 +14,7 @@ import {
   parseCardSearch,
 } from "@/domain/cards/search-query";
 import { getPathname } from "@/i18n/navigation";
+import { getSets } from "@/server/cards/printings";
 import { searchCards } from "@/server/cards/search";
 
 export async function generateMetadata({
@@ -42,7 +43,10 @@ export default async function CardsPage({
   setRequestLocale(locale as Locale);
   const t = await getTranslations("CardSearch");
   const search = parseCardSearch(await searchParams);
-  const result = await searchCards(search);
+  const [result, sets] = await Promise.all([
+    searchCards(search),
+    getSets(search.sets),
+  ]);
   const isBlankSearch = !search.name && countActiveFilters(search) === 0;
 
   return (
@@ -54,11 +58,12 @@ export default async function CardsPage({
 
       <CardSearchForm
         search={search}
+        sets={sets}
         action={getPathname({ locale: locale as Locale, href: "/cards" })}
       />
 
       <section aria-labelledby="card-results" className="space-y-6">
-        <ActiveFilters search={search} />
+        <ActiveFilters search={search} sets={sets} />
         <h2
           id="card-results"
           aria-live="polite"

@@ -34,7 +34,15 @@ services:
     build:
       context: .
       target: tools
-    command: ["node", "scripts/sync-cards.mjs", "--file", "/fixtures/cards.jsonl"]
+    command:
+      [
+        "node",
+        "scripts/sync-cards.mjs",
+        "--file",
+        "/fixtures/cards.jsonl",
+        "--printings",
+        "/fixtures/printings.jsonl",
+      ]
     environment:
       DATABASE_URL: *database-url
     volumes:

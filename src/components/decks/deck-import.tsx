@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { normalizeCardName } from "@/domain/cards/normalize";
 import { commanderIssues } from "@/domain/commander/validate";
-import type { DeckCardData, DeckEntry } from "@/domain/deck/deck";
+import type { DeckCardData, DeckEntry, DeckPrinting } from "@/domain/deck/deck";
 import {
   type DeckListLine,
   MAX_IMPORT_LENGTH,
@@ -17,7 +17,9 @@ import {
 import {
   importEntries,
   MAX_IMPORT_NAMES,
+  printingKey,
   uniqueNames,
+  uniquePrintings,
 } from "@/domain/import-export/import";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,8 @@ interface Analysis {
   parsed: ParsedDeckList;
   /** Résultats du serveur, par nom normalisé. */
   results: Map<string, ResolvedName>;
+  /** Éditions indiquées par la liste et reconnues, par extension et numéro. */
+  printings: Map<string, DeckPrinting>;
 }
 
 type Failure = "empty" | "tooMany" | "network";
@@ -54,6 +58,7 @@ export function DeckImport({
   onImport: (
     entries: DeckEntry[],
     cards: DeckCardData[],
+    printings: DeckPrinting[],
     replace: boolean,
   ) => void;
 }) {
@@ -95,16 +100,26 @@ export function DeckImport({
       const response = await fetch("/api/cards/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names }),
+        body: JSON.stringify({
+          names,
+          printings: uniquePrintings(parsed.cards),
+        }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      const { results } = (await response.json()) as {
+      const { results, printings } = (await response.json()) as {
         results: ResolvedName[];
+        printings: DeckPrinting[];
       };
       setAnalysis({
         parsed,
         results: new Map(
           results.map((result) => [normalizeCardName(result.name), result]),
+        ),
+        printings: new Map(
+          printings.map((printing) => [
+            printingKey(printing.setCode, printing.collectorNumber),
+            printing,
+          ]),
         ),
       });
       setChoices({});
@@ -156,12 +171,29 @@ export function DeckImport({
 
   function confirm() {
     if (!analysis || !report) return;
-    const entries = importEntries(analysis.parsed.cards, resolve);
+    // Édition indiquée par la ligne, si elle est bien une version de la carte.
+    const printingOf = (line: DeckListLine, card: DeckCardData) => {
+      if (!line.set || !line.collectorNumber) return null;
+      const printing = analysis.printings.get(
+        printingKey(line.set, line.collectorNumber),
+      );
+      return printing?.oracleId === card.oracleId ? printing : null;
+    };
+    const entries = importEntries(
+      analysis.parsed.cards,
+      resolve,
+      (line, card) => printingOf(line, card)?.id ?? null,
+    );
     const cards = analysis.parsed.cards.flatMap((line) => {
       const card = resolve(line);
       return card ? [card] : [];
     });
-    onImport(entries, cards, replace);
+    const printings = analysis.parsed.cards.flatMap((line) => {
+      const card = resolve(line);
+      const printing = card && printingOf(line, card);
+      return printing ? [printing] : [];
+    });
+    onImport(entries, cards, printings, replace);
     setImported(report.cardCount);
     close();
   }

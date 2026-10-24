@@ -7,7 +7,7 @@ import {
   editorReducer,
   HISTORY_LIMIT,
 } from "./editor";
-import { cardData } from "./test-helpers";
+import { cardData, deckPrinting } from "./test-helpers";
 
 const solRing = cardData("Sol Ring");
 const island = cardData("Island");
@@ -305,5 +305,67 @@ describe("glisser-déposer", () => {
     expect(
       run(state, { type: "import", entries: state.present.entries, cards: [] }),
     ).toBe(state);
+  });
+});
+
+describe("édition d'une carte", () => {
+  const alpha = deckPrinting("Sol Ring", "lea", "269");
+  const withSolRing = () =>
+    run(initial(), { type: "add", card: solRing, zone: "main" });
+
+  it("choisit l'édition d'une ligne et la garde", () => {
+    const state = run(withSolRing(), {
+      type: "setPrinting",
+      oracleId: solRing.oracleId,
+      zone: "main",
+      printing: alpha,
+    });
+    expect(entry(state, solRing.oracleId)?.printingId).toBe(alpha.id);
+    expect(state.printings[alpha.id]).toBe(alpha);
+  });
+
+  it("revient à l'édition par défaut, et s'annule", () => {
+    const chosen = run(withSolRing(), {
+      type: "setPrinting",
+      oracleId: solRing.oracleId,
+      zone: "main",
+      printing: alpha,
+    });
+    const reset = run(chosen, {
+      type: "setPrinting",
+      oracleId: solRing.oracleId,
+      zone: "main",
+      printing: null,
+    });
+    expect(entry(reset, solRing.oracleId)).not.toHaveProperty("printingId");
+    expect(
+      entry(run(reset, { type: "undo" }), solRing.oracleId)?.printingId,
+    ).toBe(alpha.id);
+  });
+
+  it("refuse l'édition d'une autre carte", () => {
+    const state = withSolRing();
+    expect(
+      run(state, {
+        type: "setPrinting",
+        oracleId: island.oracleId,
+        zone: "main",
+        printing: alpha,
+      }),
+    ).toBe(state);
+  });
+
+  it("garde l'édition quand la carte change de zone", () => {
+    const state = run(
+      withSolRing(),
+      {
+        type: "setPrinting",
+        oracleId: solRing.oracleId,
+        zone: "main",
+        printing: alpha,
+      },
+      { type: "move", oracleId: solRing.oracleId, from: "main", to: "maybe" },
+    );
+    expect(entry(state, solRing.oracleId, "maybe")?.printingId).toBe(alpha.id);
   });
 });

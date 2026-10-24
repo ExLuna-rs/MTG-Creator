@@ -1,4 +1,5 @@
 import type { CardImageUris } from "../cards/card";
+import { type Printing, printingPrice } from "../cards/printing";
 import { parseTypeLine } from "../cards/type-line";
 
 /**
@@ -39,17 +40,69 @@ export interface DeckCardData {
   imageUris: CardImageUris | null;
 }
 
-/** Une ligne du deck : une carte, sa zone, sa quantité et ses catégories. */
+/**
+ * Une ligne du deck : une carte, sa zone, sa quantité, ses catégories et,
+ * si on l'a choisie, son édition (sinon, celle par défaut de la carte).
+ */
 export interface DeckEntry {
   oracleId: string;
   zone: DeckZone;
   quantity: number;
   categories: string[];
+  printingId?: string | null;
 }
 
-/** Ligne du deck accompagnée des données de sa carte. */
+/** Édition choisie pour une carte du deck. */
+export type DeckPrinting = Pick<
+  Printing,
+  | "id"
+  | "setCode"
+  | "setName"
+  | "collectorNumber"
+  | "releasedAt"
+  | "imageUris"
+  | "priceEur"
+  | "priceUsd"
+  | "priceEurFoil"
+  | "priceUsdFoil"
+> & { oracleId: string };
+
+/**
+ * Ligne du deck accompagnée des données de sa carte (image et prix de
+ * l'édition choisie) et de cette édition.
+ */
 export interface DeckCard extends DeckEntry {
   card: DeckCardData;
+  printing?: DeckPrinting | null;
+}
+
+/** Données de la carte avec l'image et les prix de l'édition choisie. */
+export function withPrinting(
+  card: DeckCardData,
+  printing: DeckPrinting | null | undefined,
+): DeckCardData {
+  if (!printing || printing.oracleId !== card.oracleId) return card;
+  return {
+    ...card,
+    imageUris: printing.imageUris ?? card.imageUris,
+    priceEur: printingPrice(printing, "EUR"),
+    priceUsd: printingPrice(printing, "USD"),
+  };
+}
+
+/** Lignes du deck avec leurs cartes et leurs éditions ; les cartes inconnues sont écartées. */
+export function joinDeckCards(
+  entries: readonly DeckEntry[],
+  cards: Readonly<Record<string, DeckCardData>>,
+  printings: Readonly<Record<string, DeckPrinting>>,
+): DeckCard[] {
+  return entries.flatMap((entry) => {
+    const card = cards[entry.oracleId];
+    if (!card) return [];
+    const found = entry.printingId ? printings[entry.printingId] : undefined;
+    const printing = found?.oracleId === entry.oracleId ? found : null;
+    return [{ ...entry, card: withPrinting(card, printing), printing }];
+  });
 }
 
 /** Lignes qui comptent pour les règles : commandant(s) et deck. */

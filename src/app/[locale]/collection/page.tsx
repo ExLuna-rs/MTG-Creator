@@ -45,6 +45,7 @@ import {
 import { cardUsage, deckStatus } from "@/domain/collection/ownership";
 import { getPathname, Link } from "@/i18n/navigation";
 import { requireSession } from "@/server/auth/session";
+import { getSets } from "@/server/cards/printings";
 import { getBinderSplits, listBinders } from "@/server/collection/binders";
 import {
   filterCollection,
@@ -89,13 +90,14 @@ export default async function CollectionPage({
     page: undefined,
   });
   const filtering = activeFilters(filters).length > 0;
-  const [collection, holdings, binderList, splits, matching] =
+  const [collection, holdings, binderList, splits, matching, sets] =
     await Promise.all([
       getCollection(user.id),
       getDeckHoldings(user.id),
       listBinders(user.id),
       getBinderSplits(user.id),
       filtering ? filterCollection(user.id, filters) : null,
+      getSets(filters.sets),
     ]);
   const currency = locale === "en" ? "USD" : "EUR";
   const { q, sort, show } = searchSchema.parse({
@@ -273,6 +275,7 @@ export default async function CollectionPage({
             />
             <CardSearchForm
               search={filters}
+              sets={sets}
               filtersOnly
               pathname="/collection"
               keep={{ ...listQuery, ...binderQuery }}
@@ -283,6 +286,7 @@ export default async function CollectionPage({
             />
             <ActiveFilters
               search={filters}
+              sets={sets}
               pathname="/collection"
               keep={{ ...listQuery, ...binderQuery }}
             />

@@ -1,21 +1,25 @@
-// Importe les cartes Scryfall (fichier « Oracle Cards ») dans PostgreSQL.
+// Importe les cartes Scryfall (fichier « Oracle Cards ») puis leurs éditions
+// papier (fichier « Default Cards ») dans PostgreSQL.
 //
 //   node dist/scripts/sync-cards.mjs              import complet depuis Scryfall
-//   node dist/scripts/sync-cards.mjs --file f     import d'un fichier JSONL
+//   node dist/scripts/sync-cards.mjs --file f [--printings p]
+//                                                 import de fichiers JSONL
 //                                                 (.gz ou non), sans suppression
 //
-// L'import complet supprime les cartes absentes du fichier ; l'import d'un
-// fichier (jeu de test) ajoute ou met à jour sans rien supprimer.
+// L'import complet supprime les cartes et éditions absentes des fichiers ;
+// l'import de fichiers (jeu de test) ajoute ou met à jour sans rien supprimer.
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { createGunzip } from "node:zlib";
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
   type ImportOptions,
+  type ImportResult,
   importCards,
 } from "../src/server/cards/import-cards";
+import { importPrintings } from "../src/server/cards/import-printings";
 import { readLines } from "../src/server/cards/read-lines";
 
 const USER_AGENT = "MTGCreator/0.1 (+https://github.com/ExLuna-rs/MTG-Creator)";
@@ -31,13 +35,15 @@ interface Source extends ImportOptions {
   stream: NodeJS.ReadableStream;
 }
 
-async function openScryfallSource(): Promise<Source> {
+async function openScryfallSource(
+  type: "oracle_cards" | "default_cards",
+): Promise<Source> {
   const headers = { "User-Agent": USER_AGENT, Accept: "application/json" };
   const listing = await fetch(BULK_DATA_URL, { headers });
   if (!listing.ok) throw new Error(`Scryfall a répondu ${listing.status}.`);
   const { data } = (await listing.json()) as { data: BulkDataItem[] };
-  const bulk = data.find((item) => item.type === "oracle_cards");
-  if (!bulk) throw new Error("Fichier « oracle_cards » introuvable.");
+  const bulk = data.find((item) => item.type === type);
+  if (!bulk) throw new Error(`Fichier « ${type} » introuvable.`);
 
   const download = await fetch(bulk.jsonl_download_uri, {
     headers: { "User-Agent": USER_AGENT },
@@ -64,32 +70,66 @@ function openFileSource(path: string): Source {
   };
 }
 
+function argument(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  if (index < 0) return undefined;
+  const value = process.argv[index + 1];
+  if (!value) throw new Error(`${name} attend un chemin.`);
+  return value;
+}
+
+type Importer = (
+  db: NodePgDatabase,
+  lines: AsyncIterable<string>,
+  options: ImportOptions,
+) => Promise<ImportResult>;
+
+async function run(
+  pool: pg.Pool,
+  label: string,
+  importer: Importer,
+  { stream, ...options }: Source,
+) {
+  console.log(`Import des ${label} depuis ${options.source}`);
+  const startedAt = Date.now();
+  const result = await importer(
+    drizzle({ client: pool }),
+    readLines(stream as AsyncIterable<Uint8Array>),
+    options,
+  );
+  const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+  console.log(
+    `${result.imported} ${label} importées, ${result.skipped} objets ignorés, ${result.removed} supprimées, en ${seconds} s.`,
+  );
+}
+
 async function main() {
-  const fileIndex = process.argv.indexOf("--file");
-  const filePath = fileIndex >= 0 ? process.argv[fileIndex + 1] : undefined;
-  if (fileIndex >= 0 && !filePath) throw new Error("--file attend un chemin.");
+  const filePath = argument("--file");
+  const printingsPath = argument("--printings");
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("La variable DATABASE_URL est obligatoire.");
   }
 
-  const { stream, ...options } = filePath
-    ? openFileSource(filePath)
-    : await openScryfallSource();
-  console.log(`Import des cartes depuis ${options.source}`);
-
   const pool = new pg.Pool({ connectionString, max: 1 });
-  const startedAt = Date.now();
   try {
-    const result = await importCards(
-      drizzle({ client: pool }),
-      readLines(stream as AsyncIterable<Uint8Array>),
-      options,
+    await run(
+      pool,
+      "cartes",
+      importCards,
+      filePath
+        ? openFileSource(filePath)
+        : await openScryfallSource("oracle_cards"),
     );
-    const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-    console.log(
-      `${result.imported} cartes importées, ${result.skipped} objets ignorés (jetons, plans…), ${result.removed} cartes supprimées, en ${seconds} s.`,
+    if (filePath && !printingsPath) return;
+    await run(
+      pool,
+      "éditions",
+      importPrintings,
+      printingsPath
+        ? openFileSource(printingsPath)
+        : await openScryfallSource("default_cards"),
     );
   } finally {
     await pool.end();

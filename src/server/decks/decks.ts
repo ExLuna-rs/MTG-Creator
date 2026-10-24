@@ -8,9 +8,15 @@ import {
 } from "@/domain/collection/ownership";
 import { canPair } from "@/domain/commander/partners";
 import { validateCommanderDeck } from "@/domain/commander/validate";
-import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
+import {
+  type DeckCardData,
+  type DeckEntry,
+  type DeckPrinting,
+  joinDeckCards,
+} from "@/domain/deck/deck";
 import type { DeckSave, NewDeck } from "@/domain/deck/schema";
 import { computeDeckStats } from "@/domain/deck/stats";
+import { getPrintings } from "@/server/cards/printings";
 import { getDeckCardData } from "@/server/cards/search";
 import { getDb } from "@/server/db";
 import { deckCardCopies, deckCards, decks } from "@/server/db/schema";
@@ -26,6 +32,18 @@ export interface OwnedDeck {
   updatedAt: Date;
   entries: DeckEntry[];
   cards: DeckCardData[];
+  /** Éditions choisies pour les cartes du deck. */
+  printings: DeckPrinting[];
+}
+
+/** Éditions choisies dans les lignes données, par identifiant. */
+async function entryPrintings(
+  entries: readonly Pick<DeckEntry, "printingId">[],
+): Promise<DeckPrinting[]> {
+  const ids = entries.flatMap((entry) =>
+    entry.printingId ? [entry.printingId] : [],
+  );
+  return getPrintings(ids);
 }
 
 export type CreateDeckResult =
@@ -109,6 +127,7 @@ export async function getOwnedDeck(
       zone: deckCards.zone,
       quantity: deckCards.quantity,
       categories: deckCards.categories,
+      printingId: deckCards.printingId,
     })
     .from(deckCards)
     .where(eq(deckCards.deckId, deck.id));
@@ -116,8 +135,14 @@ export async function getOwnedDeck(
   const known = new Set(cards.map((card) => card.oracleId));
   return {
     ...deck,
-    entries: rows.filter((row) => known.has(row.oracleId)),
+    // Sans édition choisie, la ligne n'a pas de `printingId` (comme dans l'éditeur).
+    entries: rows.flatMap(({ printingId, ...row }) =>
+      known.has(row.oracleId)
+        ? [printingId ? { ...row, printingId } : row]
+        : [],
+    ),
     cards,
+    printings: await entryPrintings(rows),
   };
 }
 
@@ -136,6 +161,21 @@ export async function saveDeck(
   if (known.length !== oracleIds.length) {
     return { ok: false, error: "unknownCard" };
   }
+  // Chaque édition choisie doit exister et appartenir à la carte de sa ligne.
+  const printingOf = new Map(
+    (await entryPrintings(entries)).map((printing) => [
+      printing.id,
+      printing.oracleId,
+    ]),
+  );
+  if (
+    entries.some(
+      (entry) =>
+        entry.printingId && printingOf.get(entry.printingId) !== entry.oracleId,
+    )
+  ) {
+    return { ok: false, error: "unknownCard" };
+  }
 
   return getDb().transaction(async (tx) => {
     const [deck] = await tx
@@ -147,9 +187,13 @@ export async function saveDeck(
 
     await tx.delete(deckCards).where(eq(deckCards.deckId, deck.id));
     if (entries.length > 0) {
-      await tx
-        .insert(deckCards)
-        .values(entries.map((entry) => ({ ...entry, deckId: deck.id })));
+      await tx.insert(deckCards).values(
+        entries.map((entry) => ({
+          ...entry,
+          printingId: entry.printingId ?? null,
+          deckId: deck.id,
+        })),
+      );
     }
     // Une carte retirée du deck rend ses exemplaires physiques à la collection.
     await clampDeckCopies(tx, deck.id, deckNeeds(entries));
@@ -226,6 +270,7 @@ export async function listDecks(userId: string): Promise<DeckSummary[]> {
       zone: deckCards.zone,
       quantity: deckCards.quantity,
       categories: deckCards.categories,
+      printingId: deckCards.printingId,
     })
     .from(deckCards)
     .where(
@@ -234,18 +279,24 @@ export async function listDecks(userId: string): Promise<DeckSummary[]> {
         owned.map((deck) => deck.id),
       ),
     );
-  const cards = new Map(
+  const cards = Object.fromEntries(
     (await getDeckCardData(rows.map((row) => row.oracleId))).map((card) => [
       card.oracleId,
       card,
     ]),
   );
+  const printings = Object.fromEntries(
+    (await entryPrintings(rows)).map((printing) => [printing.id, printing]),
+  );
 
   return owned.map(({ assembled, ...deck }) => {
-    const entries: DeckCard[] = rows.flatMap(({ deckId, ...row }) => {
-      const card = cards.get(row.oracleId);
-      return deckId === deck.id && card ? [{ ...row, card }] : [];
-    });
+    // Image et prix de l'édition choisie : l'illustration du deck est celle
+    // de la version de son commandant.
+    const entries = joinDeckCards(
+      rows.flatMap(({ deckId, ...row }) => (deckId === deck.id ? [row] : [])),
+      cards,
+      printings,
+    );
     const validation = validateCommanderDeck(entries);
     const stats = computeDeckStats(entries);
     const needs = deckNeeds(entries);

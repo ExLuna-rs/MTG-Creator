@@ -76,6 +76,65 @@ export const cards = pgTable(
   ],
 );
 
+/**
+ * Éditions papier des cartes (fichier « Default Cards » de Scryfall) : une
+ * ligne par impression. Sans clé étrangère vers `card`, comme les decks : les
+ * deux fichiers sont synchronisés séparément.
+ */
+export const printings = pgTable(
+  "printing",
+  {
+    // Identifiant Scryfall de l'impression.
+    id: uuid("id").primaryKey(),
+    oracleId: uuid("oracle_id").notNull(),
+    setCode: text("set_code").notNull(),
+    setName: text("set_name").notNull(),
+    setType: text("set_type").notNull(),
+    collectorNumber: text("collector_number").notNull(),
+    rarity: text("rarity").notNull(),
+    releasedAt: date("released_at").notNull(),
+    // Promo, illustration étendue, sans bordure, vitrine… : affichées à part.
+    special: boolean("special").notNull(),
+    finishes: text("finishes").array().notNull(),
+    imageUris: jsonb("image_uris").$type<CardImageUris | null>(),
+    // Verso d'une carte à deux faces.
+    backImageUris: jsonb("back_image_uris").$type<CardImageUris | null>(),
+    artist: text("artist"),
+    // Produit de cette édition chez Cardmarket et TCGplayer.
+    cardmarketId: integer("cardmarket_id"),
+    tcgplayerId: integer("tcgplayer_id"),
+    priceEur: real("price_eur"),
+    priceUsd: real("price_usd"),
+    priceEurFoil: real("price_eur_foil"),
+    priceUsdFoil: real("price_usd_foil"),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("printing_oracle_id_idx").on(table.oracleId, table.releasedAt),
+    index("printing_set_code_idx").on(table.setCode),
+  ],
+);
+
+/** Extensions, calculées à partir des éditions à chaque import. */
+export const cardSets = pgTable(
+  "card_set",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(),
+    // Nom sans accents ni ponctuation, pour les suggestions.
+    searchName: text("search_name").notNull(),
+    setType: text("set_type").notNull(),
+    releasedAt: date("released_at").notNull(),
+    cardCount: integer("card_count").notNull(),
+  },
+  (table) => [
+    index("card_set_search_name_trgm_idx").using(
+      "gin",
+      table.searchName.op("gin_trgm_ops"),
+    ),
+  ],
+);
+
 /** Historique des imports de cartes. */
 export const cardImports = pgTable("card_import", {
   id: serial("id").primaryKey(),
@@ -270,6 +329,9 @@ export const deckCards = pgTable(
     quantity: smallint("quantity").notNull(),
     // Catégories personnalisées (Rampe, Pioche…) ; la première sert au regroupement.
     categories: text("categories").array().notNull().default([]),
+    // Édition choisie (`printing.id`) ; null : l'édition par défaut de la
+    // carte. Sans clé étrangère, comme `oracle_id`.
+    printingId: uuid("printing_id"),
   },
   (table) => [
     primaryKey({ columns: [table.deckId, table.zone, table.oracleId] }),

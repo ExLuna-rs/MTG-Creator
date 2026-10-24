@@ -6,10 +6,12 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 import type { TestProject } from "vitest/node";
 import { importCards } from "../../src/server/cards/import-cards";
+import { importPrintings } from "../../src/server/cards/import-printings";
 import { readLines } from "../../src/server/cards/read-lines";
 
 const TEST_DATABASE = "mtg_test";
 const FIXTURE = "tests/fixtures/cards.jsonl";
+const PRINTINGS = "tests/fixtures/printings.jsonl";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -46,6 +48,11 @@ export default async function setup(project: TestProject) {
     await migrate(db, { migrationsFolder: "drizzle" });
     await importCards(db, readLines(createReadStream(FIXTURE)), {
       source: FIXTURE,
+      sourceUpdatedAt: null,
+      fullImport: false,
+    });
+    await importPrintings(db, readLines(createReadStream(PRINTINGS)), {
+      source: PRINTINGS,
       sourceUpdatedAt: null,
       fullImport: false,
     });

@@ -299,16 +299,17 @@ test("affiche la fiche d'une carte recto verso", async ({ page }) => {
     page.getByRole("link", { name: "Voir sur Scryfall" }),
   ).toHaveAttribute("href", /^https:\/\/scryfall\.com\//);
 
-  // Liens vers les marchés, par le nom de la face avant.
+  // Liens vers les marchés : la fiche produit de l'édition affichée, sinon
+  // une recherche par le nom de la face avant.
   await expect(
     page.getByRole("link", { name: "Voir sur Cardmarket" }),
   ).toHaveAttribute(
     "href",
-    "https://www.cardmarket.com/fr/Magic/Products/Search?searchString=Delver+of+Secrets",
+    /^https:\/\/www\.cardmarket\.com\/fr\/Magic\/Products\?idProduct=\d+$/,
   );
   await expect(
     page.getByRole("link", { name: "Voir sur TCGplayer" }),
-  ).toHaveAttribute("href", /^https:\/\/www\.tcgplayer\.com\/search\/magic\//);
+  ).toHaveAttribute("href", /^https:\/\/www\.tcgplayer\.com\/product\/\d+$/);
 
   await page.getByRole("link", { name: "Retour à la recherche" }).click();
   // La recherche d'origine est retrouvée.

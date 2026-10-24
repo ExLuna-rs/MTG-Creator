@@ -14,6 +14,7 @@ export const deckEntrySchema = z.object({
   zone: z.enum(DECK_ZONES),
   quantity: z.number().int().min(1).max(MAX_QUANTITY),
   categories: z.array(categorySchema).max(MAX_CATEGORIES),
+  printingId: z.uuid().nullish(),
 });
 
 /** Contenu d'un deck envoyé par la sauvegarde automatique de l'éditeur. */

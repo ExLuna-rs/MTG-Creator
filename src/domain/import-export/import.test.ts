@@ -3,7 +3,12 @@ import type { DeckCardData, DeckEntry } from "../deck/deck";
 import { MAX_DECK_ENTRIES } from "../deck/schema";
 import { cardData } from "../deck/test-helpers";
 import { parseDeckList } from "./deck-list";
-import { importEntries, mergeImport, uniqueNames } from "./import";
+import {
+  importEntries,
+  mergeImport,
+  uniqueNames,
+  uniquePrintings,
+} from "./import";
 
 const atraxa = cardData("Atraxa, Praetors' Voice");
 const solRing = cardData("Sol Ring");
@@ -106,5 +111,49 @@ describe("import d'une liste", () => {
     expect(
       mergeImport(commanderOnly, many, byId, { replace: false }),
     ).toHaveLength(MAX_DECK_ENTRIES);
+  });
+});
+
+describe("éditions d'une liste importée", () => {
+  const list = parseDeckList(
+    [
+      "1 Sol Ring (LEA) 269",
+      "1 Sol Ring (CMM) 410",
+      "2 Island",
+      "1 [LEA] Lightning Bolt",
+    ].join("\n"),
+  );
+
+  it("demande chaque édition une seule fois", () => {
+    expect(uniquePrintings(list.cards)).toEqual([
+      { set: "LEA", collectorNumber: "269" },
+      { set: "CMM", collectorNumber: "410" },
+    ]);
+  });
+
+  it("garde la première édition reconnue d'une carte", () => {
+    const entries = importEntries(list.cards, resolve, (line) =>
+      line.set ? `printing-${line.set}` : null,
+    );
+    expect(entries.find((item) => item.oracleId === solRing.oracleId)).toEqual({
+      oracleId: solRing.oracleId,
+      zone: "main",
+      quantity: 2,
+      categories: [],
+      printingId: "printing-LEA",
+    });
+    expect(
+      entries.find((item) => item.oracleId === island.oracleId),
+    ).not.toHaveProperty("printingId");
+  });
+
+  it("applique l'édition importée à une carte déjà dans le deck", () => {
+    const merged = mergeImport(
+      [entry(solRing, "main")],
+      [{ ...entry(solRing, "main"), printingId: "printing-LEA" }],
+      byId,
+      { replace: false },
+    );
+    expect(merged[0].printingId).toBe("printing-LEA");
   });
 });

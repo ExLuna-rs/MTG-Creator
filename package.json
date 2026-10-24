@@ -20,8 +20,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mts",
     "cards:sync": "pnpm build:scripts && node dist/scripts/sync-cards.mjs",
-    "cards:seed": "pnpm build:scripts && node dist/scripts/sync-cards.mjs --file tests/fixtures/cards.jsonl",
-    "fixtures:cards": "esbuild scripts/build-card-fixture.mts --bundle --platform=node --format=esm --log-level=warning --outfile=dist/build-card-fixture.mjs && node dist/build-card-fixture.mjs"
+    "cards:seed": "pnpm build:scripts && node dist/scripts/sync-cards.mjs --file tests/fixtures/cards.jsonl --printings tests/fixtures/printings.jsonl",
+    "fixtures:cards": "esbuild scripts/build-card-fixture.mts --bundle --platform=node --format=esm --log-level=warning --outfile=dist/build-card-fixture.mjs && node dist/build-card-fixture.mjs",
+    "fixtures:printings": "esbuild scripts/build-printing-fixture.mts --bundle --platform=node --format=esm --log-level=warning --outfile=dist/build-printing-fixture.mjs && node dist/build-printing-fixture.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

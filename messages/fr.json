@@ -123,7 +123,13 @@
       "and": "Tous (ET)"
     },
     "selectPlaceholder": "Choisir…",
-    "removeChoice": "Retirer {name}"
+    "removeChoice": "Retirer {name}",
+    "setsLabel": "Extension",
+    "setsPlaceholder": "Nom ou code, ex. Commander Masters, CMM",
+    "setsHint": "Cartes imprimées au moins une fois dans l'une des extensions choisies.",
+    "setSuggestions": "Extensions proposées",
+    "removeSet": "Retirer l'extension {name}",
+    "sets": "Extension"
   },
   "Colors": {
     "W": "Blanc",
@@ -186,7 +192,19 @@
     "viewOnScryfall": "Voir sur Scryfall",
     "viewOnCardmarket": "Voir sur Cardmarket",
     "viewOnTcgplayer": "Voir sur TCGplayer",
-    "backFace": "{name} (verso)"
+    "backFace": "{name} (verso)",
+    "versions": "{count, plural, one {Version (#)} other {Versions (#)}}",
+    "versionSort": "Trier les versions",
+    "versionSorts": {
+      "newest": "Plus récentes",
+      "oldest": "Plus anciennes",
+      "price": "Prix croissant"
+    },
+    "hideSpecial": "Masquer les promos et versions spéciales",
+    "showAllVersions": "Voir les {count} versions",
+    "showFewerVersions": "Voir moins de versions",
+    "priceFoil": "Brillante : {price}",
+    "shownVersion": "Version affichée"
   },
   "Formats": {
     "commander": "Commander",
@@ -471,7 +489,18 @@
         "detail": "Retirez-en un avant d'en ajouter un autre. La carte reste à sa place.",
         "short": "Le deck a déjà deux commandants"
       }
-    }
+    },
+    "printingTitle": "Version dans ce deck",
+    "printingDefault": "Par défaut",
+    "printingDefaultShort": "Défaut",
+    "printingDefaultHint": "Par défaut : l'édition la plus courante de la carte. Choisissez une version pour son image, son prix et l'export.",
+    "printingChosen": "Version choisie : {set}, n° {number}, {price}. Le prix du deck et l'export la suivent.",
+    "printingLabel": "{set}, n° {number}",
+    "printingLoading": "Chargement des versions…",
+    "printingError": "Impossible de charger les versions.",
+    "printingSingle": "Cette carte n'a qu'une version papier.",
+    "printingShowAll": "Voir les {count} versions",
+    "printingNoPrice": "Prix inconnu"
   },
   "CardSpotlight": {
     "open": "Rechercher une carte…",
@@ -800,7 +829,8 @@
     "rarities": "Rareté : {rarities}",
     "text": "Texte : « {text} »",
     "remove": "Retirer le filtre : {label}",
-    "clearAll": "Tout effacer"
+    "clearAll": "Tout effacer",
+    "sets": "Extension : {sets}"
   },
   "ExportDialog": {
     "open": "Exporter",

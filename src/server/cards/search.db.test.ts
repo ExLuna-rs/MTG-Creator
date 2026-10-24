@@ -303,3 +303,33 @@ describe("reconnaissance des noms importés", () => {
     expect(await resolved(["Sol", "Delver"])).toEqual([null, null]);
   });
 });
+
+describe("filtre par extension", () => {
+  it("garde les cartes imprimées au moins une fois dans l'extension", async () => {
+    // Sol Ring a son édition par défaut ailleurs, mais existe dans Alpha.
+    expect(await names({ set: "lea", sort: "name" })).toEqual([
+      "Birds of Paradise",
+      "Black Lotus",
+      "Counterspell",
+      "Dark Ritual",
+      "Demonic Tutor",
+      "Lightning Bolt",
+      "Llanowar Elves",
+      "Sol Ring",
+      "Swords to Plowshares",
+    ]);
+  });
+
+  it("combine plusieurs extensions (OU) et les autres filtres (ET)", async () => {
+    expect(
+      await names({ set: ["lea", "cmm"], type: "Creature", sort: "name" }),
+    ).toEqual([
+      "Birds of Paradise",
+      "Elvish Mystic",
+      "Eternal Witness",
+      "Kozilek, the Great Distortion",
+      "Llanowar Elves",
+      "The Ur-Dragon",
+    ]);
+  });
+});

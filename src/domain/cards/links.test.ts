@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cardHref, marketLinks, pageWithQuery, parseBackLink } from "./links";
+import {
+  cardHref,
+  marketLinks,
+  pageWithQuery,
+  parseBackLink,
+  printingMarketLinks,
+} from "./links";
 
 describe("parseBackLink", () => {
   it("garde la recherche de cartes et ses paramètres", () => {
@@ -62,5 +68,31 @@ describe("marketLinks", () => {
       "https://www.tcgplayer.com/search/magic/product?productLineName=magic&q=Delver+of+Secrets",
     );
     expect(marketLinks("Sol Ring", "en").cardmarket).toContain("/en/Magic/");
+  });
+});
+
+describe("printingMarketLinks", () => {
+  it("pointe vers la fiche produit de l'édition", () => {
+    expect(
+      printingMarketLinks(
+        { cardmarketId: 12345, tcgplayerId: 678 },
+        "Sol Ring",
+        "fr",
+      ),
+    ).toEqual({
+      cardmarket:
+        "https://www.cardmarket.com/fr/Magic/Products?idProduct=12345",
+      tcgplayer: "https://www.tcgplayer.com/product/678",
+    });
+  });
+
+  it("cherche par nom sans identifiant de produit", () => {
+    expect(
+      printingMarketLinks(
+        { cardmarketId: null, tcgplayerId: null },
+        "Sol Ring",
+        "en",
+      ),
+    ).toEqual(marketLinks("Sol Ring", "en"));
   });
 });

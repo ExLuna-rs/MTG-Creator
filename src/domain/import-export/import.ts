@@ -18,10 +18,31 @@ export function uniqueNames(lines: readonly { name: string }[]): string[] {
   return [...names.values()];
 }
 
+/** Clé d'une édition : extension et numéro de collection. */
+export function printingKey(set: string, collectorNumber: string): string {
+  return `${set.toLowerCase()}:${collectorNumber}`;
+}
+
+/** Éditions indiquées par les lignes (« (CMM) 410 »), sans doublons. */
+export function uniquePrintings(
+  lines: readonly Pick<DeckListLine, "set" | "collectorNumber">[],
+): { set: string; collectorNumber: string }[] {
+  const wanted = new Map<string, { set: string; collectorNumber: string }>();
+  for (const { set, collectorNumber } of lines) {
+    if (set && collectorNumber && /^[a-z0-9]{2,6}$/i.test(set)) {
+      wanted.set(printingKey(set, collectorNumber), { set, collectorNumber });
+    }
+  }
+  return [...wanted.values()].slice(0, MAX_IMPORT_NAMES);
+}
+
 /** Lignes du deck tirées des cartes reconnues, regroupées par carte et par zone. */
 export function importEntries(
   lines: readonly DeckListLine[],
   resolve: (line: DeckListLine) => DeckCardData | null,
+  /** Édition indiquée par la ligne (« (CMM) 410 »), si elle est connue. */
+  printingOf: (line: DeckListLine, card: DeckCardData) => string | null = () =>
+    null,
 ): DeckEntry[] {
   const entries = new Map<string, DeckEntry>();
   for (const line of lines) {
@@ -29,9 +50,9 @@ export function importEntries(
     if (!card) continue;
     const key = `${line.zone}:${card.oracleId}`;
     const existing = entries.get(key);
-    entries.set(
-      key,
-      existing
+    const printingId = existing?.printingId ?? printingOf(line, card);
+    entries.set(key, {
+      ...(existing
         ? {
             ...existing,
             quantity: existing.quantity + line.quantity,
@@ -42,8 +63,9 @@ export function importEntries(
             zone: line.zone,
             quantity: line.quantity,
             categories: line.categories,
-          },
-    );
+          }),
+      ...(printingId ? { printingId } : {}),
+    });
   }
   return [...entries.values()];
 }
@@ -94,6 +116,7 @@ export function mergeImport(
           ...existing.categories,
           ...entry.categories,
         ]),
+        ...(entry.printingId ? { printingId: entry.printingId } : {}),
       };
     } else if (result.length < MAX_DECK_ENTRIES) {
       result.push({

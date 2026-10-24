@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { listPrintings } from "@/server/cards/printings";
 import { getDb } from "@/server/db";
 import { cards, users } from "@/server/db/schema";
 import {
@@ -157,5 +158,74 @@ describe("sauvegarde et lecture", () => {
 
     expect(await deleteDeck(owner, created.deckId)).toBe(true);
     expect(await getOwnedDeck(owner, created.deckId)).toBeNull();
+  });
+});
+
+describe("édition des cartes d'un deck", () => {
+  it("enregistre l'édition choisie et l'applique à l'illustration et au prix", async () => {
+    const atraxa = await oracleId("Atraxa, Praetors' Voice");
+    const solRing = await oracleId("Sol Ring");
+    const created = await createDeck(owner, { commanderId: atraxa });
+    if (!created.ok) throw new Error("deck non créé");
+    const [atraxaPrinting] = (await listPrintings(atraxa)).slice(-1);
+    const alpha = (await listPrintings(solRing)).find(
+      (printing) => printing.setCode === "lea",
+    );
+    if (!alpha) throw new Error("édition Alpha absente");
+
+    const saved = await saveDeck(owner, created.deckId, {
+      name: "Atraxa",
+      entries: [
+        {
+          oracleId: atraxa,
+          zone: "commander",
+          quantity: 1,
+          categories: [],
+          printingId: atraxaPrinting.id,
+        },
+        {
+          oracleId: solRing,
+          zone: "main",
+          quantity: 1,
+          categories: [],
+          printingId: alpha.id,
+        },
+      ],
+    });
+    expect(saved.ok).toBe(true);
+
+    const deck = await getOwnedDeck(owner, created.deckId);
+    expect(
+      deck?.entries.find((entry) => entry.oracleId === solRing)?.printingId,
+    ).toBe(alpha.id);
+    expect(deck?.printings.map((printing) => printing.id).sort()).toEqual(
+      [alpha.id, atraxaPrinting.id].sort(),
+    );
+
+    const summary = (await listDecks(owner)).find(
+      (item) => item.id === created.deckId,
+    );
+    expect(summary?.commanders[0].imageUris).toEqual(atraxaPrinting.imageUris);
+    expect(summary?.priceEur).toBeGreaterThanOrEqual(alpha.priceEur ?? 0);
+  });
+
+  it("refuse l'édition d'une autre carte", async () => {
+    const atraxa = await oracleId("Atraxa, Praetors' Voice");
+    const created = await createDeck(owner, { commanderId: atraxa });
+    if (!created.ok) throw new Error("deck non créé");
+    const [solRingPrinting] = await listPrintings(await oracleId("Sol Ring"));
+    const saved = await saveDeck(owner, created.deckId, {
+      name: "Atraxa",
+      entries: [
+        {
+          oracleId: atraxa,
+          zone: "commander",
+          quantity: 1,
+          categories: [],
+          printingId: solRingPrinting.id,
+        },
+      ],
+    });
+    expect(saved).toEqual({ ok: false, error: "unknownCard" });
   });
 });
