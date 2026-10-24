@@ -348,12 +348,19 @@ Un premier testeur a fait ses retours ; ils sont rangés en six lots (plan valid
 - Collection : les filtres de la recherche de cartes (couleurs, types, rareté…), repliés sous « Filtres » (`filterCollection`).
 - Classeurs (tables `binder` et `binder_card`) : une seule collection, dont les exemplaires d'une carte se répartissent entre classeurs ; le reste est « Non rangé ». Leur somme ne dépasse jamais les exemplaires possédés : retirer un exemplaire de la collection vide d'abord le classeur créé en dernier. Le détail d'une carte (« Rangement ») range ou sort un exemplaire ; l'import d'une liste peut viser un classeur. La colonne des dossiers et celle des classeurs partagent `src/components/organizer/folder-nav.tsx`.
 
-**Lot 5a (éditions des cartes)** : fait. La collection par édition (lot 5b) suit dans une seconde pull request.
+**Lot 5a (éditions des cartes)** : fait (pull request n° 31).
 
 - Données : table `printing`, une ligne par édition papier (fichier *Default Cards* lu en flux par `make sync` : environ 102 800 éditions gardées en 30 secondes, 170 Mo en base) : extension, numéro, rareté, date, images (recto et verso), artiste, prix normaux et brillants, identifiants Cardmarket et TCGplayer, et un drapeau « version spéciale » (promo, sans bordure, vitrine, Secret Lair…). Sont écartés les versions Arena et MTGO, les jetons, les cartes d'illustration et les cartes géantes (`src/domain/cards/printing.ts`). La table `card_set` résume les extensions pour les suggestions. `make seed` importe aussi `tests/fixtures/printings.jsonl` (1 231 éditions des cartes du jeu de test, reconstruit par `pnpm fixtures:printings`).
 - Fiche carte : liste « Versions » (plus récentes, plus anciennes ou par prix ; versions spéciales masquées par défaut). Choisir une version (`?v=`) change l'image, les prix (normal et brillant), l'extension, l'artiste et les liens Cardmarket et TCGplayer, qui ouvrent la fiche produit de cette édition.
 - Éditeur de deck : bande « Version dans ce deck » dans la fenêtre d'une carte (`deck_card.printing_id`, facultatif : sans choix, l'édition par défaut). Le prix du deck suit la version choisie, l'export MTG Arena, Moxfield et Archidekt l'écrit (« 1 Sol Ring (LEA) 269 ») et l'import la reprend ; la version du commandant devient l'illustration du deck dans « Mes decks ».
 - Recherche et collection : filtre « Extension » avec suggestions par nom ou par code (`set=cmm`, dix au plus, en OU) ; il garde les cartes imprimées au moins une fois dans l'extension, même si leur édition par défaut est ailleurs.
+
+**Lot 5b (collection par édition)** : fait.
+
+- Table `collection_printing` : l'édition et la finition brillante des exemplaires, facultatives, précisées exemplaire par exemplaire. Leur somme ne dépasse jamais les exemplaires possédés ; le reste est « édition non précisée ». Retirer des exemplaires de la collection retire d'abord des non précisés, puis les éditions précisées en dernier. Les decks et les classeurs continuent de compter par carte.
+- Détail d'une carte de la collection (avec une recherche) : section « Éditions », un exemplaire de plus ou de moins par édition, et « Préciser l'édition d'un exemplaire » (liste déroulante des éditions, case « brillante » quand l'édition existe dans les deux finitions).
+- La valeur de la collection suit l'édition et la finition de chaque exemplaire (prix brillant, sinon normal) ; les exemplaires non précisés gardent le prix de l'édition par défaut.
+- Import : « 1 Sol Ring (LEA) 269 *F* » en texte ; colonnes d'édition, de numéro, de finition et « Scryfall ID » des CSV de Moxfield, ManaBox et Archidekt. Une édition inconnue, d'une autre carte ou dans une finition qui n'existe pas laisse l'exemplaire sans édition. Export : une ligne par édition précisée, et un CSV aux colonnes de Moxfield (Count, Name, Edition, Collector Number, Foil).
 
 ### Phase 6 et suivantes
 

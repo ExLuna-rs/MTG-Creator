@@ -46,7 +46,7 @@ export interface PrintingRow {
 }
 
 /** Ce que l'interface affiche d'une édition. */
-export type Printing = Omit<PrintingRow, "oracleId" | "setType" | "finishes">;
+export type Printing = Omit<PrintingRow, "oracleId" | "setType">;
 
 /** Extensions sans cartes jouables : jetons, cartes géantes, souvenirs… */
 const EXCLUDED_SET_TYPES = new Set(["token", "minigame", "vanguard"]);

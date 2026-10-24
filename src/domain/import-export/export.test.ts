@@ -135,7 +135,38 @@ describe("exportCollection", () => {
 
   it("écrit un CSV aux champs protégés", () => {
     expect(exportCollection(entries, "csv")).toBe(
-      '"Count","Name"\n"1","Kongming, ""Sleeping Dragon"""\n"3","Sol Ring"',
+      [
+        '"Count","Name","Edition","Collector Number","Foil"',
+        '"1","Kongming, ""Sleeping Dragon""","","",""',
+        '"3","Sol Ring","","",""',
+      ].join("\n"),
+    );
+  });
+
+  const withPrintings = [
+    {
+      name: "Sol Ring",
+      quantity: 4,
+      printings: [
+        { setCode: "lea", collectorNumber: "269", foil: false, quantity: 1 },
+        { setCode: "cmm", collectorNumber: "410", foil: true, quantity: 2 },
+      ],
+    },
+  ];
+
+  it("écrit une ligne par édition précisée, puis les exemplaires sans édition", () => {
+    expect(exportCollection(withPrintings, "text")).toBe(
+      ["1 Sol Ring (LEA) 269", "2 Sol Ring (CMM) 410 *F*", "1 Sol Ring"].join(
+        "\n",
+      ),
+    );
+    expect(exportCollection(withPrintings, "csv")).toBe(
+      [
+        '"Count","Name","Edition","Collector Number","Foil"',
+        '"1","Sol Ring","lea","269",""',
+        '"2","Sol Ring","cmm","410","foil"',
+        '"1","Sol Ring","","",""',
+      ].join("\n"),
     );
   });
 });

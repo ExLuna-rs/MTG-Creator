@@ -888,5 +888,23 @@
       "text": "Une carte par ligne (« 4 Lightning Bolt ») : reconnu par Moxfield, Archidekt, ManaBox et MTG Creator.",
       "csv": "Colonnes « Count » et « Name », pour un tableur ou un import dans Moxfield."
     }
+  },
+  "CollectionPrintings": {
+    "title": "Éditions",
+    "unspecified": "Édition non précisée",
+    "foil": "brillante",
+    "foilLabel": "Finition brillante (foil)",
+    "noPrice": "prix inconnu",
+    "copiesLabel": "{name}, {set} n° {number}{foil, select, true { brillante} other {}}",
+    "decrease": "Retirer un exemplaire : {label}",
+    "increase": "Ajouter un exemplaire : {label}",
+    "specify": "Préciser l'édition d'un exemplaire",
+    "specifyFor": "Préciser l'édition d'un exemplaire de {name}",
+    "edition": "Édition",
+    "add": "Préciser",
+    "cancel": "Annuler",
+    "loading": "Chargement des éditions…",
+    "loadError": "Impossible de charger les éditions.",
+    "error": "La modification n'a pas pu être enregistrée. Réessayez."
   }
 }

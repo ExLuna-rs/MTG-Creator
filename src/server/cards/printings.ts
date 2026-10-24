@@ -15,6 +15,7 @@ const printingColumns = {
   rarity: printings.rarity,
   releasedAt: printings.releasedAt,
   special: printings.special,
+  finishes: printings.finishes,
   imageUris: printings.imageUris,
   backImageUris: printings.backImageUris,
   artist: printings.artist,

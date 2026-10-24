@@ -60,7 +60,7 @@ export function BinderStorage({
         <p className="text-muted-foreground text-sm italic">{t("noBinders")}</p>
       ) : (
         <>
-          <ul className="max-w-sm divide-y rounded-lg border text-sm">
+          <ul className="divide-y rounded-lg border text-sm sm:max-w-sm">
             {holding.map((binder) => {
               const copies = split[binder.id] ?? 0;
               return (
@@ -73,7 +73,7 @@ export function BinderStorage({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7"
+                      className="size-9 sm:size-7"
                       disabled={busy}
                       aria-label={t("decrease", {
                         name: card.name,
@@ -89,7 +89,7 @@ export function BinderStorage({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7"
+                      className="size-9 sm:size-7"
                       disabled={busy || unsorted === 0}
                       aria-label={t("increase", {
                         name: card.name,

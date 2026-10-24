@@ -63,6 +63,8 @@ export const collectionImportSchema = z.object({
       z.object({
         oracleId: z.uuid(),
         quantity: z.number().int().min(1).max(MAX_COLLECTION_QUANTITY),
+        printingId: z.uuid().optional(),
+        foil: z.boolean().optional(),
       }),
     )
     .min(1)

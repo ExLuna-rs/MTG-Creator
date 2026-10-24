@@ -120,3 +120,138 @@ describe("collectionImportEntries", () => {
     ]);
   });
 });
+
+describe("éditions d'une liste de la collection", () => {
+  const editions = (text: string) =>
+    parseCollectionList(text).cards.map(
+      ({ name, set, collectorNumber, foil, printingId }) => ({
+        name,
+        set,
+        collectorNumber,
+        foil,
+        printingId,
+      }),
+    );
+
+  it("lit l'édition et la finition d'une liste texte", () => {
+    expect(
+      editions(
+        "1 Sol Ring (LEA) 269 *F*\n2 Lightning Bolt (M10) 146\n1 Island",
+      ),
+    ).toEqual([
+      {
+        name: "Sol Ring",
+        set: "LEA",
+        collectorNumber: "269",
+        foil: true,
+        printingId: null,
+      },
+      {
+        name: "Lightning Bolt",
+        set: "M10",
+        collectorNumber: "146",
+        foil: false,
+        printingId: null,
+      },
+      {
+        name: "Island",
+        set: null,
+        collectorNumber: null,
+        foil: false,
+        printingId: null,
+      },
+    ]);
+  });
+
+  it("lit les colonnes d'édition des CSV (Moxfield, ManaBox, Archidekt)", () => {
+    expect(
+      editions(
+        [
+          '"Count","Name","Edition","Collector Number","Foil"',
+          '"1","Sol Ring","lea","269","foil"',
+          '"2","Lightning Bolt","","",""',
+        ].join("\n"),
+      ),
+    ).toEqual([
+      {
+        name: "Sol Ring",
+        set: "LEA",
+        collectorNumber: "269",
+        foil: true,
+        printingId: null,
+      },
+      {
+        name: "Lightning Bolt",
+        set: null,
+        collectorNumber: null,
+        foil: false,
+        printingId: null,
+      },
+    ]);
+    const id = "c4300d24-1cae-4dd5-be7e-38cc677cf5bd";
+    expect(
+      editions(
+        [
+          "Name,Set code,Collector number,Foil,Quantity,Scryfall ID",
+          `Sol Ring,lea,269,normal,1,${id}`,
+        ].join("\n"),
+      ),
+    ).toEqual([
+      {
+        name: "Sol Ring",
+        set: "LEA",
+        collectorNumber: "269",
+        foil: false,
+        printingId: id,
+      },
+    ]);
+  });
+
+  it("regroupe les exemplaires par carte et par édition", () => {
+    const list = parseCollectionList(
+      "1 Sol Ring (LEA) 269\n1 Sol Ring (LEA) 269\n1 Sol Ring (LEA) 269 *F*\n2 Sol Ring",
+    );
+    expect(
+      collectionImportEntries(
+        list.cards,
+        () => "sol",
+        (line) => (line.set ? "alpha" : null),
+      ),
+    ).toEqual([
+      { oracleId: "sol", quantity: 2, printingId: "alpha", foil: false },
+      { oracleId: "sol", quantity: 1, printingId: "alpha", foil: true },
+      { oracleId: "sol", quantity: 2 },
+    ]);
+  });
+
+  it("se relit après un export", () => {
+    const exported = exportCollection(
+      [
+        {
+          name: "Sol Ring",
+          quantity: 2,
+          printings: [
+            { setCode: "lea", collectorNumber: "269", foil: true, quantity: 1 },
+          ],
+        },
+      ],
+      "csv",
+    );
+    expect(editions(exported)).toEqual([
+      {
+        name: "Sol Ring",
+        set: "LEA",
+        collectorNumber: "269",
+        foil: true,
+        printingId: null,
+      },
+      {
+        name: "Sol Ring",
+        set: null,
+        collectorNumber: null,
+        foil: false,
+        printingId: null,
+      },
+    ]);
+  });
+});

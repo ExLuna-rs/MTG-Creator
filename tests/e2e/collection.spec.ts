@@ -80,7 +80,7 @@ test("cherche et trie les cartes de la collection", async ({ page }) => {
   await page.getByLabel("Rechercher dans la collection").fill("bolt");
   await expect(page).toHaveURL(/[?&]q=bolt/);
   // Une recherche affiche le détail des cartes trouvées.
-  const details = page.getByTestId("collection-details").getByRole("listitem");
+  const details = page.getByTestId("collection-details").locator("> li");
   await expect(details).toHaveCount(1);
   await expect(details).toHaveAttribute("data-card", "Lightning Bolt");
 
@@ -238,7 +238,9 @@ test("importe une liste et un fichier dans la collection, puis l'exporte", async
     "2 Counterspell\n1 Fire // Ice\n4 Lightning Bolt\n3 Sol Ring",
   );
   await page.getByRole("radio", { name: "CSV" }).check();
-  await expect(exported).toHaveValue(/^"Count","Name"\n"2","Counterspell"/);
+  await expect(exported).toHaveValue(
+    /^"Count","Name","Edition","Collector Number","Foil"\n"2","Counterspell"/,
+  );
 });
 
 test("refuse l'import dans la collection sans session", async ({ request }) => {

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ExportDialog } from "@/components/import-export/export-dialog";
 import {
   COLLECTION_EXPORT_FORMATS,
+  type CollectionExportEntry,
   type CollectionExportFormat,
   exportCollection,
 } from "@/domain/import-export/export";
@@ -13,7 +14,7 @@ import {
 export function CollectionExport({
   entries,
 }: {
-  entries: readonly { name: string; quantity: number }[];
+  entries: readonly CollectionExportEntry[];
 }) {
   const t = useTranslations("CollectionExport");
   const [format, setFormat] = useState<CollectionExportFormat>("text");
