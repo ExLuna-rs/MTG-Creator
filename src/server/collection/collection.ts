@@ -1,11 +1,13 @@
 import "server-only";
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
+import type { CardSearch } from "@/domain/cards/search-query";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import { MAX_COLLECTION_QUANTITY } from "@/domain/collection/schema";
-import { getDeckCardData } from "@/server/cards/search";
+import { cardFilterConditions, getDeckCardData } from "@/server/cards/search";
 import { type Database, getDb } from "@/server/db";
 import { cards, collectionCards } from "@/server/db/schema";
 import { trimCopiesToOwned } from "@/server/decks/copies";
+import { addToBinder, ownsBinder, trimBindersToOwned } from "./binders";
 
 /** Base de données, ou transaction en cours. */
 export type DbExecutor =
@@ -60,6 +62,24 @@ export async function getCollection(userId: string): Promise<Collection> {
   };
 }
 
+/**
+ * Cartes de la collection de l'utilisateur qui passent les filtres de la
+ * recherche de cartes (couleurs, types, rareté…), par `oracle_id`.
+ */
+export async function filterCollection(
+  userId: string,
+  search: CardSearch,
+): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ oracleId: cards.oracleId })
+    .from(collectionCards)
+    .innerJoin(cards, eq(cards.oracleId, collectionCards.oracleId))
+    .where(
+      and(eq(collectionCards.userId, userId), ...cardFilterConditions(search)),
+    );
+  return new Set(rows.map((row) => row.oracleId));
+}
+
 export type ChangeCollectionResult =
   | { ok: true; quantity: number }
   | { ok: false; error: "unknownCard" };
@@ -91,13 +111,11 @@ export async function changeCollectionCard(
         ),
       )
       .returning({ quantity: collectionCards.quantity });
-    // Les exemplaires retirés de la collection quittent aussi les decks.
-    await trimCopiesToOwned(
-      db,
-      userId,
-      oracleId,
-      Math.max(0, row?.quantity ?? 0),
-    );
+    // Les exemplaires retirés de la collection quittent aussi les decks et
+    // les classeurs.
+    const owned = Math.max(0, row?.quantity ?? 0);
+    await trimCopiesToOwned(db, userId, oracleId, owned);
+    await trimBindersToOwned(db, userId, oracleId, owned);
     if (!row || row.quantity > 0)
       return { ok: true, quantity: row?.quantity ?? 0 };
     await db
@@ -129,13 +147,15 @@ export async function changeCollectionCard(
 /**
  * Ajoute des exemplaires de plusieurs cartes (import d'une liste), en une
  * transaction. Les cartes inconnues sont ignorées ; une même carte listée
- * deux fois compte deux fois. Renvoie le nombre de cartes et d'exemplaires
- * ajoutés.
+ * deux fois compte deux fois. Avec `binderId`, les exemplaires ajoutés sont
+ * aussi rangés dans ce classeur. Renvoie le nombre de cartes et
+ * d'exemplaires ajoutés, ou null si le classeur n'est pas à l'utilisateur.
  */
 export async function addCollectionCards(
   userId: string,
   entries: readonly { oracleId: string; quantity: number }[],
-): Promise<{ cards: number; copies: number }> {
+  binderId?: string,
+): Promise<{ cards: number; copies: number } | null> {
   const totals = new Map<string, number>();
   for (const { oracleId, quantity } of entries) {
     totals.set(
@@ -157,16 +177,23 @@ export async function addCollectionCards(
   }));
   if (rows.length === 0) return { cards: 0, copies: 0 };
 
-  await db
-    .insert(collectionCards)
-    .values(rows)
-    .onConflictDoUpdate({
-      target: [collectionCards.userId, collectionCards.oracleId],
-      set: {
-        quantity: sql`least(${collectionCards.quantity} + excluded.quantity, ${MAX_COLLECTION_QUANTITY})`,
-        updatedAt: new Date(),
-      },
-    });
+  if (binderId && !(await ownsBinder(userId, binderId))) return null;
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(collectionCards)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [collectionCards.userId, collectionCards.oracleId],
+        set: {
+          quantity: sql`least(${collectionCards.quantity} + excluded.quantity, ${MAX_COLLECTION_QUANTITY})`,
+          updatedAt: new Date(),
+        },
+      });
+    if (binderId) {
+      const added = new Map(rows.map((row) => [row.oracleId, row.quantity]));
+      await addToBinder(tx, userId, binderId, added);
+    }
+  });
   return {
     cards: rows.length,
     copies: rows.reduce((sum, row) => sum + row.quantity, 0),

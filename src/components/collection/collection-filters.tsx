@@ -12,15 +12,20 @@ import { useRouter } from "@/i18n/navigation";
 
 const DEBOUNCE_MS = 250;
 
-/** Recherche par nom et tri de la collection, gardés dans l'adresse de la page. */
+/**
+ * Recherche par nom et tri de la collection, gardés dans l'adresse de la
+ * page avec les autres paramètres (classeur, filtres).
+ */
 export function CollectionFilters({
   query,
   sort,
   show,
+  keep,
 }: {
   query: string;
   sort: CollectionSort;
   show: CollectionShow;
+  keep: Record<string, string | string[]>;
 }) {
   const t = useTranslations("CollectionPage");
   const tSort = useTranslations("CollectionSorts");
@@ -46,7 +51,7 @@ export function CollectionFilters({
     sort: CollectionSort;
     show?: CollectionShow;
   }) {
-    const params: Record<string, string> = {};
+    const params: Record<string, string | string[]> = { ...keep };
     const nextShow = next.show ?? show;
     if (next.q.trim()) params.q = next.q.trim();
     setSentQuery(next.q.trim());

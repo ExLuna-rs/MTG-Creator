@@ -16,7 +16,17 @@ import { Link } from "@/i18n/navigation";
  * Filtres actifs au-dessus des résultats, visibles même panneau fermé :
  * chacun est un lien vers la même recherche sans lui (sans JavaScript aussi).
  */
-export function ActiveFilters({ search }: { search: CardSearch }) {
+export function ActiveFilters({
+  search,
+  pathname = "/cards",
+  keep = {},
+}: {
+  search: CardSearch;
+  /** Page des liens (la collection réutilise les filtres). */
+  pathname?: "/cards" | "/collection";
+  /** Paramètres de la page gardés tels quels. */
+  keep?: Record<string, string>;
+}) {
   const t = useTranslations("ActiveFilters");
   const tSearch = useTranslations("CardSearch");
   const tColors = useTranslations("Colors");
@@ -74,8 +84,11 @@ export function ActiveFilters({ search }: { search: CardSearch }) {
           <li key={group} className="min-w-0 max-w-full">
             <Link
               href={{
-                pathname: "/cards",
-                query: cardSearchToQuery(withoutFilter(search, group)),
+                pathname,
+                query: {
+                  ...keep,
+                  ...cardSearchToQuery(withoutFilter(search, group)),
+                },
               }}
               aria-label={t("remove", { label: text })}
               className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary bg-primary/10 py-1 pr-2 pl-3 text-sm outline-none transition-colors hover:bg-primary/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -92,8 +105,8 @@ export function ActiveFilters({ search }: { search: CardSearch }) {
       <li>
         <Link
           href={{
-            pathname: "/cards",
-            query: cardSearchToQuery(withoutFilters(search)),
+            pathname,
+            query: { ...keep, ...cardSearchToQuery(withoutFilters(search)) },
           }}
           className="rounded-md px-2 py-1 font-medium text-sm outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >

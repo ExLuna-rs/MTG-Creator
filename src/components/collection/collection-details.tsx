@@ -6,9 +6,11 @@ import { CardImage } from "@/components/cards/card-image";
 import { GameChangerBadge } from "@/components/cards/game-changer-badge";
 import { DeckStatusBadge } from "@/components/decks/deck-status";
 import { cardHref } from "@/domain/cards/links";
+import type { BinderSplit } from "@/domain/collection/binders";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import type { CardUsage, DeckStatus } from "@/domain/collection/ownership";
 import { Link, useRouter } from "@/i18n/navigation";
+import { type BinderInfo, BinderStorage } from "./binder-storage";
 import { UsageGauge } from "./usage-gauge";
 
 export interface DeckInfo {
@@ -25,11 +27,16 @@ export function CollectionDetails({
   entries,
   usage,
   decks,
+  binders,
+  splits,
   from,
 }: {
   entries: CollectionEntry[];
   usage: Record<string, CardUsage>;
   decks: Record<string, DeckInfo>;
+  binders: readonly BinderInfo[];
+  /** Exemplaires de chaque carte par classeur. */
+  splits: Record<string, BinderSplit>;
   /** Recherche en cours, où la fiche d'une carte ramènera. */
   from: string;
 }) {
@@ -104,6 +111,12 @@ export function CollectionDetails({
                   </span>
                 </div>
                 <UsageGauge owned={card.quantity} usage={cardUsage} />
+                <BinderStorage
+                  card={card}
+                  owned={card.quantity}
+                  split={splits[card.oracleId] ?? {}}
+                  binders={binders}
+                />
                 <DeckGroup title={t("usedIn")} empty={t("noUsedIn")}>
                   {cardUsage.usedIn.map(({ deckId, copies }) => (
                     <DeckLink

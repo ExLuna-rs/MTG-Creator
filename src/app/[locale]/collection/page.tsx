@@ -7,7 +7,14 @@ import {
   setRequestLocale,
 } from "next-intl/server";
 import { z } from "zod";
+import { ActiveFilters } from "@/components/cards/active-filters";
+import { CardSearchForm } from "@/components/cards/card-search-form";
 import { AddCollectionCard } from "@/components/collection/add-collection-card";
+import {
+  BinderNav,
+  BinderSelect,
+  type BinderViewKey,
+} from "@/components/collection/binder-nav";
 import {
   CollectionDetails,
   type DeckInfo,
@@ -21,14 +28,28 @@ import { PhoneScan } from "@/components/collection/phone-scan";
 import { buttonVariants } from "@/components/ui/button";
 import { pageWithQuery } from "@/domain/cards/links";
 import {
+  activeFilters,
+  cardSearchToQuery,
+  parseCardSearch,
+} from "@/domain/cards/search-query";
+import {
+  copiesInView,
+  parseBinderView,
+  unsortedCopies,
+} from "@/domain/collection/binders";
+import {
   COLLECTION_SHOWS,
   COLLECTION_SORTS,
   selectCollection,
 } from "@/domain/collection/collection";
 import { cardUsage, deckStatus } from "@/domain/collection/ownership";
-import { Link } from "@/i18n/navigation";
+import { getPathname, Link } from "@/i18n/navigation";
 import { requireSession } from "@/server/auth/session";
-import { getCollection } from "@/server/collection/collection";
+import { getBinderSplits, listBinders } from "@/server/collection/binders";
+import {
+  filterCollection,
+  getCollection,
+} from "@/server/collection/collection";
 import { getDeckHoldings } from "@/server/decks/copies";
 
 export async function generateMetadata({
@@ -56,18 +77,67 @@ export default async function CollectionPage({
   setRequestLocale(locale as Locale);
   const { user } = await requireSession(locale as Locale, "/collection");
   const t = await getTranslations("CollectionPage");
+  const tBinders = await getTranslations("Binders");
   const format = await getFormatter();
-  const [collection, holdings] = await Promise.all([
-    getCollection(user.id),
-    getDeckHoldings(user.id),
-  ]);
-  const currency = locale === "en" ? "USD" : "EUR";
   const raw = await searchParams;
+  // Filtres de la recherche de cartes (couleurs, types…), sans son nom ni
+  // son tri : la collection a les siens.
+  const filters = parseCardSearch({
+    ...raw,
+    q: undefined,
+    sort: undefined,
+    page: undefined,
+  });
+  const filtering = activeFilters(filters).length > 0;
+  const [collection, holdings, binderList, splits, matching] =
+    await Promise.all([
+      getCollection(user.id),
+      getDeckHoldings(user.id),
+      listBinders(user.id),
+      getBinderSplits(user.id),
+      filtering ? filterCollection(user.id, filters) : null,
+    ]);
+  const currency = locale === "en" ? "USD" : "EUR";
   const { q, sort, show } = searchSchema.parse({
     q: typeof raw.q === "string" ? raw.q : "",
     sort: typeof raw.sort === "string" ? raw.sort : "name",
     show: typeof raw.show === "string" ? raw.show : "all",
   });
+  // Un classeur supprimé entre-temps : on montre toute la collection.
+  const parsedView = parseBinderView(raw.binder);
+  const view =
+    typeof parsedView === "object" &&
+    !binderList.some((binder) => binder.id === parsedView.id)
+      ? "all"
+      : parsedView;
+  const viewKey: BinderViewKey = typeof view === "string" ? view : view.id;
+  const inView = (entry: { oracleId: string; quantity: number }) =>
+    copiesInView(entry.quantity, splits[entry.oracleId] ?? {}, view);
+  const binders = binderList.map((binder) => ({
+    ...binder,
+    count: collection.entries.reduce(
+      (sum, entry) => sum + (splits[entry.oracleId]?.[binder.id] ?? 0),
+      0,
+    ),
+  }));
+  const binderCounts = {
+    all: collection.total,
+    none: collection.entries.reduce(
+      (sum, entry) =>
+        sum + unsortedCopies(entry.quantity, splits[entry.oracleId] ?? {}),
+      0,
+    ),
+  };
+  const viewEntries = collection.entries.filter((entry) => inView(entry) > 0);
+  // Paramètres de chaque réglage, pour que les autres les gardent.
+  const binderQuery: Record<string, string> =
+    viewKey === "all" ? {} : { binder: viewKey };
+  const listQuery: Record<string, string> = {
+    ...(q && { q }),
+    ...(sort !== "name" && { sort }),
+    ...(show !== "all" && { show }),
+  };
+  const { page: _page, ...filterQuery } = cardSearchToQuery(filters);
   // Où sont les exemplaires de chaque carte, et l'état de chaque deck.
   const usage = Object.fromEntries(
     collection.entries.map((entry) => [
@@ -84,11 +154,12 @@ export default async function CollectionPage({
       },
     ]),
   );
-  const shown = selectCollection(collection.entries, {
+  const shown = selectCollection(viewEntries, {
     query: q,
     sort,
     currency,
   }).filter((entry) => {
+    if (matching && !matching.has(entry.oracleId)) return false;
     const { used, free, missing } = usage[entry.oracleId];
     if (show === "free") return free > 0;
     if (show === "used") return used > 0;
@@ -123,7 +194,10 @@ export default async function CollectionPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <CollectionImport />
+          <CollectionImport
+            binders={binderList}
+            defaultBinder={typeof view === "object" ? view.id : null}
+          />
           {collection.entries.length > 0 && (
             <CollectionExport
               entries={collection.entries.map(({ name, quantity }) => ({
@@ -154,27 +228,115 @@ export default async function CollectionPage({
           <p className="mt-1 text-muted-foreground text-sm">{t("emptyHint")}</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <CollectionFilters query={q} sort={sort} show={show} />
-          {shown.length === 0 ? (
-            <p className="text-muted-foreground">
-              {q ? t("noMatch", { query: q }) : t("noShown")}
-            </p>
-          ) : q ? (
-            // Une recherche montre le détail : decks et exemplaires.
-            <CollectionDetails
-              entries={shown}
-              usage={usage}
-              decks={decks}
-              from={pageWithQuery("collection", {
-                q,
-                ...(sort !== "name" && { sort }),
-                ...(show !== "all" && { show }),
+        <div className="grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)]">
+          <aside className="max-md:hidden">
+            <BinderNav
+              binders={binders}
+              counts={binderCounts}
+              view={viewKey}
+              query={{ ...listQuery, ...filterQuery }}
+            />
+          </aside>
+          <div className="min-w-0 space-y-4">
+            <div className="max-md:sr-only">
+              <h2 className="font-semibold text-xl">
+                {viewKey === "all"
+                  ? tBinders("all")
+                  : viewKey === "none"
+                    ? tBinders("unsorted")
+                    : binders.find((binder) => binder.id === viewKey)?.name}
+              </h2>
+              <p
+                className="text-muted-foreground text-sm"
+                data-testid="binder-count"
+              >
+                {tBinders("viewCount", {
+                  count: viewEntries.reduce(
+                    (sum, entry) => sum + inView(entry),
+                    0,
+                  ),
+                  distinct: viewEntries.length,
+                })}
+              </p>
+            </div>
+            <BinderSelect
+              binders={binders}
+              counts={binderCounts}
+              view={viewKey}
+              query={{ ...listQuery, ...filterQuery }}
+            />
+            <CollectionFilters
+              query={q}
+              sort={sort}
+              show={show}
+              keep={{ ...binderQuery, ...filterQuery }}
+            />
+            <CardSearchForm
+              search={filters}
+              filtersOnly
+              pathname="/collection"
+              keep={{ ...listQuery, ...binderQuery }}
+              action={getPathname({
+                locale: locale as Locale,
+                href: "/collection",
               })}
             />
-          ) : (
-            <CollectionGrid entries={shown} usage={usage} />
-          )}
+            <ActiveFilters
+              search={filters}
+              pathname="/collection"
+              keep={{ ...listQuery, ...binderQuery }}
+            />
+            {shown.length === 0 ? (
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  {q
+                    ? t("noMatch", { query: q })
+                    : filtering
+                      ? t("noFilterMatch")
+                      : viewEntries.length === 0
+                        ? tBinders(
+                            viewKey === "none"
+                              ? "emptyUnsorted"
+                              : "emptyBinder",
+                          )
+                        : t("noShown")}
+                </p>
+                {filtering && (
+                  <Link
+                    href={{
+                      pathname: "/collection",
+                      query: { ...listQuery, ...binderQuery },
+                    }}
+                    className="text-primary text-sm underline-offset-4 hover:underline"
+                  >
+                    {t("clearFilters")}
+                  </Link>
+                )}
+              </div>
+            ) : q ? (
+              // Une recherche montre le détail : decks, exemplaires, classeurs.
+              <CollectionDetails
+                entries={shown}
+                usage={usage}
+                decks={decks}
+                binders={binderList}
+                splits={splits}
+                from={pageWithQuery("collection", {
+                  ...listQuery,
+                  ...binderQuery,
+                })}
+              />
+            ) : (
+              <CollectionGrid
+                entries={shown}
+                usage={usage}
+                binders={binderList}
+                splits={splits}
+                view={view}
+                keep={binderQuery}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

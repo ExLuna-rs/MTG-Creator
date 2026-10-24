@@ -341,6 +341,13 @@ Un premier testeur a fait ses retours ; ils sont rangés en six lots (plan valid
 - Export de la collection en texte ou en CSV (`"Count","Name"`). L'option « exemplaires libres seulement » a été écartée par Corentin.
 - Choix du format : boutons sur ordinateur, liste déroulante sur téléphone. Les confirmations d'import (« 23 cartes importées », « 7 exemplaires ajoutés ») s'affichent dans une notification en haut à droite (`src/components/ui/toast.tsx`), comme le refus d'un commandant.
 
+**Lot 4 (rangement des decks et de la collection)** : fait.
+
+- « Mes decks » : dossiers sur un seul niveau (100 au plus, nom unique sans tenir compte de la casse, table `deck_folder`), un deck dans un seul dossier ; supprimer un dossier laisse ses decks « Sans dossier ». Favoris indépendants des dossiers (`deck.favorite`), toujours en tête, avec leur entrée « Favoris ». On range un deck en le glissant sur un dossier ou depuis son menu « ⋯ » (`PATCH /api/decks/[id]`, la date de modification ne change pas).
+- Recherche par nom de deck ou de commandant, couleurs de l'identité (le deck doit toutes les contenir), validité, statut, et six tris (modifiés récemment, nom, prix, date de création, couleurs, commandant), gardés dans l'adresse (`src/domain/deck/deck-list.ts`). Sur téléphone, le dossier se choisit dans une liste déroulante.
+- Collection : les filtres de la recherche de cartes (couleurs, types, rareté…), repliés sous « Filtres » (`filterCollection`).
+- Classeurs (tables `binder` et `binder_card`) : une seule collection, dont les exemplaires d'une carte se répartissent entre classeurs ; le reste est « Non rangé ». Leur somme ne dépasse jamais les exemplaires possédés : retirer un exemplaire de la collection vide d'abord le classeur créé en dernier. Le détail d'une carte (« Rangement ») range ou sort un exemplaire ; l'import d'une liste peut viser un classeur. La colonne des dossiers et celle des classeurs partagent `src/components/organizer/folder-nav.tsx`.
+
 ### Phase 6 et suivantes
 
 Selon les priorités, dans la liste « Plus tard ».

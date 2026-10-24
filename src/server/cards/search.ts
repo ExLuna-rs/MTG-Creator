@@ -193,6 +193,14 @@ function buildConditions(search: CardSearch, normalizedName: string): SQL[] {
   return conditions;
 }
 
+/**
+ * Conditions des filtres d'une recherche, sans le nom : la collection les
+ * applique à ses propres cartes.
+ */
+export function cardFilterConditions(search: CardSearch): SQL[] {
+  return buildConditions(search, "");
+}
+
 function buildOrder(search: CardSearch, normalizedName: string): SQL[] {
   const popularity = sql`${cards.edhrecRank} asc nulls last`;
   switch (search.sort) {

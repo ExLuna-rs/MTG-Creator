@@ -1,4 +1,5 @@
 // Schéma de la base de données (tables Drizzle).
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -194,6 +195,30 @@ export const verifications = pgTable(
 export const DECK_VISIBILITIES = ["private", "unlisted", "public"] as const;
 
 /** Un deck, qui appartient à un utilisateur. */
+/**
+ * Dossiers de « Mes decks », sur un seul niveau. Le nom est unique par
+ * utilisateur, sans tenir compte de la casse.
+ */
+export const deckFolders = pgTable(
+  "deck_folder",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("deck_folder_user_name_idx").on(
+      table.userId,
+      sql`lower(${table.name})`,
+    ),
+  ],
+);
+
 export const decks = pgTable(
   "deck",
   {
@@ -213,6 +238,12 @@ export const decks = pgTable(
     // Deck monté : ses cartes reçoivent des exemplaires physiques de la
     // collection (table `deck_card_copy`). Sinon, il est en construction.
     assembled: boolean("assembled").notNull().default(false),
+    // Dossier de « Mes decks » (du même utilisateur, vérifié par le code) ;
+    // supprimer le dossier laisse le deck sans dossier.
+    folderId: uuid("folder_id").references(() => deckFolders.id, {
+      onDelete: "set null",
+    }),
+    favorite: boolean("favorite").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -289,6 +320,50 @@ export const collectionCards = pgTable(
       .defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.oracleId] })],
+);
+
+/**
+ * Classeurs de la collection. Une seule collection, rangée dans des
+ * classeurs ; le nom est unique par utilisateur, sans tenir compte de la casse.
+ */
+export const binders = pgTable(
+  "binder",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("binder_user_name_idx").on(
+      table.userId,
+      sql`lower(${table.name})`,
+    ),
+  ],
+);
+
+/**
+ * Exemplaires d'une carte de la collection rangés dans un classeur. Les
+ * exemplaires d'une carte peuvent être répartis entre plusieurs classeurs ;
+ * leur somme ne dépasse jamais la quantité possédée, le reste est « non rangé ».
+ */
+export const binderCards = pgTable(
+  "binder_card",
+  {
+    binderId: uuid("binder_id")
+      .notNull()
+      .references(() => binders.id, { onDelete: "cascade" }),
+    oracleId: uuid("oracle_id").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.binderId, table.oracleId] }),
+    index("binder_card_oracle_id_idx").on(table.oracleId),
+  ],
 );
 
 /**

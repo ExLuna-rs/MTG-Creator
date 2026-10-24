@@ -267,10 +267,19 @@ function Group({
 export function CardSearchForm({
   search,
   action,
+  pathname = "/cards",
+  keep = {},
+  filtersOnly = false,
 }: {
   search: CardSearch;
   /** Chemin de la page de recherche, langue comprise (sans JavaScript). */
   action: string;
+  /** Page de destination (la collection réutilise les filtres). */
+  pathname?: "/cards" | "/collection";
+  /** Paramètres de la page gardés tels quels (recherche, tri de la collection). */
+  keep?: Record<string, string>;
+  /** Seulement les filtres, repliés : sans le nom ni le tri des cartes. */
+  filtersOnly?: boolean;
 }) {
   const t = useTranslations("CardSearch");
   const tColors = useTranslations("Colors");
@@ -283,7 +292,9 @@ export function CardSearchForm({
 
   const activeFilters = countActiveFilters(search);
   const [draft, setDraft] = useState(() => toDraft(search));
-  const [filtersOpen, setFiltersOpen] = useState(activeFilters > 0);
+  const [filtersOpen, setFiltersOpen] = useState(
+    !filtersOnly && activeFilters > 0,
+  );
 
   // L'URL a changé (envoi, retour arrière, lien) : les champs la suivent.
   const searchKey = JSON.stringify({ ...search, page: 1 });
@@ -291,15 +302,17 @@ export function CardSearchForm({
   if (searchKey !== syncedKey) {
     setSyncedKey(searchKey);
     setDraft(toDraft(search));
-    if (activeFilters > 0) setFiltersOpen(true);
+    if (activeFilters > 0 && !filtersOnly) setFiltersOpen(true);
   }
 
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   function submit(next: Draft) {
+    const { q: _q, sort: _sort, ...filters } = toQuery(next);
+    const query = filtersOnly ? { ...keep, ...filters } : toQuery(next);
     startTransition(() => {
-      router.push({ pathname: "/cards", query: toQuery(next) });
+      router.push({ pathname, query });
     });
   }
 
@@ -311,51 +324,62 @@ export function CardSearchForm({
   return (
     <search aria-label={t("title")}>
       <form action={action} onSubmit={onSubmit} className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-[1_1_16rem] space-y-1.5">
-            <label htmlFor={`${id}-q`} className="block font-medium text-sm">
-              {t("nameLabel")}
-            </label>
-            <CardNameInput
-              id={`${id}-q`}
-              name="q"
-              value={draft.q}
-              onValueChange={(value) => update("q", value)}
-              placeholder={t("namePlaceholder")}
-              suggestionsLabel={t("suggestionsLabel")}
-            />
+        {filtersOnly ? (
+          Object.entries(keep).map(([key, value]) => (
+            <input key={key} type="hidden" name={key} value={value} />
+          ))
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-[1_1_16rem] space-y-1.5">
+              <label htmlFor={`${id}-q`} className="block font-medium text-sm">
+                {t("nameLabel")}
+              </label>
+              <CardNameInput
+                id={`${id}-q`}
+                name="q"
+                value={draft.q}
+                onValueChange={(value) => update("q", value)}
+                placeholder={t("namePlaceholder")}
+                suggestionsLabel={t("suggestionsLabel")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor={`${id}-sort`}
+                className="block font-medium text-sm"
+              >
+                {t("sortLabel")}
+              </label>
+              <select
+                id={`${id}-sort`}
+                name="sort"
+                value={draft.sort}
+                onChange={(event) => {
+                  // Changer le tri relance la recherche, comme un bouton.
+                  const next = { ...draft, sort: event.target.value };
+                  setDraft(next);
+                  submit(next);
+                }}
+                className={cn(inputClassName, "h-10 w-auto pr-8")}
+              >
+                <option value="">{tSorts("relevance")}</option>
+                {CARD_SORTS.filter((sort) => sort !== "relevance").map(
+                  (sort) => (
+                    <option key={sort} value={sort}>
+                      {tSorts(sort)}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+            <Button type="submit" size="lg">
+              {pending ? (
+                <LoaderCircle className="animate-spin" aria-hidden />
+              ) : null}
+              {t("submit")}
+            </Button>
           </div>
-          <div className="space-y-1.5">
-            <label htmlFor={`${id}-sort`} className="block font-medium text-sm">
-              {t("sortLabel")}
-            </label>
-            <select
-              id={`${id}-sort`}
-              name="sort"
-              value={draft.sort}
-              onChange={(event) => {
-                // Changer le tri relance la recherche, comme un bouton.
-                const next = { ...draft, sort: event.target.value };
-                setDraft(next);
-                submit(next);
-              }}
-              className={cn(inputClassName, "h-10 w-auto pr-8")}
-            >
-              <option value="">{tSorts("relevance")}</option>
-              {CARD_SORTS.filter((sort) => sort !== "relevance").map((sort) => (
-                <option key={sort} value={sort}>
-                  {tSorts(sort)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button type="submit" size="lg">
-            {pending ? (
-              <LoaderCircle className="animate-spin" aria-hidden />
-            ) : null}
-            {t("submit")}
-          </Button>
-        </div>
+        )}
 
         <details
           open={filtersOpen}
@@ -577,7 +601,7 @@ export function CardSearchForm({
           <div className="flex flex-wrap gap-3 border-t px-4 py-3">
             <Button type="submit">{t("submit")}</Button>
             <Link
-              href="/cards"
+              href={{ pathname, query: filtersOnly ? keep : {} }}
               // Même URL possible (champs modifiés mais pas envoyés) : on vide
               // aussi les champs directement.
               onClick={() => setDraft(EMPTY_DRAFT)}
