@@ -1,8 +1,10 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { deckPlacementSchema } from "@/domain/deck/deck-list";
 import { deckSaveSchema } from "@/domain/deck/schema";
 import { getCurrentSession } from "@/server/auth/session";
 import { saveDeck } from "@/server/decks/decks";
+import { placeDeck } from "@/server/decks/folders";
 
 // Sauvegarde automatique de l'éditeur : remplace le nom et les cartes du deck.
 // Réservée au propriétaire du deck (vérifié par saveDeck). Le cookie de
@@ -29,4 +31,33 @@ export async function PUT(
     return Response.json({ error: result.error }, { status });
   }
   return Response.json({ updatedAt: result.updatedAt.toISOString() });
+}
+
+// Rangement d'un deck dans « Mes decks » : dossier et favori.
+export async function PATCH(
+  request: NextRequest,
+  ctx: RouteContext<"/api/decks/[id]">,
+) {
+  const session = await getCurrentSession();
+  if (!session)
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const id = z.uuid().safeParse((await ctx.params).id);
+  if (!id.success) return Response.json({ error: "notFound" }, { status: 404 });
+
+  const body = deckPlacementSchema.safeParse(
+    await request.json().catch(() => null),
+  );
+  if (!body.success) {
+    return Response.json({ error: "invalid" }, { status: 400 });
+  }
+
+  const result = await placeDeck(session.user.id, id.data, body.data);
+  if (result === "notFound") {
+    return Response.json({ error: result }, { status: 404 });
+  }
+  if (result === "unknownFolder") {
+    return Response.json({ error: result }, { status: 400 });
+  }
+  return new Response(null, { status: 204 });
 }

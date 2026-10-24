@@ -174,6 +174,9 @@ export interface DeckSummary {
   id: string;
   name: string;
   updatedAt: Date;
+  createdAt: Date;
+  folderId: string | null;
+  favorite: boolean;
   commanders: Pick<DeckCardData, "oracleId" | "name" | "imageUris">[];
   colorIdentity: number;
   cardCount: number;
@@ -193,6 +196,9 @@ export async function listDecks(userId: string): Promise<DeckSummary[]> {
       id: decks.id,
       name: decks.name,
       updatedAt: decks.updatedAt,
+      createdAt: decks.createdAt,
+      folderId: decks.folderId,
+      favorite: decks.favorite,
       assembled: decks.assembled,
     })
     .from(decks)

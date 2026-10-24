@@ -67,4 +67,6 @@ export const collectionImportSchema = z.object({
     )
     .min(1)
     .max(MAX_COLLECTION_IMPORT_CARDS),
+  /** Classeur où ranger les exemplaires ajoutés. */
+  binderId: z.uuid().optional(),
 });

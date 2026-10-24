@@ -31,7 +31,7 @@ interface Analysis {
   results: Map<string, ResolvedName>;
 }
 
-type Failure = "empty" | "network" | "file";
+type Failure = "empty" | "network" | "file" | "unknownBinder";
 
 const PLACEHOLDER = `4 Lightning Bolt
 1 Sol Ring (CMM) 410
@@ -62,7 +62,15 @@ async function resolveAll(names: string[]): Promise<ResolvedName[]> {
  * Les noms sont reconnus, un rapport liste les lignes non reconnues avec
  * des suggestions, puis les exemplaires s'ajoutent à ceux déjà possédés.
  */
-export function CollectionImport() {
+export function CollectionImport({
+  binders,
+  defaultBinder,
+}: {
+  /** Classeurs où ranger les exemplaires ajoutés. */
+  binders: readonly { id: string; name: string }[];
+  /** Classeur affiché, choisi d'avance. */
+  defaultBinder: string | null;
+}) {
   const t = useTranslations("CollectionImport");
   const tDeck = useTranslations("DeckImport");
   const router = useRouter();
@@ -70,6 +78,8 @@ export function CollectionImport() {
   const fileInput = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const textId = useId();
+  const binderId = useId();
+  const [binder, setBinder] = useState(defaultBinder ?? "");
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -155,8 +165,19 @@ export function CollectionImport() {
       const response = await fetch("/api/collection/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cards: report.entries }),
+        body: JSON.stringify({
+          cards: report.entries,
+          ...(binder && { binderId: binder }),
+        }),
       });
+      if (response.status === 400) {
+        const { error } = (await response.json()) as { error?: string };
+        if (error === "unknownBinder") {
+          setBinder("");
+          router.refresh();
+          return setFailure("unknownBinder");
+        }
+      }
       if (!response.ok) throw new Error(String(response.status));
       const { copies } = (await response.json()) as { copies: number };
       setImported(copies);
@@ -175,6 +196,7 @@ export function CollectionImport() {
         variant="outline"
         onClick={() => {
           setImported(null);
+          setBinder(defaultBinder ?? "");
           dialog.current?.showModal();
         }}
       >
@@ -342,6 +364,27 @@ export function CollectionImport() {
                     ))}
                   </ul>
                 </section>
+              )}
+
+              {binders.length > 0 && (
+                <div className="space-y-1.5">
+                  <label htmlFor={binderId} className="font-medium text-sm">
+                    {t("binderLabel")}
+                  </label>
+                  <select
+                    id={binderId}
+                    value={binder}
+                    onChange={(event) => setBinder(event.target.value)}
+                    className="block h-10 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:text-sm"
+                  >
+                    <option value="">{t("binderNone")}</option>
+                    {binders.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {failure && (
