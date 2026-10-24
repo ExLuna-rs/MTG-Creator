@@ -26,6 +26,7 @@ export function printingKey(set: string, collectorNumber: string): string {
 /** Éditions indiquées par les lignes (« (CMM) 410 »), sans doublons. */
 export function uniquePrintings(
   lines: readonly Pick<DeckListLine, "set" | "collectorNumber">[],
+  limit = MAX_IMPORT_NAMES,
 ): { set: string; collectorNumber: string }[] {
   const wanted = new Map<string, { set: string; collectorNumber: string }>();
   for (const { set, collectorNumber } of lines) {
@@ -33,7 +34,7 @@ export function uniquePrintings(
       wanted.set(printingKey(set, collectorNumber), { set, collectorNumber });
     }
   }
-  return [...wanted.values()].slice(0, MAX_IMPORT_NAMES);
+  return [...wanted.values()].slice(0, limit);
 }
 
 /** Lignes du deck tirées des cartes reconnues, regroupées par carte et par zone. */

@@ -147,21 +147,63 @@ export type CollectionExportFormat = (typeof COLLECTION_EXPORT_FORMATS)[number];
 const csvField = (value: string | number) =>
   `"${String(value).replace(/"/g, '""')}"`;
 
-/** Liste de la collection, triée par nom. */
+/** Une carte de la collection à exporter, avec ses exemplaires précisés. */
+export interface CollectionExportEntry {
+  name: string;
+  quantity: number;
+  printings?: readonly {
+    setCode: string;
+    collectorNumber: string;
+    foil: boolean;
+    quantity: number;
+  }[];
+}
+
+/**
+ * Liste de la collection, triée par nom : une ligne par édition précisée
+ * (« 1 Sol Ring (LEA) 269 *F* »), puis une pour les exemplaires sans édition.
+ * Le CSV suit les colonnes de Moxfield (Count, Name, Edition, Collector
+ * Number, Foil).
+ */
 export function exportCollection(
-  entries: readonly { name: string; quantity: number }[],
+  entries: readonly CollectionExportEntry[],
   format: CollectionExportFormat,
 ): string {
   const lines = [...entries]
     .filter((entry) => entry.quantity > 0)
-    .sort((a, b) => a.name.localeCompare(b.name, "en"));
+    .sort((a, b) => a.name.localeCompare(b.name, "en"))
+    .flatMap(({ name, quantity, printings = [] }) => {
+      const specified = printings.filter((copies) => copies.quantity > 0);
+      const rest =
+        quantity - specified.reduce((sum, copies) => sum + copies.quantity, 0);
+      return [
+        ...specified.map((copies) => ({ name, ...copies })),
+        ...(rest > 0 ? [{ name, quantity: rest }] : []),
+      ];
+    });
   if (format === "text") {
-    return lines.map((entry) => `${entry.quantity} ${entry.name}`).join("\n");
+    return lines
+      .map((line) =>
+        "setCode" in line
+          ? `${line.quantity} ${line.name} (${line.setCode.toUpperCase()}) ${line.collectorNumber}${line.foil ? " *F*" : ""}`
+          : `${line.quantity} ${line.name}`,
+      )
+      .join("\n");
   }
   return [
-    `${csvField("Count")},${csvField("Name")}`,
-    ...lines.map(
-      (entry) => `${csvField(entry.quantity)},${csvField(entry.name)}`,
+    ["Count", "Name", "Edition", "Collector Number", "Foil"]
+      .map(csvField)
+      .join(","),
+    ...lines.map((line) =>
+      [
+        line.quantity,
+        line.name,
+        "setCode" in line ? line.setCode : "",
+        "setCode" in line ? line.collectorNumber : "",
+        "setCode" in line && line.foil ? "foil" : "",
+      ]
+        .map(csvField)
+        .join(","),
     ),
   ].join("\n");
 }

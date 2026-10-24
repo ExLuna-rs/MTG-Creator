@@ -9,8 +9,10 @@ import { cardHref } from "@/domain/cards/links";
 import type { BinderSplit } from "@/domain/collection/binders";
 import type { CollectionEntry } from "@/domain/collection/collection";
 import type { CardUsage, DeckStatus } from "@/domain/collection/ownership";
+import type { PrintingSplit } from "@/domain/collection/printings";
 import { Link, useRouter } from "@/i18n/navigation";
 import { type BinderInfo, BinderStorage } from "./binder-storage";
+import { PrintingStorage } from "./printing-storage";
 import { UsageGauge } from "./usage-gauge";
 
 export interface DeckInfo {
@@ -29,6 +31,7 @@ export function CollectionDetails({
   decks,
   binders,
   splits,
+  printings,
   from,
 }: {
   entries: CollectionEntry[];
@@ -37,6 +40,8 @@ export function CollectionDetails({
   binders: readonly BinderInfo[];
   /** Exemplaires de chaque carte par classeur. */
   splits: Record<string, BinderSplit>;
+  /** Exemplaires de chaque carte dont l'édition est précisée. */
+  printings: Record<string, PrintingSplit>;
   /** Recherche en cours, où la fiche d'une carte ramènera. */
   from: string;
 }) {
@@ -85,11 +90,11 @@ export function CollectionDetails({
             <li
               key={card.oracleId}
               data-card={card.name}
-              className="grid grid-cols-[4rem_minmax(0,1fr)] gap-4 rounded-xl border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)]"
+              className="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-4 gap-y-4 rounded-xl border bg-card p-3 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-y-3 sm:p-4"
             >
               <Link
                 href={cardHref(card.oracleId, from)}
-                className="relative block self-start rounded-[4.75%/3.5%] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="relative block self-start rounded-[4.75%/3.5%] outline-none sm:row-span-2 focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <CardImage
                   imageUris={card.imageUris}
@@ -111,6 +116,14 @@ export function CollectionDetails({
                   </span>
                 </div>
                 <UsageGauge owned={card.quantity} usage={cardUsage} />
+              </div>
+              {/* Sur téléphone, les sections prennent toute la largeur, sous l'image. */}
+              <div className="col-span-2 min-w-0 space-y-4 sm:col-span-1 sm:col-start-2 sm:space-y-3">
+                <PrintingStorage
+                  card={card}
+                  owned={card.quantity}
+                  split={printings[card.oracleId] ?? []}
+                />
                 <BinderStorage
                   card={card}
                   owned={card.quantity}

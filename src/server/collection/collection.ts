@@ -2,12 +2,18 @@ import "server-only";
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { CardSearch } from "@/domain/cards/search-query";
 import type { CollectionEntry } from "@/domain/collection/collection";
+import { copiesValue, type PrintingSplit } from "@/domain/collection/printings";
 import { MAX_COLLECTION_QUANTITY } from "@/domain/collection/schema";
 import { cardFilterConditions, getDeckCardData } from "@/server/cards/search";
 import { type Database, getDb } from "@/server/db";
 import { cards, collectionCards } from "@/server/db/schema";
 import { trimCopiesToOwned } from "@/server/decks/copies";
 import { addToBinder, ownsBinder, trimBindersToOwned } from "./binders";
+import {
+  addPrintingCopies,
+  getPrintingSplits,
+  trimPrintingsToOwned,
+} from "./printings";
 
 /** Base de données, ou transaction en cours. */
 export type DbExecutor =
@@ -21,14 +27,17 @@ export interface Collection {
   entries: CollectionEntry[];
   /** Nombre total d'exemplaires. */
   total: number;
+  /** Valeur, d'après l'édition et la finition de chaque exemplaire. */
   priceEur: number;
   priceUsd: number;
+  /** Exemplaires dont l'édition est précisée, par carte. */
+  printings: Record<string, PrintingSplit>;
 }
 
 /** Collection de l'utilisateur, triée par nom de carte. */
 export async function getCollection(userId: string): Promise<Collection> {
   // Une carte retirée par Scryfall reste en base mais n'est pas affichée.
-  const entries = await getDb()
+  const entriesQuery = getDb()
     .select({
       oracleId: cards.oracleId,
       name: cards.name,
@@ -48,17 +57,28 @@ export async function getCollection(userId: string): Promise<Collection> {
     .innerJoin(cards, eq(cards.oracleId, collectionCards.oracleId))
     .where(eq(collectionCards.userId, userId))
     .orderBy(asc(cards.name));
+  const [entries, printings] = await Promise.all([
+    entriesQuery,
+    getPrintingSplits(userId),
+  ]);
+  const value = (currency: "EUR" | "USD") =>
+    entries.reduce(
+      (sum, entry) =>
+        sum +
+        copiesValue(
+          entry.quantity,
+          currency === "EUR" ? entry.priceEur : entry.priceUsd,
+          printings[entry.oracleId] ?? [],
+          currency,
+        ),
+      0,
+    );
   return {
     entries,
     total: entries.reduce((sum, entry) => sum + entry.quantity, 0),
-    priceEur: entries.reduce(
-      (sum, entry) => sum + (entry.priceEur ?? 0) * entry.quantity,
-      0,
-    ),
-    priceUsd: entries.reduce(
-      (sum, entry) => sum + (entry.priceUsd ?? 0) * entry.quantity,
-      0,
-    ),
+    priceEur: value("EUR"),
+    priceUsd: value("USD"),
+    printings,
   };
 }
 
@@ -116,6 +136,7 @@ export async function changeCollectionCard(
     const owned = Math.max(0, row?.quantity ?? 0);
     await trimCopiesToOwned(db, userId, oracleId, owned);
     await trimBindersToOwned(db, userId, oracleId, owned);
+    await trimPrintingsToOwned(db, userId, oracleId, owned);
     if (!row || row.quantity > 0)
       return { ok: true, quantity: row?.quantity ?? 0 };
     await db
@@ -153,7 +174,13 @@ export async function changeCollectionCard(
  */
 export async function addCollectionCards(
   userId: string,
-  entries: readonly { oracleId: string; quantity: number }[],
+  entries: readonly {
+    oracleId: string;
+    quantity: number;
+    /** Édition et finition indiquées par la liste (« (LEA) 269 *F* »). */
+    printingId?: string;
+    foil?: boolean;
+  }[],
   binderId?: string,
 ): Promise<{ cards: number; copies: number } | null> {
   const totals = new Map<string, number>();
@@ -193,6 +220,13 @@ export async function addCollectionCards(
       const added = new Map(rows.map((row) => [row.oracleId, row.quantity]));
       await addToBinder(tx, userId, binderId, added);
     }
+    await addPrintingCopies(
+      tx,
+      userId,
+      entries.flatMap(({ oracleId, quantity, printingId, foil = false }) =>
+        printingId ? [{ oracleId, printingId, foil, quantity }] : [],
+      ),
+    );
   });
   return {
     cards: rows.length,

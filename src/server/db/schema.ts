@@ -385,6 +385,36 @@ export const collectionCards = pgTable(
 );
 
 /**
+ * Édition et finition des exemplaires d'une carte de la collection, quand on
+ * les a précisées. Leur somme ne dépasse jamais la quantité possédée
+ * (`collection_card`) ; le reste est « édition non précisée ». Les decks et
+ * les classeurs continuent de compter par carte.
+ */
+export const collectionPrintings = pgTable(
+  "collection_printing",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    oracleId: uuid("oracle_id").notNull(),
+    // Édition (table `printing`), sans clé étrangère : l'import la remplace.
+    printingId: uuid("printing_id").notNull(),
+    foil: boolean("foil").notNull(),
+    quantity: integer("quantity").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.printingId, table.foil] }),
+    index("collection_printing_user_oracle_idx").on(
+      table.userId,
+      table.oracleId,
+    ),
+  ],
+);
+
+/**
  * Classeurs de la collection. Une seule collection, rangée dans des
  * classeurs ; le nom est unique par utilisateur, sans tenir compte de la casse.
  */

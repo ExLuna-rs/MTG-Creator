@@ -16,9 +16,11 @@ export interface DeckListLine {
   name: string;
   zone: DeckZone;
   categories: string[];
-  /** Édition indiquée, par exemple « CMM » (ignorée jusqu'à la phase 5). */
+  /** Édition indiquée, par exemple « CMM ». */
   set: string | null;
   collectorNumber: string | null;
+  /** Finition brillante indiquée : « *F* » (foil) ou « *E* » (etched). */
+  foil: boolean;
 }
 
 export interface ParsedDeckList {
@@ -89,6 +91,7 @@ function splitAnnotations(rest: string) {
   let name = rest;
   let set: string | null = null;
   let collectorNumber: string | null = null;
+  let foil = false;
   const categories: string[] = [];
 
   const leadingSet = name.match(/^\[([a-z0-9]{2,6})\]\s+/i);
@@ -104,7 +107,9 @@ function splitAnnotations(rest: string) {
     const edition = name.match(/\s+\(([a-z0-9]{2,6})\)(?:\s+([a-z0-9★-]+))?$/i);
     const found = finish ?? tags ?? brackets ?? edition;
     if (!found) break;
-    if (found === brackets) {
+    if (found === finish) {
+      foil ||= /\*[fe]\*$/i.test(finish[0]);
+    } else if (found === brackets) {
       categories.unshift(...brackets[1].split(","));
     } else if (found === edition) {
       set = edition[1].toUpperCase();
@@ -113,7 +118,7 @@ function splitAnnotations(rest: string) {
     name = name.slice(0, -found[0].length);
   }
 
-  return { name: name.trim(), set, collectorNumber, categories };
+  return { name: name.trim(), set, collectorNumber, foil, categories };
 }
 
 /**
@@ -198,6 +203,7 @@ export function parseDeckList(
         categories,
         set: parsed.set,
         collectorNumber: parsed.collectorNumber,
+        foil: parsed.foil,
       });
     });
 

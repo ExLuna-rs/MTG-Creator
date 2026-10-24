@@ -202,10 +202,20 @@ export default async function CollectionPage({
           />
           {collection.entries.length > 0 && (
             <CollectionExport
-              entries={collection.entries.map(({ name, quantity }) => ({
-                name,
-                quantity,
-              }))}
+              entries={collection.entries.map(
+                ({ oracleId, name, quantity }) => ({
+                  name,
+                  quantity,
+                  printings: (collection.printings[oracleId] ?? []).map(
+                    ({ printing, foil, quantity }) => ({
+                      setCode: printing.setCode,
+                      collectorNumber: printing.collectorNumber,
+                      foil,
+                      quantity,
+                    }),
+                  ),
+                }),
+              )}
             />
           )}
           {/* Sur téléphone, le scan se fait directement sur l'appareil. */}
@@ -325,6 +335,7 @@ export default async function CollectionPage({
                 decks={decks}
                 binders={binderList}
                 splits={splits}
+                printings={collection.printings}
                 from={pageWithQuery("collection", {
                   ...listQuery,
                   ...binderQuery,

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { MAX_COLLECTION_QUANTITY } from "../collection/schema";
 import { parseDeckList } from "./deck-list";
 
@@ -14,6 +15,12 @@ export interface CollectionListLine {
   text: string;
   quantity: number;
   name: string;
+  /** Édition indiquée (« (CMM) 410 », colonnes du CSV), si elle l'est. */
+  set: string | null;
+  collectorNumber: string | null;
+  foil: boolean;
+  /** Identifiant Scryfall de l'édition (colonne « Scryfall ID »). */
+  printingId: string | null;
 }
 
 export interface ParsedCollectionList {
@@ -27,6 +34,18 @@ export interface ParsedCollectionList {
 /** En-têtes des colonnes du nom et de la quantité (Moxfield, ManaBox, Archidekt, Deckbox…). */
 const NAME_HEADERS = ["name", "card name", "card", "card_name"];
 const QUANTITY_HEADERS = ["count", "quantity", "qty", "amount"];
+const SET_HEADERS = ["edition", "set code", "set", "edition code", "set_code"];
+const NUMBER_HEADERS = [
+  "collector number",
+  "collector_number",
+  "card number",
+  "number",
+];
+const FOIL_HEADERS = ["foil", "finish", "printing"];
+const SCRYFALL_ID_HEADERS = ["scryfall id", "scryfall_id", "scryfallid"];
+/** Valeurs de la colonne de finition qui désignent une carte brillante. */
+const FOIL_VALUES = ["foil", "etched", "true", "yes", "1"];
+const SET_CODE = /^[a-z0-9]{2,6}$/i;
 const DELIMITERS = [",", ";", "\t"];
 
 /** Découpe une ligne CSV (champs entre guillemets, guillemets doublés). */
@@ -66,10 +85,17 @@ function csvColumns(header: string) {
     );
     const name = headers.findIndex((item) => NAME_HEADERS.includes(item));
     if (name < 0 || headers.length < 2) continue;
-    const quantity = headers.findIndex((item) =>
-      QUANTITY_HEADERS.includes(item),
-    );
-    return { delimiter, name, quantity };
+    const column = (names: string[]) =>
+      headers.findIndex((item) => names.includes(item));
+    return {
+      delimiter,
+      name,
+      quantity: column(QUANTITY_HEADERS),
+      set: column(SET_HEADERS),
+      number: column(NUMBER_HEADERS),
+      foil: column(FOIL_HEADERS),
+      scryfallId: column(SCRYFALL_ID_HEADERS),
+    };
   }
   return null;
 }
@@ -102,7 +128,20 @@ function parseCsv(
       invalid.push({ line: index + 1, text });
       return;
     }
-    cards.push({ line: index + 1, text, quantity, name });
+    const field = (column: number) =>
+      column < 0 ? "" : (fields[column] ?? "");
+    const set = field(columns.set);
+    const scryfallId = field(columns.scryfallId);
+    cards.push({
+      line: index + 1,
+      text,
+      quantity,
+      name,
+      set: SET_CODE.test(set) ? set.toUpperCase() : null,
+      collectorNumber: field(columns.number).slice(0, 12) || null,
+      foil: FOIL_VALUES.includes(field(columns.foil).toLowerCase()),
+      printingId: z.uuid().safeParse(scryfallId).success ? scryfallId : null,
+    });
   });
   return { format: "csv", cards, invalid, truncated };
 }
@@ -128,33 +167,59 @@ export function parseCollectionList(text: string): ParsedCollectionList {
     format: "text",
     cards: list.cards
       .slice(0, MAX_COLLECTION_IMPORT_LINES)
-      .map(({ line, text, quantity, name }) => ({
+      .map(({ line, text, quantity, name, set, collectorNumber, foil }) => ({
         line,
         text,
         quantity,
         name,
+        set,
+        collectorNumber,
+        foil,
+        printingId: null,
       })),
     invalid: list.invalid,
     truncated: list.cards.length > MAX_COLLECTION_IMPORT_LINES,
   };
 }
 
-/** Exemplaires à ajouter, par carte reconnue (quantités additionnées). */
+/** Exemplaires d'une carte à ajouter, avec leur édition si elle est connue. */
+export interface CollectionImportEntry {
+  oracleId: string;
+  quantity: number;
+  printingId?: string;
+  foil?: boolean;
+}
+
+/**
+ * Exemplaires à ajouter, par carte reconnue et par édition (quantités
+ * additionnées). `printingOf` donne l'édition reconnue d'une ligne.
+ */
 export function collectionImportEntries(
   lines: readonly CollectionListLine[],
   resolve: (line: CollectionListLine) => string | null,
-): { oracleId: string; quantity: number }[] {
-  const totals = new Map<string, number>();
+  printingOf: (
+    line: CollectionListLine,
+    oracleId: string,
+  ) => string | null = () => null,
+): CollectionImportEntry[] {
+  const entries = new Map<string, CollectionImportEntry>();
   for (const line of lines) {
     const oracleId = resolve(line);
     if (!oracleId) continue;
-    totals.set(
-      oracleId,
-      Math.min(
-        (totals.get(oracleId) ?? 0) + line.quantity,
-        MAX_COLLECTION_QUANTITY,
-      ),
+    const printingId = printingOf(line, oracleId);
+    const key = printingId
+      ? `${oracleId}:${printingId}:${line.foil}`
+      : oracleId;
+    const quantity = Math.min(
+      (entries.get(key)?.quantity ?? 0) + line.quantity,
+      MAX_COLLECTION_QUANTITY,
+    );
+    entries.set(
+      key,
+      printingId
+        ? { oracleId, quantity, printingId, foil: line.foil }
+        : { oracleId, quantity },
     );
   }
-  return [...totals].map(([oracleId, quantity]) => ({ oracleId, quantity }));
+  return [...entries.values()];
 }

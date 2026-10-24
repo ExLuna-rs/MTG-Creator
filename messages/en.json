@@ -888,5 +888,23 @@
       "text": "One card per line (“4 Lightning Bolt”): understood by Moxfield, Archidekt, ManaBox and MTG Creator.",
       "csv": "“Count” and “Name” columns, for a spreadsheet or a Moxfield import."
     }
+  },
+  "CollectionPrintings": {
+    "title": "Printings",
+    "unspecified": "Printing not specified",
+    "foil": "foil",
+    "foilLabel": "Foil finish",
+    "noPrice": "unknown price",
+    "copiesLabel": "{name}, {set} no. {number}{foil, select, true { foil} other {}}",
+    "decrease": "Remove a copy: {label}",
+    "increase": "Add a copy: {label}",
+    "specify": "Specify a copy's printing",
+    "specifyFor": "Specify the printing of a copy of {name}",
+    "edition": "Printing",
+    "add": "Specify",
+    "cancel": "Cancel",
+    "loading": "Loading printings…",
+    "loadError": "Couldn't load the printings.",
+    "error": "The change couldn't be saved. Try again."
   }
 }

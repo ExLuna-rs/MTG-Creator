@@ -16,7 +16,12 @@ import {
   type ParsedCollectionList,
   parseCollectionList,
 } from "@/domain/import-export/collection-list";
-import { MAX_IMPORT_NAMES, uniqueNames } from "@/domain/import-export/import";
+import {
+  MAX_IMPORT_NAMES,
+  printingKey,
+  uniqueNames,
+  uniquePrintings,
+} from "@/domain/import-export/import";
 import { useRouter } from "@/i18n/navigation";
 
 interface ResolvedName {
@@ -29,6 +34,15 @@ interface Analysis {
   parsed: ParsedCollectionList;
   /** Résultats du serveur, par nom normalisé. */
   results: Map<string, ResolvedName>;
+  /** Éditions indiquées par la liste et reconnues : carte, par extension et numéro. */
+  printings: Map<string, { id: string; oracleId: string }>;
+}
+
+interface ResolvedPrinting {
+  id: string;
+  oracleId: string;
+  setCode: string;
+  collectorNumber: string;
 }
 
 type Failure = "empty" | "network" | "file" | "unknownBinder";
@@ -38,22 +52,40 @@ const PLACEHOLDER = `4 Lightning Bolt
 2x Counterspell
 12 Island`;
 
-/** Noms reconnus par lots : le serveur en accepte un nombre limité par requête. */
-async function resolveAll(names: string[]): Promise<ResolvedName[]> {
+/**
+ * Noms et éditions reconnus par lots : le serveur en accepte un nombre
+ * limité par requête.
+ */
+async function resolveAll(
+  names: string[],
+  editions: { set: string; collectorNumber: string }[],
+): Promise<{ results: ResolvedName[]; printings: ResolvedPrinting[] }> {
   const results: ResolvedName[] = [];
-  for (let start = 0; start < names.length; start += MAX_IMPORT_NAMES) {
+  const printings: ResolvedPrinting[] = [];
+  for (
+    let start = 0;
+    start < Math.max(names.length, editions.length);
+    start += MAX_IMPORT_NAMES
+  ) {
+    const batch = names.slice(start, start + MAX_IMPORT_NAMES);
     const response = await fetch("/api/cards/resolve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        names: names.slice(start, start + MAX_IMPORT_NAMES),
+        // Le serveur demande au moins un nom par requête.
+        names: batch.length > 0 ? batch : [names[0]],
+        printings: editions.slice(start, start + MAX_IMPORT_NAMES),
       }),
     });
     if (!response.ok) throw new Error(String(response.status));
-    const data = (await response.json()) as { results: ResolvedName[] };
-    results.push(...data.results);
+    const data = (await response.json()) as {
+      results: ResolvedName[];
+      printings: ResolvedPrinting[];
+    };
+    if (batch.length > 0) results.push(...data.results);
+    printings.push(...data.printings);
   }
-  return results;
+  return { results, printings };
 }
 
 /**
@@ -121,11 +153,20 @@ export function CollectionImport({
     setLoading(true);
     setFailure(null);
     try {
-      const results = await resolveAll(names);
+      const { results, printings } = await resolveAll(
+        names,
+        uniquePrintings(parsed.cards, Number.POSITIVE_INFINITY),
+      );
       setAnalysis({
         parsed,
         results: new Map(
           results.map((result) => [normalizeCardName(result.name), result]),
+        ),
+        printings: new Map(
+          printings.map((printing) => [
+            printingKey(printing.setCode, printing.collectorNumber),
+            printing,
+          ]),
         ),
       });
       setChoices({});
@@ -144,12 +185,24 @@ export function CollectionImport({
   // biome-ignore lint/correctness/useExhaustiveDependencies: resolve ne dépend que d'analysis et choices
   const report = useMemo(() => {
     if (!analysis) return null;
+    // Édition de la ligne : identifiant Scryfall du CSV (vérifié par le
+    // serveur), sinon extension et numéro reconnus pour cette carte.
+    const printingOf = (line: CollectionListLine, oracleId: string) => {
+      if (line.printingId) return line.printingId;
+      if (!line.set || !line.collectorNumber) return null;
+      const printing = analysis.printings.get(
+        printingKey(line.set, line.collectorNumber),
+      );
+      return printing?.oracleId === oracleId ? printing.id : null;
+    };
     const entries = collectionImportEntries(
       analysis.parsed.cards,
       (line) => resolve(line)?.oracleId ?? null,
+      printingOf,
     );
     return {
       entries,
+      cards: new Set(entries.map((entry) => entry.oracleId)).size,
       copies: entries.reduce((sum, entry) => sum + entry.quantity, 0),
       unknown: analysis.parsed.cards.filter(
         (line) => !analysis.results.get(normalizeCardName(line.name))?.card,
@@ -312,7 +365,7 @@ export function CollectionImport({
               <p className="rounded-md border border-l-4 border-l-primary px-3 py-2 text-sm">
                 {t("recognized", {
                   copies: report.copies,
-                  cards: report.entries.length,
+                  cards: report.cards,
                 })}
               </p>
 

@@ -153,3 +153,59 @@ test("filtre les cartes par extension", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "9 cartes" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Sol Ring / })).toBeVisible();
 });
+
+test("précise l'édition des exemplaires de la collection", async ({ page }) => {
+  await signUpViaApi(page);
+  await page.goto("/fr/collection");
+  await page.getByRole("button", { name: "Importer une liste" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Importer dans la collection",
+  });
+  await dialog
+    .getByLabel("Ou collez la liste")
+    .fill("1 Sol Ring (LEA) 269\n2 Sol Ring");
+  await dialog.getByRole("button", { name: "Analyser la liste" }).click();
+  await dialog.getByRole("button", { name: "Ajouter 3 exemplaires" }).click();
+  await expect(dialog).toBeHidden();
+
+  // La recherche montre le détail de la carte, avec ses éditions.
+  await page.goto("/fr/collection?q=sol+ring");
+  const printings = page.getByTestId("printing-storage");
+  await expect(printings).toContainText("Limited Edition Alpha");
+  await expect(printings.getByRole("listitem").last()).toHaveText(
+    "Édition non précisée2",
+  );
+
+  // Un exemplaire brillant d'une autre édition.
+  await printings
+    .getByRole("button", { name: "Préciser l'édition d'un exemplaire" })
+    .click();
+  await printings
+    .getByLabel("Édition", { exact: true })
+    .selectOption({ label: "Secret Lair Drop (SLD · 2783)" });
+  await printings.getByLabel("Finition brillante (foil)").check();
+  await printings
+    .getByRole("button", { name: "Préciser", exact: true })
+    .click();
+  await expect(printings).toContainText("brillante");
+  await expect(printings.getByRole("listitem").last()).toHaveText(
+    "Édition non précisée1",
+  );
+
+  // Retirer l'édition rend l'exemplaire aux non précisés.
+  await printings
+    .getByRole("button", {
+      name: "Retirer un exemplaire : Sol Ring, Limited Edition Alpha n° 269",
+    })
+    .click();
+  await expect(printings.getByRole("listitem").last()).toHaveText(
+    "Édition non précisée2",
+  );
+
+  await page.getByRole("button", { name: "Exporter" }).click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Exporter la collection" })
+      .getByRole("textbox", { name: "Liste exportée" }),
+  ).toHaveValue("1 Sol Ring (SLD) 2783 *F*\n2 Sol Ring");
+});
