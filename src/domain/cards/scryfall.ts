@@ -42,7 +42,12 @@ export interface ScryfallCard {
   produced_mana?: string[];
   card_faces?: ScryfallCardFace[];
   image_uris?: CardImageUris;
-  prices?: { usd?: string | null; eur?: string | null };
+  prices?: {
+    usd?: string | null;
+    eur?: string | null;
+    usd_foil?: string | null;
+    eur_foil?: string | null;
+  };
   rarity: string;
   set: string;
   set_name: string;
@@ -90,7 +95,7 @@ export interface CardRow {
 }
 
 /** Mises en page qui ne sont pas des cartes de deck (jetons, plans, etc.). */
-const EXCLUDED_LAYOUTS = new Set([
+export const EXCLUDED_LAYOUTS = new Set([
   "art_series",
   "double_faced_token",
   "emblem",
@@ -118,7 +123,7 @@ export function isDeckCard(card: ScryfallCard): boolean {
   return true;
 }
 
-function getOracleId(card: ScryfallCard): string | undefined {
+export function getOracleId(card: ScryfallCard): string | undefined {
   return card.oracle_id ?? card.card_faces?.[0]?.oracle_id;
 }
 
@@ -136,7 +141,7 @@ function toFace(face: ScryfallCardFace | ScryfallCard): CardFace {
   };
 }
 
-function parsePrice(value: string | null | undefined): number | null {
+export function parsePrice(value: string | null | undefined): number | null {
   if (!value) return null;
   const price = Number.parseFloat(value);
   return Number.isFinite(price) ? price : null;

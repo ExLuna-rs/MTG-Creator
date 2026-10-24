@@ -11,6 +11,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { CardImage } from "@/components/cards/card-image";
 import { ManaText, OracleText } from "@/components/cards/mana-text";
+import { PrintingList } from "@/components/cards/printing-list";
 import { buttonVariants } from "@/components/ui/button";
 import {
   type CardFace,
@@ -18,9 +19,10 @@ import {
   isLegality,
   type Legality,
 } from "@/domain/cards/card";
-import { marketLinks, parseBackLink } from "@/domain/cards/links";
+import { parseBackLink, printingMarketLinks } from "@/domain/cards/links";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { listPrintings } from "@/server/cards/printings";
 import { getCard } from "@/server/cards/search";
 
 const idSchema = z.uuid();
@@ -103,10 +105,18 @@ export default async function CardPage({
   searchParams,
 }: PageProps<"/[locale]/cards/[id]">) {
   const { locale, id } = await params;
-  const back = parseBackLink((await searchParams).from);
+  const query = await searchParams;
+  const back = parseBackLink(query.from);
   setRequestLocale(locale as Locale);
   const card = await loadCard(id);
   if (!card) notFound();
+  const printings = await listPrintings(card.oracleId);
+  // Version affichée : celle demandée (`v`), sinon l'édition par défaut.
+  const printing =
+    printings.find((item) => item.id === query.v) ??
+    printings.find((item) => item.id === card.scryfallId) ??
+    null;
+  const currency = locale === "en" ? "USD" : "EUR";
 
   const t = await getTranslations("CardPage");
   const tFormats = await getTranslations("Formats");
@@ -115,8 +125,22 @@ export default async function CardPage({
   const multiFace = card.faces.length > 1;
   // Recto verso : une image par face. Sinon (cartes scindées, aventures…),
   // une seule image pour toute la carte.
-  const images =
-    multiFace && card.faces.every((face) => face.imageUris)
+  const images = printing
+    ? [
+        {
+          name: card.faces[0]?.name ?? card.name,
+          imageUris: printing.imageUris,
+        },
+        ...(printing.backImageUris
+          ? [
+              {
+                name: t("backFace", { name: card.faces[1]?.name ?? card.name }),
+                imageUris: printing.backImageUris,
+              },
+            ]
+          : []),
+      ]
+    : multiFace && card.faces.every((face) => face.imageUris)
       ? card.faces.map((face, index) => ({
           name: index === 0 ? face.name : t("backFace", { name: face.name }),
           imageUris: face.imageUris,
@@ -127,7 +151,21 @@ export default async function CardPage({
   const scryfallUrl = card.scryfallUri.startsWith("https://scryfall.com/")
     ? card.scryfallUri
     : null;
-  const markets = marketLinks(card.name, locale);
+  const markets = printingMarketLinks(
+    printing ?? { cardmarketId: null, tcgplayerId: null },
+    card.name,
+    locale,
+  );
+  const shown = printing ?? {
+    setName: card.setName,
+    setCode: card.setCode,
+    collectorNumber: card.collectorNumber,
+    artist: card.artist,
+    priceEur: card.priceEur,
+    priceUsd: card.priceUsd,
+    priceEurFoil: null,
+    priceUsdFoil: null,
+  };
   const price = (value: number | null, currency: "EUR" | "USD") =>
     value === null
       ? t("priceUnavailable")
@@ -239,13 +277,17 @@ export default async function CardPage({
               {[
                 {
                   label: t("priceEur"),
-                  value: price(card.priceEur, "EUR"),
+                  value: price(shown.priceEur, "EUR"),
+                  foil: shown.priceEurFoil,
+                  currency: "EUR" as const,
                   href: markets.cardmarket,
                   link: t("viewOnCardmarket"),
                 },
                 {
                   label: t("priceUsd"),
-                  value: price(card.priceUsd, "USD"),
+                  value: price(shown.priceUsd, "USD"),
+                  foil: shown.priceUsdFoil,
+                  currency: "USD" as const,
                   href: markets.tcgplayer,
                   link: t("viewOnTcgplayer"),
                 },
@@ -256,7 +298,19 @@ export default async function CardPage({
                 >
                   <div>
                     <dt className="text-muted-foreground">{market.label}</dt>
-                    <dd className="font-medium tabular-nums">{market.value}</dd>
+                    <dd className="font-medium tabular-nums">
+                      {market.value}
+                      {market.foil !== null && (
+                        <span className="ml-2 font-normal text-muted-foreground text-xs">
+                          {t("priceFoil", {
+                            price: format.number(market.foil, {
+                              style: "currency",
+                              currency: market.currency,
+                            }),
+                          })}
+                        </span>
+                      )}
+                    </dd>
                   </div>
                   <dd>
                     <a
@@ -289,12 +343,12 @@ export default async function CardPage({
               )}
               <li>
                 {t("set", {
-                  set: card.setName,
-                  code: card.setCode.toUpperCase(),
-                  number: card.collectorNumber,
+                  set: shown.setName,
+                  code: shown.setCode.toUpperCase(),
+                  number: shown.collectorNumber,
                 })}
               </li>
-              {card.artist && <li>{t("artist", { artist: card.artist })}</li>}
+              {shown.artist && <li>{t("artist", { artist: shown.artist })}</li>}
             </ul>
             {scryfallUrl && (
               <a
@@ -308,6 +362,17 @@ export default async function CardPage({
               </a>
             )}
           </section>
+
+          {printings.length > 1 && printing && (
+            <PrintingList
+              printings={printings}
+              selectedId={printing.id}
+              name={card.name}
+              oracleId={card.oracleId}
+              from={typeof query.from === "string" ? query.from : undefined}
+              currency={currency}
+            />
+          )}
         </div>
       </div>
     </div>

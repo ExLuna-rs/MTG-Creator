@@ -40,6 +40,7 @@ export default async function DeckEditorPage({
         name={deck.name}
         entries={deck.entries}
         cards={deck.cards}
+        printings={deck.printings}
         ownership={ownership}
         defaultCategories={t("defaultCategories")
           .split(",")

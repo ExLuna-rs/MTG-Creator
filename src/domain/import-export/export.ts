@@ -22,11 +22,13 @@ export interface DeckExportOptions {
   skipBasicLands: boolean;
 }
 
-/** Une ligne d'export : quantité et nom anglais complet. */
+/** Une ligne d'export : quantité, nom anglais complet et édition choisie. */
 interface Line {
   quantity: number;
   name: string;
   categories: string[];
+  /** « (CMM) 410 » quand une édition a été choisie. */
+  edition?: string;
 }
 
 const byName = (a: Line, b: Line) => a.name.localeCompare(b.name, "en");
@@ -34,10 +36,13 @@ const byName = (a: Line, b: Line) => a.name.localeCompare(b.name, "en");
 function linesOf(cards: readonly DeckCard[], zone: DeckZone): Line[] {
   return cards
     .filter((entry) => entry.zone === zone)
-    .map(({ quantity, card, categories }) => ({
+    .map(({ quantity, card, categories, printing }) => ({
       quantity,
       name: card.name,
       categories,
+      edition: printing
+        ? `(${printing.setCode.toUpperCase()}) ${printing.collectorNumber}`
+        : undefined,
     }))
     .sort(byName);
 }
@@ -65,6 +70,10 @@ function merged(lines: readonly Line[]): Line[] {
 
 const plainLine = ({ quantity, name }: Line) => `${quantity} ${name}`;
 
+/** Ligne avec l'édition choisie, comprise par MTG Arena et Moxfield. */
+const editionLine = (line: Line) =>
+  line.edition ? `${plainLine(line)} ${line.edition}` : plainLine(line);
+
 /**
  * Liste texte d'un deck, avec toujours les noms anglais : les autres outils
  * les reconnaissent. Les cartes sont triées par nom dans chaque section.
@@ -87,15 +96,18 @@ export function exportDeck(
       ];
       return sections
         .filter(([, lines]) => lines.length > 0)
-        .map(([title, lines]) => [title, ...lines.map(plainLine)].join("\n"))
+        .map(([title, lines]) => [title, ...lines.map(editionLine)].join("\n"))
         .join("\n\n");
     }
     case "archidekt": {
       // Catégories d'Archidekt : « {top} » place le commandant en tête,
       // « {noDeck}{noPrice} » garde le maybeboard hors du deck.
-      const line = ({ quantity, name, categories }: Line, extra: string[]) => {
+      const line = (
+        { quantity, name, categories, edition }: Line,
+        extra: string[],
+      ) => {
         const all = [...extra, ...categories];
-        return `${quantity}x ${name}${all.length > 0 ? ` [${all.join(",")}]` : ""}`;
+        return `${quantity}x ${name}${edition ? ` ${edition}` : ""}${all.length > 0 ? ` [${all.join(",")}]` : ""}`;
       };
       return [
         ...commanders.map((item) => line(item, ["Commander{top}"])),

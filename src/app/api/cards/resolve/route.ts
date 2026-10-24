@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { importNamesSchema } from "@/domain/import-export/schema";
 import { getCurrentSession } from "@/server/auth/session";
+import { findPrintings } from "@/server/cards/printings";
 import { resolveCardNames } from "@/server/cards/search";
 
 // Reconnaissance des noms d'une liste importée dans l'éditeur de deck. Les
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid" }, { status: 400 });
   }
 
-  const results = await resolveCardNames(body.data.names);
-  return Response.json({ results });
+  const [results, printings] = await Promise.all([
+    resolveCardNames(body.data.names),
+    findPrintings(body.data.printings ?? []),
+  ]);
+  return Response.json({ results, printings });
 }

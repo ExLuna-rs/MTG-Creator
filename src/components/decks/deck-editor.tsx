@@ -12,7 +12,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { validateCommanderDeck } from "@/domain/commander/validate";
-import type { DeckCard, DeckCardData, DeckEntry } from "@/domain/deck/deck";
+import {
+  type DeckCard,
+  type DeckCardData,
+  type DeckEntry,
+  type DeckPrinting,
+  joinDeckCards,
+} from "@/domain/deck/deck";
 import { createEditorState, editorReducer } from "@/domain/deck/editor";
 import { GROUP_MODES, type GroupMode } from "@/domain/deck/groups";
 import { computeDeckStats } from "@/domain/deck/stats";
@@ -79,6 +85,7 @@ export function DeckEditor({
   name,
   entries,
   cards,
+  printings,
   ownership,
   defaultCategories,
 }: {
@@ -86,12 +93,13 @@ export function DeckEditor({
   name: string;
   entries: DeckEntry[];
   cards: DeckCardData[];
+  printings: DeckPrinting[];
   ownership: DeckOwnershipData;
   defaultCategories: string[];
 }) {
   const t = useTranslations("DeckEditor");
   const [state, dispatch] = useReducer(editorReducer, null, () =>
-    createEditorState({ name, entries }, cards),
+    createEditorState({ name, entries }, cards, printings),
   );
   const [mode, setMode] = useState<GroupMode>("role");
   const [view, setView] = useState<DeckView>("piles");
@@ -99,12 +107,8 @@ export function DeckEditor({
   const { status, retry } = useAutosave(deckId, state.present);
 
   const deck = useMemo<DeckCard[]>(
-    () =>
-      state.present.entries.flatMap((entry) => {
-        const card = state.cards[entry.oracleId];
-        return card ? [{ ...entry, card }] : [];
-      }),
-    [state.present.entries, state.cards],
+    () => joinDeckCards(state.present.entries, state.cards, state.printings),
+    [state.present.entries, state.cards, state.printings],
   );
   const validation = useMemo(() => validateCommanderDeck(deck), [deck]);
   const stats = useMemo(() => computeDeckStats(deck), [deck]);
@@ -187,7 +191,7 @@ export function DeckEditor({
           <DeckAssemblyToggle state={owning} />
           <div className="ml-auto flex flex-wrap items-center gap-1">
             <DeckImport
-              onImport={(imported, importedCards, replace) =>
+              onImport={(imported, importedCards, importedPrintings, replace) =>
                 dispatch({
                   type: "import",
                   entries: mergeImport(
@@ -202,6 +206,7 @@ export function DeckEditor({
                     { replace },
                   ),
                   cards: importedCards,
+                  printings: importedPrintings,
                 })
               }
             />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deckCard } from "../deck/test-helpers";
+import { deckCard, deckPrinting } from "../deck/test-helpers";
 import { parseDeckList } from "./deck-list";
 import { exportCollection, exportDeck } from "./export";
 
@@ -82,6 +82,41 @@ describe("exportDeck", () => {
       "maybe",
     );
     expect(archidekt[0].zone).toBe("commander");
+  });
+});
+
+describe("export des éditions choisies", () => {
+  const withEdition = [
+    {
+      ...deckCard("Sol Ring", { categories: ["Ramp"] }),
+      printing: deckPrinting("Sol Ring", "lea", "269"),
+    },
+    deckCard("Island", { quantity: 6 }),
+  ];
+
+  it("écrit l'édition pour MTG Arena, Moxfield et Archidekt", () => {
+    expect(exportDeck(withEdition, "arena", options)).toBe(
+      ["Deck", "6 Island", "1 Sol Ring (LEA) 269"].join("\n"),
+    );
+    expect(exportDeck(withEdition, "archidekt", options)).toBe(
+      ["6x Island", "1x Sol Ring (LEA) 269 [Ramp]"].join("\n"),
+    );
+  });
+
+  it("garde les noms seuls dans le texte simple et pour Cardmarket", () => {
+    expect(exportDeck(withEdition, "plain", options)).toBe(
+      ["6 Island", "1 Sol Ring"].join("\n"),
+    );
+    expect(exportDeck(withEdition, "cardmarket", options)).toBe(
+      ["6 Island", "1 Sol Ring"].join("\n"),
+    );
+  });
+
+  it("se relit à l'import", () => {
+    const [, solRing] = parseDeckList(
+      exportDeck(withEdition, "arena", options),
+    ).cards;
+    expect(solRing).toMatchObject({ set: "LEA", collectorNumber: "269" });
   });
 });
 

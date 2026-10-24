@@ -20,12 +20,15 @@ export function ActiveFilters({
   search,
   pathname = "/cards",
   keep = {},
+  sets = [],
 }: {
   search: CardSearch;
   /** Page des liens (la collection réutilise les filtres). */
   pathname?: "/cards" | "/collection";
   /** Paramètres de la page gardés tels quels. */
   keep?: Record<string, string>;
+  /** Extensions de la recherche, pour afficher leur nom. */
+  sets?: readonly { code: string; name: string }[];
 }) {
   const t = useTranslations("ActiveFilters");
   const tSearch = useTranslations("CardSearch");
@@ -67,6 +70,16 @@ export function ActiveFilters({
             search.rarities.includes(rarity),
           )
             .map((rarity) => tRarities(rarity))
+            .join(", "),
+        });
+      case "sets":
+        return t("sets", {
+          sets: search.sets
+            .map(
+              (code) =>
+                sets.find((set) => set.code === code)?.name ??
+                code.toUpperCase(),
+            )
             .join(", "),
         });
       case "text":

@@ -1,6 +1,6 @@
 import { maxCopies } from "../commander/singleton";
 import { commanderRefusal } from "../commander/validate";
-import type { DeckCardData, DeckEntry, DeckZone } from "./deck";
+import type { DeckCardData, DeckEntry, DeckPrinting, DeckZone } from "./deck";
 
 /** Contenu modifiable d'un deck : ce que la sauvegarde envoie au serveur. */
 export interface DeckSnapshot {
@@ -15,6 +15,8 @@ export interface EditorState {
   future: DeckSnapshot[];
   /** Données des cartes déjà rencontrées, par `oracleId`. */
   cards: Record<string, DeckCardData>;
+  /** Éditions déjà rencontrées, par identifiant. */
+  printings: Record<string, DeckPrinting>;
 }
 
 /** Nombre d'étapes gardées pour « Annuler ». */
@@ -60,6 +62,13 @@ export type EditorAction =
       to: DeckZone;
       category?: string | null;
     }
+  | {
+      /** Choisit l'édition d'une ligne ; null revient à l'édition par défaut. */
+      type: "setPrinting";
+      oracleId: string;
+      zone: DeckZone;
+      printing: DeckPrinting | null;
+    }
   | { type: "rename"; name: string }
   | {
       /**
@@ -69,6 +78,7 @@ export type EditorAction =
       type: "import";
       entries: DeckEntry[];
       cards: DeckCardData[];
+      printings?: DeckPrinting[];
     }
   | { type: "undo" }
   | { type: "redo" };
@@ -76,14 +86,19 @@ export type EditorAction =
 export function createEditorState(
   snapshot: DeckSnapshot,
   cards: DeckCardData[],
+  printings: DeckPrinting[] = [],
 ): EditorState {
   return {
     past: [],
     present: snapshot,
     future: [],
     cards: Object.fromEntries(cards.map((card) => [card.oracleId, card])),
+    printings: byId(printings),
   };
 }
+
+const byId = (printings: readonly DeckPrinting[]) =>
+  Object.fromEntries(printings.map((printing) => [printing.id, printing]));
 
 const isEntry = (oracleId: string, zone: DeckZone) => (entry: DeckEntry) =>
   entry.oracleId === oracleId && entry.zone === zone;
@@ -220,6 +235,7 @@ function applyEdit(
               ...target.categories,
               ...source.categories,
             ]),
+            printingId: target.printingId ?? source.printingId,
           }
         : {
             ...source,
@@ -289,6 +305,24 @@ function applyEdit(
       return moved === state.present ? null : moved;
     }
 
+    case "setPrinting": {
+      const existing = entries.find(isEntry(action.oracleId, action.zone));
+      if (!existing) return null;
+      if (action.printing && action.printing.oracleId !== action.oracleId) {
+        return null;
+      }
+      const printingId = action.printing?.id ?? null;
+      if ((existing.printingId ?? null) === printingId) return null;
+      return updateEntries(
+        state,
+        entries.map((entry) => {
+          if (entry !== existing) return entry;
+          const { printingId: _previous, ...rest } = entry;
+          return printingId ? { ...rest, printingId } : rest;
+        }),
+      );
+    }
+
     case "import": {
       const unchanged =
         JSON.stringify(action.entries) === JSON.stringify(entries);
@@ -350,11 +384,18 @@ export function editorReducer(
               ),
             }
           : state.cards;
+      const printings =
+        action.type === "setPrinting" && action.printing
+          ? { ...state.printings, [action.printing.id]: action.printing }
+          : action.type === "import" && action.printings?.length
+            ? { ...state.printings, ...byId(action.printings) }
+            : state.printings;
       return {
         past: [...state.past, state.present].slice(-HISTORY_LIMIT),
         present,
         future: [],
         cards,
+        printings,
       };
     }
   }

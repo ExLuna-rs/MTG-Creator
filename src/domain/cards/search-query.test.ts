@@ -22,6 +22,7 @@ describe("parseCardSearch", () => {
       subtypes: [],
       typeMode: "or",
       rarities: [],
+      sets: [],
       manaValueMin: null,
       manaValueMax: null,
       commanderLegal: false,
@@ -125,6 +126,16 @@ describe("parseCardSearch", () => {
     expect(parseCardSearch({ sort: "relevance" }).sort).toBe("popularity");
     expect(parseCardSearch({ sort: "name" }).sort).toBe("name");
   });
+
+  it("lit les extensions en minuscules, sans doublon ni code suspect", () => {
+    expect(
+      parseCardSearch({
+        set: ["CMM", "cmm", "fin", "c'21", "toolongcode", ""],
+      }).sets,
+    ).toEqual(["cmm", "fin"]);
+    const many = Array.from({ length: 12 }, (_, index) => `s${index}`);
+    expect(parseCardSearch({ set: many }).sets).toHaveLength(10);
+  });
 });
 
 describe("cardSearchToQuery", () => {
@@ -152,6 +163,7 @@ describe("cardSearchToQuery", () => {
       sub: ["Elf", "Druid"],
       tmode: "and",
       rarity: ["rare", "mythic"],
+      set: ["cmm", "fin"],
       mvMin: "0",
       mvMax: "4",
       legal: "1",

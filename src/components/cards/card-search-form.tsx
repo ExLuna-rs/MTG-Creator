@@ -11,6 +11,7 @@ import {
 } from "react";
 import { CardNameInput } from "@/components/cards/card-name-input";
 import { ManaSymbol } from "@/components/cards/mana-text";
+import { SetInput, type SetOption } from "@/components/cards/set-input";
 import { SubtypeInput } from "@/components/cards/subtype-input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -48,6 +49,10 @@ interface Draft {
   subText: string;
   tmode: TypeMode;
   rarity: string[];
+  /** Extensions choisies, avec leur nom pour les pastilles. */
+  set: SetOption[];
+  /** Extension en cours de saisie. */
+  setText: string;
   mvMin: string;
   mvMax: string;
   legal: boolean;
@@ -68,6 +73,8 @@ const EMPTY_DRAFT: Draft = {
   subText: "",
   tmode: "or",
   rarity: [],
+  set: [],
+  setText: "",
   mvMin: "",
   mvMax: "",
   legal: false,
@@ -76,7 +83,7 @@ const EMPTY_DRAFT: Draft = {
   sort: "",
 };
 
-function toDraft(search: CardSearch): Draft {
+function toDraft(search: CardSearch, sets: readonly SetOption[]): Draft {
   return {
     q: search.name,
     text: search.text,
@@ -88,6 +95,16 @@ function toDraft(search: CardSearch): Draft {
     subText: "",
     tmode: search.typeMode,
     rarity: search.rarities,
+    // Code inconnu de la base (URL trafiquée ou extension disparue) : affiché tel quel.
+    set: search.sets.map(
+      (code) =>
+        sets.find((set) => set.code === code) ?? {
+          code,
+          name: code.toUpperCase(),
+          releasedAt: "",
+        },
+    ),
+    setText: "",
     mvMin: search.manaValueMin?.toString() ?? "",
     mvMax: search.manaValueMax?.toString() ?? "",
     legal: search.commanderLegal,
@@ -110,6 +127,7 @@ function toQuery(draft: Draft): Record<string, string | string[]> {
   for (const key of ["legal", "commander", "gc"] as const) {
     if (draft[key]) query[key] = "1";
   }
+  if (draft.set.length > 0) query.set = draft.set.map((set) => set.code);
   const subtypes = [...draft.sub, draft.subText.trim()].filter(Boolean);
   if (subtypes.length > 0) query.sub = subtypes;
   if (draft.cmode !== "within") query.cmode = draft.cmode;
@@ -270,6 +288,7 @@ export function CardSearchForm({
   pathname = "/cards",
   keep = {},
   filtersOnly = false,
+  sets = [],
 }: {
   search: CardSearch;
   /** Chemin de la page de recherche, langue comprise (sans JavaScript). */
@@ -280,6 +299,8 @@ export function CardSearchForm({
   keep?: Record<string, string>;
   /** Seulement les filtres, repliés : sans le nom ni le tri des cartes. */
   filtersOnly?: boolean;
+  /** Extensions de la recherche, pour afficher leur nom. */
+  sets?: readonly SetOption[];
 }) {
   const t = useTranslations("CardSearch");
   const tColors = useTranslations("Colors");
@@ -291,7 +312,7 @@ export function CardSearchForm({
   const id = useId();
 
   const activeFilters = countActiveFilters(search);
-  const [draft, setDraft] = useState(() => toDraft(search));
+  const [draft, setDraft] = useState(() => toDraft(search, sets));
   const [filtersOpen, setFiltersOpen] = useState(
     !filtersOnly && activeFilters > 0,
   );
@@ -301,7 +322,7 @@ export function CardSearchForm({
   const [syncedKey, setSyncedKey] = useState(searchKey);
   if (searchKey !== syncedKey) {
     setSyncedKey(searchKey);
-    setDraft(toDraft(search));
+    setDraft(toDraft(search, sets));
     if (activeFilters > 0 && !filtersOnly) setFiltersOpen(true);
   }
 
@@ -547,6 +568,22 @@ export function CardSearchForm({
                 </Chip>
               ))}
             </Group>
+            <div className="min-w-0 space-y-2">
+              <label
+                htmlFor={`${id}-set`}
+                className="block font-medium text-sm"
+              >
+                {t("setsLabel")}
+              </label>
+              <SetInput
+                id={`${id}-set`}
+                values={draft.set}
+                onValuesChange={(values) => update("set", values)}
+                text={draft.setText}
+                onTextChange={(text) => update("setText", text)}
+              />
+              <p className="text-muted-foreground text-xs">{t("setsHint")}</p>
+            </div>
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor={`${id}-text`}

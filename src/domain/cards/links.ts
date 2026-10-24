@@ -68,3 +68,26 @@ export function marketLinks(
     tcgplayer: `https://www.tcgplayer.com/search/magic/product?${new URLSearchParams({ productLineName: "magic", q: front })}`,
   };
 }
+
+/**
+ * Liens d'achat d'une édition précise quand Cardmarket et TCGplayer la
+ * connaissent ; sinon, recherche par nom comme `marketLinks`.
+ */
+export function printingMarketLinks(
+  printing: { cardmarketId: number | null; tcgplayerId: number | null },
+  name: string,
+  locale: string,
+): { cardmarket: string; tcgplayer: string } {
+  const byName = marketLinks(name, locale);
+  const language = locale === "fr" ? "fr" : "en";
+  return {
+    cardmarket:
+      printing.cardmarketId === null
+        ? byName.cardmarket
+        : `https://www.cardmarket.com/${language}/Magic/Products?${new URLSearchParams({ idProduct: String(printing.cardmarketId) })}`,
+    tcgplayer:
+      printing.tcgplayerId === null
+        ? byName.tcgplayer
+        : `https://www.tcgplayer.com/product/${printing.tcgplayerId}`,
+  };
+}

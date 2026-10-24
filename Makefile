@@ -74,7 +74,7 @@ e2e-ci: ## Lance les tests de bout en bout sur les images de production
 db-migrate: ## Applique les migrations de la base de données
 	$(COMPOSE) run --rm migrate
 
-sync: ## Importe toutes les cartes depuis Scryfall (environ 25 Mo, 30 s)
+sync: ## Importe toutes les cartes et leurs éditions depuis Scryfall (environ 1 min)
 	$(COMPOSE) run --rm --build app pnpm cards:sync
 
 seed: ## Importe le jeu de cartes de test (172 cartes, sans réseau)

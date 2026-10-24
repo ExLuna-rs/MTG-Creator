@@ -26,7 +26,7 @@ import {
 } from "@/domain/cards/search-query";
 import { type DeckCardData, frontName } from "@/domain/deck/deck";
 import { getDb } from "@/server/db";
-import { cards } from "@/server/db/schema";
+import { cards, printings } from "@/server/db/schema";
 
 /** Carte telle qu'affichée dans une liste de résultats. */
 export interface CardSummary {
@@ -178,6 +178,13 @@ function buildConditions(search: CardSearch, normalizedName: string): SQL[] {
   }
   if (search.rarities.length > 0) {
     conditions.push(inArray(cards.rarity, search.rarities));
+  }
+  if (search.sets.length > 0) {
+    // Imprimée au moins une fois dans l'une des extensions, même si son
+    // édition par défaut est ailleurs.
+    conditions.push(
+      sql`exists (select 1 from ${printings} where ${printings.oracleId} = ${cards.oracleId} and ${inArray(printings.setCode, search.sets)})`,
+    );
   }
   if (search.manaValueMin !== null) {
     conditions.push(gte(cards.manaValue, search.manaValueMin));

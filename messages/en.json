@@ -123,7 +123,13 @@
       "and": "All (AND)"
     },
     "selectPlaceholder": "Choose…",
-    "removeChoice": "Remove {name}"
+    "removeChoice": "Remove {name}",
+    "setsLabel": "Set",
+    "setsPlaceholder": "Name or code, e.g. Commander Masters, CMM",
+    "setsHint": "Cards printed at least once in one of the chosen sets.",
+    "setSuggestions": "Suggested sets",
+    "removeSet": "Remove set {name}",
+    "sets": "Set"
   },
   "Colors": {
     "W": "White",
@@ -186,7 +192,19 @@
     "viewOnScryfall": "View on Scryfall",
     "viewOnCardmarket": "View on Cardmarket",
     "viewOnTcgplayer": "View on TCGplayer",
-    "backFace": "{name} (back face)"
+    "backFace": "{name} (back face)",
+    "versions": "{count, plural, one {Printing (#)} other {Printings (#)}}",
+    "versionSort": "Sort printings",
+    "versionSorts": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "price": "Lowest price"
+    },
+    "hideSpecial": "Hide promos and special versions",
+    "showAllVersions": "Show all {count} printings",
+    "showFewerVersions": "Show fewer printings",
+    "priceFoil": "Foil: {price}",
+    "shownVersion": "Shown printing"
   },
   "Formats": {
     "commander": "Commander",
@@ -471,7 +489,18 @@
         "detail": "Remove one before adding another. The card stays where it was.",
         "short": "The deck already has two commanders"
       }
-    }
+    },
+    "printingTitle": "Version in this deck",
+    "printingDefault": "Default",
+    "printingDefaultShort": "Default",
+    "printingDefaultHint": "Default: the card's most common printing. Pick a version for its image, its price and the export.",
+    "printingChosen": "Chosen version: {set}, no. {number}, {price}. The deck price and the export follow it.",
+    "printingLabel": "{set}, no. {number}",
+    "printingLoading": "Loading versions…",
+    "printingError": "Couldn't load the versions.",
+    "printingSingle": "This card has only one paper printing.",
+    "printingShowAll": "Show all {count} versions",
+    "printingNoPrice": "Unknown price"
   },
   "CardSpotlight": {
     "open": "Search for a card…",
@@ -800,7 +829,8 @@
     "rarities": "Rarity: {rarities}",
     "text": "Text: “{text}”",
     "remove": "Remove filter: {label}",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "sets": "Set: {sets}"
   },
   "ExportDialog": {
     "open": "Export",

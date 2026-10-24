@@ -44,6 +44,7 @@ export const FILTER_GROUPS = [
   "types",
   "manaValue",
   "rarities",
+  "sets",
   "text",
   "commanderLegal",
   "canBeCommander",
@@ -56,6 +57,10 @@ export const MAX_SUBTYPES = 10;
 const MAX_SUBTYPE_LENGTH = 40;
 /** Lettres, chiffres, espaces, apostrophes et tirets (« Urza's », « Time Lord »). */
 const SUBTYPE_PATTERN = /^[0-9A-Za-zÀ-ÖØ-öø-ÿ' ’.-]+$/;
+
+export const MAX_SETS = 10;
+/** Code d'extension de Scryfall : « cmm », « 2xm », « pkhm »… */
+const SET_CODE_PATTERN = /^[a-z0-9]{2,6}$/;
 
 export const CARD_PAGE_SIZE = 60;
 const MAX_PAGE = 500;
@@ -72,6 +77,8 @@ export interface CardSearch {
   subtypes: string[];
   typeMode: TypeMode;
   rarities: (typeof RARITIES)[number][];
+  /** Codes d'extension : cartes imprimées au moins une fois dans l'une d'elles. */
+  sets: string[];
   manaValueMin: number | null;
   manaValueMax: number | null;
   commanderLegal: boolean;
@@ -126,6 +133,14 @@ function parseSubtypes(values: string[]): string[] {
   return result.slice(0, MAX_SUBTYPES);
 }
 
+/** Codes d'extension valides, en minuscules, sans doublon, dix au plus. */
+function parseSets(values: string[]): string[] {
+  const codes = values
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => SET_CODE_PATTERN.test(value));
+  return [...new Set(codes)].slice(0, MAX_SETS);
+}
+
 /** Valeur d'une liste autorisée, sinon la première (valeur par défaut). */
 function oneOf<T extends string>(allowed: readonly [T, ...T[]], value: string) {
   return z.enum(allowed).catch(allowed[0]).parse(value);
@@ -162,6 +177,7 @@ export function parseCardSearch(params: RawParams): CardSearch {
     subtypes: parseSubtypes(all(params, "sub")),
     typeMode: oneOf(TYPE_MODES, first(params, "tmode")),
     rarities: pick(RARITIES, all(params, "rarity")),
+    sets: parseSets(all(params, "set")),
     manaValueMin: manaValue("mvMin"),
     manaValueMax: manaValue("mvMax"),
     commanderLegal: flagSchema.parse(first(params, "legal")),
@@ -201,6 +217,7 @@ export function cardSearchToQuery(
   if (search.subtypes.length > 0) query.sub = search.subtypes;
   if (search.typeMode !== "or") query.tmode = search.typeMode;
   if (search.rarities.length > 0) query.rarity = search.rarities;
+  if (search.sets.length > 0) query.set = search.sets;
   if (search.manaValueMin !== null) query.mvMin = String(search.manaValueMin);
   if (search.manaValueMax !== null) query.mvMax = String(search.manaValueMax);
   if (search.commanderLegal) query.legal = "1";
@@ -218,6 +235,7 @@ export function activeFilters(search: CardSearch): FilterGroup[] {
     types: search.types.length > 0 || search.subtypes.length > 0,
     manaValue: search.manaValueMin !== null || search.manaValueMax !== null,
     rarities: search.rarities.length > 0,
+    sets: search.sets.length > 0,
     text: search.text !== "",
     commanderLegal: search.commanderLegal,
     canBeCommander: search.canBeCommander,
@@ -251,6 +269,8 @@ export function withoutFilter(
       return { ...next, manaValueMin: null, manaValueMax: null };
     case "rarities":
       return { ...next, rarities: [] };
+    case "sets":
+      return { ...next, sets: [] };
     case "text":
       return { ...next, text: "" };
     default:

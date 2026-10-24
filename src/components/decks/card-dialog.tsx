@@ -12,6 +12,7 @@ import type { DeckCard } from "@/domain/deck/deck";
 import { MAX_QUANTITY } from "@/domain/deck/editor";
 import { CardCopies } from "./deck-assembly";
 import { CardOptions, type Dispatch, QuantityStepper } from "./deck-list";
+import { PrintingPicker } from "./printing-picker";
 
 /**
  * Fenêtre d'une carte du deck (vues Piles et Grille) : image, texte,
@@ -135,6 +136,9 @@ export function CardDialog({
                 <Trash2 aria-hidden />
                 {t("remove", { name: entry.card.name })}
               </Button>
+            </div>
+            <div className="border-t pt-4">
+              <PrintingPicker entry={entry} dispatch={dispatch} />
             </div>
             {entry.zone !== "maybe" && (
               <div className="border-t pt-4">
