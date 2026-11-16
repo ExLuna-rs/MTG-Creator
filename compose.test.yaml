@@ -97,7 +97,7 @@ services:
   # Analyse des vulnérabilités des images de production (`make scan`).
   grype:
     profiles: ["scan"]
-    image: anchore/grype:v0.120.0@sha256:5c88961f4130e830542d441c7ed6c78baa28e799163abac53d2be4923fb5ab7d
+    image: anchore/grype:v0.121.3@sha256:13113eeceab017260370cf540e1d25442c59665fd07d1b09b66d63bb0c282887
     environment:
       GRYPE_DB_CACHE_DIR: /cache
     volumes:
